@@ -3,18 +3,18 @@ Google Cloud Pub/Sub Event Broadcaster.
 Publishes asynchronous research completion events and risk notifications to downstream consumers.
 """
 
-import json
 import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 from src.config import Settings
 
 
 class PubSubBroadcaster:
     """Publishes completed research brief events to Google Cloud Pub/Sub."""
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        self.published_events: List[Dict[str, Any]] = []
+        self.published_events: list[dict[str, Any]] = []
 
     async def broadcast_brief_completed(
         self,
@@ -23,13 +23,13 @@ class PubSubBroadcaster:
         fiscal_year: int,
         metrics_count: int,
         citations_count: int,
-        risk_categories: List[str]
-    ) -> Dict[str, Any]:
+        risk_categories: list[str]
+    ) -> dict[str, Any]:
         """Publishes `research.brief.completed` event to Pub/Sub topic."""
         event = {
             "event_type": "research.brief.completed",
             "event_id": f"evt-{brief_id}",
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
             "topic": self.settings.pubsub_topic_id,
             "payload": {
                 "brief_id": brief_id,

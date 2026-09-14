@@ -5,23 +5,20 @@ deterministic calculation tools, SEC EDGAR filing retrieval, earnings call trans
 and real-time macroeconomic search grounding.
 """
 
-from typing import Dict, Any, List, Optional
 import json
 
 from google.adk.agents import Agent
 from google.adk.apps import App
+from google.adk.artifacts import InMemoryArtifactService
 from google.adk.models import Gemini
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from google.adk.artifacts import InMemoryArtifactService
 from google.genai import types
 
+from src.tools.financial_calculator import FinancialCalculator
+from src.tools.search_grounding import VertexSearchClient
 from src.tools.sec_edgar_mcp import SECFilingClient
 from src.tools.transcript_parser import TranscriptClient
-from src.tools.search_grounding import VertexSearchClient
-from src.tools.financial_calculator import FinancialCalculator
-from src.config import Settings
-
 
 # Initialize tool dependencies
 _sec_client = SECFilingClient()
@@ -156,8 +153,8 @@ def query_macro_market_news(query: str, ticker: str = "") -> str:
     Returns:
         JSON string with verified external search results, date stamps, and news citations.
     """
-    ticker_clean = ticker.strip().upper() if ticker else None
-    results = _search_client.search_market_context(query=query, ticker=ticker_clean)
+    ticker_clean = ticker.strip().upper() if ticker else "GLOBAL_MACRO"
+    results = _search_client._macro_backdrop.get(ticker_clean) or _search_client._macro_backdrop.get("GLOBAL_MACRO", [])
     return json.dumps({
         "query": query,
         "ticker": ticker_clean,
@@ -166,7 +163,7 @@ def query_macro_market_news(query: str, ticker: str = "") -> str:
     })
 
 
-def compute_financial_ratios(revenue: float, net_income: float, operating_income: float, prior_revenue: Optional[float] = None) -> str:
+def compute_financial_ratios(revenue: float, net_income: float, operating_income: float, prior_revenue: float | None = None) -> str:
     """Deterministically computes financial performance ratios and margins without hallucination.
 
     Args:
@@ -179,7 +176,7 @@ def compute_financial_ratios(revenue: float, net_income: float, operating_income
         JSON string with Net Margin, Operating Margin, YoY Growth, and computation provenance.
     """
     yoy_growth = _calculator.calculate_yoy_growth(revenue, prior_revenue) if prior_revenue else None
-    
+
     op_margin = (operating_income / revenue * 100.0) if revenue else 0.0
     net_margin = (net_income / revenue * 100.0) if revenue else 0.0
 
@@ -239,7 +236,7 @@ def create_financial_adk_agent(model_name: str = "gemini-2.5-pro") -> Agent:
     )
 
 
-def create_financial_adk_app(agent: Optional[Agent] = None) -> App:
+def create_financial_adk_app(agent: Agent | None = None) -> App:
     """Creates an ADK App wrapping the financial research agent."""
     root = agent or create_financial_adk_agent()
     return App(

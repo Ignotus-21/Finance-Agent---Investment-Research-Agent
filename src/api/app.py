@@ -3,13 +3,13 @@ FastAPI Application Entrypoint.
 Initializes middleware, CORS, routers, and exception handlers.
 """
 
+import datetime
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+
 from src.api.routes import router
 from src.core.exceptions import FinancialAgentException
-from src.config import settings
-import datetime
 
 
 def create_app() -> FastAPI:
@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
                 "error_code": exc.error_code,
                 "message": exc.message,
                 "details": exc.details,
-                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
             }
         )
 

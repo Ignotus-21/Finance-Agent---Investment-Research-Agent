@@ -25,5 +25,7 @@ jobs:
           pip install -e .[dev]
 
       - name: Execute Golden Evaluation Regression Gate
+        env:
+          PYTHONPATH: .
         run: |
           python -m eval.regression_gate

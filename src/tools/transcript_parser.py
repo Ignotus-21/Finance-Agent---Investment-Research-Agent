@@ -4,9 +4,10 @@ Segments raw quarterly transcripts into Executive Prepared Remarks and Analyst Q
 Extracts speaker roles (CEO, CFO, Analyst) and sentiment orientation.
 """
 
-from typing import Dict, Any, List, Optional
-from src.core.interfaces import BaseTool
+from typing import Any
+
 from src.config import Settings
+from src.core.interfaces import BaseTool
 
 
 class TranscriptClient(BaseTool):
@@ -15,11 +16,11 @@ class TranscriptClient(BaseTool):
     Distinguishes formal guidance remarks from unscripted Q&A.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        
+
         # High-fidelity transcript corpus for benchmark scenarios
-        self._transcripts: Dict[str, Dict[str, Any]] = {
+        self._transcripts: dict[str, dict[str, Any]] = {
             "AAPL_Q4_2024": {
                 "event": "Apple Inc. Q4 2024 Earnings Conference Call",
                 "date": "2024-10-31",
@@ -120,7 +121,7 @@ class TranscriptClient(BaseTool):
         speaker_role = kwargs.get("speaker_role", "ALL")
         return await self.get_transcript(ticker, quarter, speaker_role)
 
-    async def get_transcript(self, ticker: str, quarter: str, speaker_role: str = "ALL") -> Dict[str, Any]:
+    async def get_transcript(self, ticker: str, quarter: str, speaker_role: str = "ALL") -> dict[str, Any]:
         key = f"{ticker.upper()}_{quarter.upper()}"
         transcript = self._transcripts.get(key)
 

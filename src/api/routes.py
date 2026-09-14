@@ -4,18 +4,20 @@ Conforms to the OpenAPI 3.1 specification (openapi.yaml).
 """
 
 import time
-from typing import Dict, Any
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from src.models.request import EquityResearchRequest, FilingResearchRequest
-from src.models.response import ResearchBriefResponse, ErrorResponse
-from src.core.container import ApplicationContainer
+
 from src.api.dependencies import get_container, verify_auth_token
+from src.core.container import ApplicationContainer
 from src.core.exceptions import (
-    SecurityViolationException,
-    OutOfDomainQueryException,
     FilingNotFoundException,
+    OutOfDomainQueryException,
+    SecurityViolationException,
     UpstreamRateLimitException,
 )
+from src.models.request import EquityResearchRequest, FilingResearchRequest
+from src.models.response import ResearchBriefResponse
 from src.observability.audit_logger import audit_logger
 from src.observability.pubsub_broadcaster import broadcaster
 
@@ -62,7 +64,7 @@ async def generate_equity_research(
             cost_usd=0.0,
             guardrail_verdict="REJECT_INJECTION"
         )
-        raise HTTPException(status_code=400, detail=f"Security Violation: {e.message}")
+        raise HTTPException(status_code=400, detail=f"Security Violation: {e.message}") from e
     except OutOfDomainQueryException as e:
         await audit_logger.log_research_execution(
             ticker=request.ticker,
@@ -75,17 +77,17 @@ async def generate_equity_research(
             cost_usd=0.0,
             guardrail_verdict="REJECT_SCOPE"
         )
-        raise HTTPException(status_code=400, detail=f"Scope Violation: {e.message}")
+        raise HTTPException(status_code=400, detail=f"Scope Violation: {e.message}") from e
 
     # Step 2: Multi-Agent Orchestration Loop
     try:
         brief = await app_container.root_coordinator.execute_research(request)
     except FilingNotFoundException as e:
-        raise HTTPException(status_code=404, detail=e.message)
+        raise HTTPException(status_code=404, detail=e.message) from e
     except UpstreamRateLimitException as e:
-        raise HTTPException(status_code=429, detail=e.message)
+        raise HTTPException(status_code=429, detail=e.message) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Multi-agent execution failure: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Multi-agent execution failure: {str(e)}") from e
 
     elapsed_ms = int((time.monotonic() - req_start) * 1000)
 
@@ -128,7 +130,7 @@ async def extract_filings(
     request: FilingResearchRequest,
     user_id: str = Depends(verify_auth_token),
     app_container: ApplicationContainer = Depends(get_container)
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Direct MCP extraction of SEC filing tables."""
     try:
         results = {}
@@ -147,18 +149,18 @@ async def extract_filings(
             "sections": results
         }
     except FilingNotFoundException as e:
-        raise HTTPException(status_code=404, detail=e.message)
+        raise HTTPException(status_code=404, detail=e.message) from e
 
 
 @router.get("/healthz", tags=["Health & Diagnostics"])
-async def healthz() -> Dict[str, Any]:
+async def healthz() -> dict[str, Any]:
     """Cloud Run liveness probe."""
     uptime = round(time.monotonic() - start_server_time, 2)
     return {"status": "HEALTHY", "uptime_seconds": uptime}
 
 
 @router.get("/readyz", tags=["Health & Diagnostics"])
-async def readyz(app_container: ApplicationContainer = Depends(get_container)) -> Dict[str, Any]:
+async def readyz(app_container: ApplicationContainer = Depends(get_container)) -> dict[str, Any]:
     """Cloud Run readiness probe."""
     return {
         "status": "READY",

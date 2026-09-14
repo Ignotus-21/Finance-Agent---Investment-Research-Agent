@@ -4,10 +4,14 @@ Validates end-to-end multi-agent research generation on un-cached synthetic corp
 """
 
 import pytest
+
+from src.agents.adk_agent import (
+    create_financial_adk_agent,
+    fetch_sec_filing_section,
+)
 from src.core.container import ApplicationContainer
-from src.models.request import EquityResearchRequest
 from src.guardrails.input_guardrail import InputGuardrail
-from src.agents.adk_agent import create_financial_adk_agent, fetch_sec_filing_section, compute_financial_ratios
+from src.models.request import EquityResearchRequest
 
 
 @pytest.mark.asyncio
