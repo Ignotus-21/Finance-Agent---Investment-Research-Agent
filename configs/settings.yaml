@@ -1,0 +1,36 @@
+app:
+  name: "Autonomous Investment Research Intelligence Agent (IRA)"
+  version: "1.0.0"
+  environment: "development"
+  log_level: "INFO"
+
+models:
+  coordinator:
+    name: "gemini-2.5-pro"
+    thinking_budget: 2048
+    temperature: 0.1
+    max_output_tokens: 4096
+  extraction:
+    name: "gemini-2.5-flash"
+    temperature: 0.0
+    max_output_tokens: 2048
+
+sec_edgar:
+  user_agent: "SampleInstitutionalResearch AdminContact@samplecompany.com"
+  rate_limit_per_second: 8.0
+  burst_capacity: 10
+  timeout_seconds: 15
+  retry_attempts: 3
+  backoff_base_seconds: 1.0
+
+context_caching:
+  ttl_minutes: 60
+  min_tokens_for_cache: 32768
+
+guardrails:
+  enforce_strict_scope: true
+  block_injection: true
+  max_prompt_length_chars: 4000
+
+budget:
+  max_cost_per_brief_usd: 0.25

@@ -1,0 +1,7 @@
+project_id            = "ira-capstone-finance-prod"
+region                = "us-central1"
+environment           = "production"
+container_image       = "us-central1-docker.pkg.dev/ira-capstone-finance-prod/ira-repo/ira-service:v1.0.0"
+min_instances         = 1
+max_instances         = 50
+container_concurrency = 80
