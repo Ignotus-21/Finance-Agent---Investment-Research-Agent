@@ -3,7 +3,8 @@ Audit and Observability Data Models.
 Enforces immutable compliance logging for BigQuery and Cloud Logging.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -11,12 +12,12 @@ class ExecutionSpan(BaseModel):
     """Distributed tracing span record."""
 
     span_id: str
-    parent_span_id: Optional[str] = None
+    parent_span_id: str | None = None
     name: str
     start_time: str
     end_time: str
     duration_ms: int
-    attributes: Dict[str, Any] = Field(default_factory=dict)
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class AuditLogEntry(BaseModel):
@@ -31,11 +32,11 @@ class AuditLogEntry(BaseModel):
     ticker: str = Field(..., description="Target equity ticker symbol.")
     fiscal_year: int = Field(..., description="Fiscal year analyzed.")
     prompt_hash: str = Field(..., description="SHA-256 hash of the sanitized user prompt.")
-    tools_called: List[str] = Field(default_factory=list, description="List of tool identifiers invoked.")
+    tools_called: list[str] = Field(default_factory=list, description="List of tool identifiers invoked.")
     model_id: str = Field(..., description="Primary coordinator model identifier.")
     latency_ms: int = Field(..., description="Total end-to-end execution latency in milliseconds.")
     total_tokens: int = Field(..., description="Total prompt and completion tokens consumed.")
     cost_usd: float = Field(..., description="Estimated inference cost in USD.")
     guardrail_verdict: str = Field(default="PASS", description="PASS, REJECT_INJECTION, REJECT_SCOPE.")
     citations_count: int = Field(default=0, description="Total evidentiary citations generated.")
-    spans: List[ExecutionSpan] = Field(default_factory=list, description="Nested OpenTelemetry spans.")
+    spans: list[ExecutionSpan] = Field(default_factory=list, description="Nested OpenTelemetry spans.")

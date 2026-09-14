@@ -5,7 +5,8 @@ Slashes input token consumption by >70% and enforces the < $0.25/brief budget co
 """
 
 import time
-from typing import Dict, Any, Optional
+from typing import Any
+
 from src.config import Settings
 
 
@@ -34,13 +35,13 @@ class ContextCachingManager:
     Tracks cache hit ratios, token savings, and cost reductions.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        self._caches: Dict[str, CachedFilingContext] = {}
+        self._caches: dict[str, CachedFilingContext] = {}
 
     def get_or_create_cache(
         self, ticker: str, fiscal_year: int, document_text_length: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Retrieves an active context cache for the ticker and fiscal year,
         or simulates creating a new Vertex AI context cache.
@@ -65,7 +66,7 @@ class ContextCachingManager:
         estimated_tokens = max(35000, document_text_length // 4)
         ttl_seconds = self.settings.context_cache_ttl_minutes * 60
         cache_id = f"projects/{self.settings.gcp_project_id}/locations/{self.settings.gcp_region}/cachedContents/cache-{ticker.lower()}-{fiscal_year}"
-        
+
         new_cache = CachedFilingContext(
             cache_id=cache_id,
             ticker=ticker,

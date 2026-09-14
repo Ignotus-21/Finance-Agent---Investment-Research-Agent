@@ -5,21 +5,22 @@ Executes a Plan-and-Execute reasoning loop with explicit thought budgeting,
 dispatches tasks concurrently to specialized sub-agents, and drives end-to-end brief synthesis.
 """
 
-import time
 import asyncio
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+import time
+from typing import Any
 
-from src.core.interfaces import BaseAgent
-from src.models.request import EquityResearchRequest
-from src.models.response import ResearchBriefResponse, FinancialMetric
+from pydantic import BaseModel
+
+from src.agents.macro_agent import MacroSubAgent
 from src.agents.sec_agent import SECSubAgent
 from src.agents.transcript_agent import TranscriptSubAgent
-from src.agents.macro_agent import MacroSubAgent
-from src.tools.financial_calculator import FinancialCalculator
 from src.cache.context_caching import ContextCachingManager
-from src.engine.synthesis_engine import SynthesisEngine
 from src.config import Settings
+from src.core.interfaces import BaseAgent
+from src.engine.synthesis_engine import SynthesisEngine
+from src.models.request import EquityResearchRequest
+from src.models.response import ResearchBriefResponse
+from src.tools.financial_calculator import FinancialCalculator
 
 
 class SubTaskPlan(BaseModel):
@@ -27,15 +28,15 @@ class SubTaskPlan(BaseModel):
     task_id: str
     target_agent: str
     action: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
 
 
 class ExecutionPlan(BaseModel):
     """Decomposed multi-agent execution plan formulated by the Root Coordinator."""
     ticker: str
     fiscal_year: int
-    focus_areas: List[str]
-    planned_steps: List[SubTaskPlan]
+    focus_areas: list[str]
+    planned_steps: list[SubTaskPlan]
     thought_budget_allocated: int
 
 
@@ -52,8 +53,8 @@ class RootCoordinatorAgent(BaseAgent):
         macro_agent: MacroSubAgent,
         calculator: FinancialCalculator,
         synthesis_engine: SynthesisEngine,
-        context_cache_manager: Optional[ContextCachingManager] = None,
-        settings: Optional[Settings] = None
+        context_cache_manager: ContextCachingManager | None = None,
+        settings: Settings | None = None
     ) -> None:
         self.sec_agent = sec_agent
         self.transcript_agent = transcript_agent
@@ -67,7 +68,7 @@ class RootCoordinatorAgent(BaseAgent):
     def agent_name(self) -> str:
         return "root_coordinator_agent"
 
-    async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, context: dict[str, Any]) -> dict[str, Any]:
         req = EquityResearchRequest(**context)
         response = await self.execute_research(req)
         return response.model_dump()
@@ -79,7 +80,7 @@ class RootCoordinatorAgent(BaseAgent):
         start_time = time.monotonic()
 
         # Step 1: Formulate Decomposed Execution Plan (Gemini 2.5 Pro reasoning with Thinking Budget)
-        plan = self._formulate_execution_plan(request)
+        _ = self._formulate_execution_plan(request)
 
         # Step 2: Context Cache Check (Gemini Context Caching on 10-K document)
         cache_status = self.cache_manager.get_or_create_cache(

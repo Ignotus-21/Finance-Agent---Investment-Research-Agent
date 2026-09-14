@@ -4,9 +4,10 @@ Executes grounded macroeconomic web queries and retrieves real-time interest rat
 regulatory updates, and market context.
 """
 
-from typing import Dict, Any, List, Optional
-from src.core.interfaces import MarketDataInterface, BaseTool
+from typing import Any
+
 from src.config import Settings
+from src.core.interfaces import BaseTool, MarketDataInterface
 
 
 class VertexSearchClient(MarketDataInterface, BaseTool):
@@ -15,11 +16,11 @@ class VertexSearchClient(MarketDataInterface, BaseTool):
     Provides verifiable citations with source URLs and timestamps.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        
+
         # Grounded macroeconomic context cache
-        self._macro_backdrop: Dict[str, List[Dict[str, Any]]] = {
+        self._macro_backdrop: dict[str, list[dict[str, Any]]] = {
             "GLOBAL_MACRO": [
                 {
                     "title": "Federal Reserve Monetary Policy Statement",
@@ -79,12 +80,12 @@ class VertexSearchClient(MarketDataInterface, BaseTool):
         return await self.query_market_context(ticker, focus_areas)
 
     async def query_market_context(
-        self, ticker: str, focus_areas: List[str]
-    ) -> List[Dict[str, Any]]:
-        results: List[Dict[str, Any]] = []
+        self, ticker: str, focus_areas: list[str]
+    ) -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
         # Add general macro backdrop
         results.extend(self._macro_backdrop.get("GLOBAL_MACRO", []))
-        
+
         # Add ticker-specific news if present
         ticker_upper = ticker.upper()
         if ticker_upper in self._macro_backdrop:

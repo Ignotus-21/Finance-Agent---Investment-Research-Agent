@@ -3,8 +3,9 @@ Chaos & Failure Injection Tests: Vertex AI 503 Transient Failure Simulation.
 Tests retry policies and exponential backoff resilience.
 """
 
-import pytest
 import asyncio
+
+import pytest
 
 
 class TransientFailureService:
@@ -16,7 +17,7 @@ class TransientFailureService:
         max_retries = 4
         backoff = 0.05
 
-        for attempt in range(max_retries):
+        for _attempt in range(max_retries):
             self.attempts += 1
             if self.attempts <= self.failure_threshold:
                 await asyncio.sleep(backoff)

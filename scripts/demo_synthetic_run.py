@@ -11,17 +11,21 @@ This script demonstrates:
 
 import asyncio
 import json
-import time
 import sys
+import time
 from pathlib import Path
 
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.agents.adk_agent import (
+    compute_financial_ratios,
+    create_financial_adk_agent,
+    fetch_sec_filing_section,
+)
 from src.core.container import ApplicationContainer
-from src.models.request import EquityResearchRequest
 from src.guardrails.input_guardrail import InputGuardrail
-from src.agents.adk_agent import create_financial_adk_agent, fetch_sec_filing_section, compute_financial_ratios
+from src.models.request import EquityResearchRequest
 
 
 def print_banner(title: str):

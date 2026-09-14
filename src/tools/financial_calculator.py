@@ -4,9 +4,9 @@ Pure Python mathematical tool computing core fundamental ratios using Decimal pr
 Eliminates floating-point drift and prevents LLM numerical hallucinations.
 """
 
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from decimal import ROUND_HALF_UP, Decimal
+from typing import Any
+
 from src.core.interfaces import BaseTool
 from src.models.response import FinancialMetric
 
@@ -40,8 +40,8 @@ class FinancialCalculator(BaseTool):
 
     @classmethod
     def calculate_yoy_growth(
-        cls, current_val: float, prior_val: Optional[float], metric_name: str = "revenue"
-    ) -> Optional[FinancialMetric]:
+        cls, current_val: float, prior_val: float | None, metric_name: str = "revenue"
+    ) -> FinancialMetric | None:
         """
         Computes YoY Growth: ((Current - Prior) / Prior) * 100
         """
@@ -50,7 +50,7 @@ class FinancialCalculator(BaseTool):
 
         d_curr = cls.to_decimal(current_val)
         d_prior = cls.to_decimal(prior_val)
-        
+
         # Growth % = ((d_curr - d_prior) / d_prior) * 100
         growth_pct = ((d_curr - d_prior) / d_prior) * Decimal("100.0")
         rounded = float(growth_pct.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
@@ -71,13 +71,13 @@ class FinancialCalculator(BaseTool):
         cls,
         operating_income_curr: float,
         revenue_curr: float,
-        operating_income_prior: Optional[float] = None,
-        revenue_prior: Optional[float] = None,
-    ) -> List[FinancialMetric]:
+        operating_income_prior: float | None = None,
+        revenue_prior: float | None = None,
+    ) -> list[FinancialMetric]:
         """
         Computes Current Operating Margin (%) and Operating Margin Compression (bps).
         """
-        metrics: List[FinancialMetric] = []
+        metrics: list[FinancialMetric] = []
         if revenue_curr <= 0:
             return metrics
 
@@ -127,7 +127,7 @@ class FinancialCalculator(BaseTool):
     @classmethod
     def calculate_free_cash_flow_conversion(
         cls, cash_from_ops: float, capex: float, net_income: float
-    ) -> Optional[FinancialMetric]:
+    ) -> FinancialMetric | None:
         """
         Computes Free Cash Flow (FCF = Operating Cash - CapEx)
         and FCF Conversion % = (FCF / Net Income) * 100
@@ -157,7 +157,7 @@ class FinancialCalculator(BaseTool):
     @classmethod
     def calculate_debt_to_equity(
         cls, total_debt: float, shareholders_equity: float
-    ) -> Optional[FinancialMetric]:
+    ) -> FinancialMetric | None:
         """
         Computes Debt-to-Equity Ratio = Total Debt / Shareholders' Equity
         """
@@ -181,9 +181,9 @@ class FinancialCalculator(BaseTool):
             provenance_verified=True
         )
 
-    def compute_all_metrics(self, sec_data: Dict[str, Any]) -> List[FinancialMetric]:
+    def compute_all_metrics(self, sec_data: dict[str, Any]) -> list[FinancialMetric]:
         """Extracts primary figures from parsed SEC statements and returns all verified metrics."""
-        metrics: List[FinancialMetric] = []
+        metrics: list[FinancialMetric] = []
         inc = sec_data.get("income_statement", {})
         bal = sec_data.get("balance_sheet", {})
         cf = sec_data.get("cash_flow", {})
