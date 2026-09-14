@@ -14,11 +14,11 @@ class ScopeClassifier:
     # Prohibited intent patterns
     PROHIBITED_INTENTS = [
         # Stock price speculation & fortune telling
-        (r"(?i)\b(will\s+(?:the\s+)?stock\s+(?:hit|reach|drop|rise)|price\s+target\s+prediction|option\s+strike\s+price\s+to\s+buy|get\s+rich)\b", 
+        (r"(?i)\b(will\s+(?:[A-Za-z0-9]+\s+)?(?:the\s+)?stock\s+(?:hit|reach|drop|rise)|price\s+target\s+prediction|option\s+strike\s+price\s+to\s+buy|get\s+rich)\b", 
          "Stock price speculation and quantitative trading advice are prohibited by system governance."),
         
         # Algorithmic trade execution
-        (r"(?i)\b(buy\s+\d+\s+shares|sell\s+\d+\s+shares|execute\s+order|transmit\s+(?:to\s+)?broker|place\s+(?:a\s+)?trade)\b", 
+        (r"(?i)\b(buy\s+[\d,]+\s+shares|sell\s+[\d,]+\s+shares|generate\s+a\s+buy\s+order|execute\s+order|transmit\s+(?:it\s+)?(?:to\s+)?broker|place\s+(?:a\s+)?trade)\b", 
          "Trade execution and direct brokerage order routing are strictly out-of-scope."),
         
         # Non-financial creative or code generation requests
@@ -31,7 +31,9 @@ class ScopeClassifier:
         "revenue", "sales", "margin", "income", "profit", "ebitda", "cash flow", "fcf",
         "debt", "equity", "leverage", "capex", "10-k", "10-q", "8-k", "filing", "transcript",
         "earnings", "quarter", "cfo", "ceo", "guidance", "headwinds", "valuation", "ratio",
-        "balance sheet", "sec", "xbrl", "shares", "dividend", "repurchase", "research", "stock"
+        "balance sheet", "sec", "xbrl", "shares", "dividend", "repurchase", "research", "stock",
+        "operating", "expense", "expenses", "assets", "aum", "growth", "flow", "investment",
+        "capital", "roe", "roce", "return", "fee", "fund", "management", "cost", "performance"
     ]
 
     @classmethod
