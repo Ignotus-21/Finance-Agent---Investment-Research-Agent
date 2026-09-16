@@ -12,7 +12,7 @@
 
 ## 1. Purpose & Benchmark Objectives
 
-The Golden Evaluation Dataset provides an authoritative, regression-resistant evaluation suite to benchmark the IRA multi-agent system. In institutional finance, small numerical inaccuracies or hallucinated decimals can destroy investment theses and create regulatory liability. 
+The Golden Evaluation Dataset provides an authoritative, regression-resistant evaluation suite to benchmark the IRA multi-agent system. In institutional finance, small numerical inaccuracies or hallucinated decimals can destroy investment theses and create regulatory liability.
 
 These guidelines define the methodology used to curate, verify, annotate, and evaluate test scenarios across the four target market sectors (Technology, Healthcare, Energy, Financials) and adversarial security vectors.
 
@@ -32,7 +32,7 @@ graph TD
 
 ### 2.1 Archetype Definitions
 
-1. **Standard Extraction:** 
+1. **Standard Extraction:**
    - Queries targeting explicit financial metrics within a single SEC filing (e.g., segment revenues, CapEx, cash balances).
    - *Target Criteria:* 100% extraction precision, zero hallucination, exact line-item citation.
 2. **Complex Comparative:**

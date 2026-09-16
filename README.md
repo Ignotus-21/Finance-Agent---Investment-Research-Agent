@@ -29,7 +29,7 @@ graph TB
 
     subgraph MultiAgentRuntime [Vertex AI Agent Runtime - Google ADK]
         RootAgent[Root Coordinator Agent<br/>Gemini 2.5 Pro + 2k Thinking Budget]
-        
+
         subgraph SubAgents [Domain-Specific Specialized Sub-Agents]
             SECAgent[SEC Filing Specialist<br/>MCP EDGAR / XBRL Tables]
             TranscriptAgent[Earnings Transcript Specialist<br/>Executive Remarks vs Q&A]

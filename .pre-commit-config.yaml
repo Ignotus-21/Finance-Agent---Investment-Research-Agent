@@ -1,0 +1,97 @@
+# Pre-commit hooks - local quality gate mirroring the CI pipeline.
+#
+# Install once per clone:
+#     pip install pre-commit && pre-commit install
+#
+# Run against the whole repo (CI parity check):
+#     pre-commit run --all-files
+#
+# DESIGN NOTE - no auto-formatter is configured.
+# `ruff format` / `black` would rewrite 37 of the 61 Python files in this
+# repository on the very first commit, burying real changes under thousands of
+# lines of cosmetic churn and invalidating every open PR. Ruff's linter already
+# enforces import ordering (`I`) and the pycodestyle rules that matter. If the
+# team later wants a formatter, land it as one isolated
+# "style: apply ruff format" commit first, then add the hook here.
+repos:
+  # ----------------------------------------------------------------------
+  # Core file hygiene - fast, no project dependencies required.
+  # ----------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-yaml
+        # cloudbuild.yaml and the GitHub workflows are load-bearing; a YAML
+        # typo here breaks the deploy pipeline rather than a single test.
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: detect-private-key
+        # Complements Secret Manager: keys must never reach the object store.
+      - id: check-case-conflict
+      - id: debug-statements
+        # Blocks a stray breakpoint() from reaching a Cloud Run revision.
+
+  # ----------------------------------------------------------------------
+  # Ruff + MyPy run as LOCAL hooks against the tools already installed by
+  # `pip install -e .[dev]`.
+  #
+  # Why local instead of the upstream ruff-pre-commit / mirrors-mypy repos:
+  #   1. Version parity. Mirrored hooks pin their own `rev:`, creating a
+  #      second source of truth that silently drifts from the versions in
+  #      pyproject.toml, so a commit can pass locally and fail in CI.
+  #   2. No duplicate toolchain. Mirrors build an isolated env under
+  #      ~/.cache/pre-commit and re-download ruff and every mypy type stub.
+  #   3. Managed workstations. Binary allowlisting (e.g. Santa) kills
+  #      freshly-downloaded unsigned binaries from that cache; the venv's
+  #      already-approved executables are unaffected.
+  #
+  # Requires the dev extras to be installed and the venv active.
+  # ----------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff (lint + import sort, autofix)
+        entry: ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types_or: [python, pyi]
+        files: ^(src|tests|scripts|eval)/
+
+      - id: mypy
+        name: mypy (static type check, src/ only)
+        # Tests are excluded on purpose: they lean on loose fixtures and
+        # mocks, and type-checking them produced noise without ever
+        # surfacing a real defect.
+        entry: mypy --ignore-missing-imports
+        language: system
+        types: [python]
+        files: ^src/
+        # Pass the package as a whole rather than the changed files, so
+        # cross-module inference matches `make lint` exactly.
+        pass_filenames: false
+        args: [src/]
+
+  # ----------------------------------------------------------------------
+  # Secret scanning - last line of defence before credentials are pushed.
+  # Baseline file records reviewed/accepted findings (e.g. fixture hashes).
+  # ----------------------------------------------------------------------
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: ^(\.secrets\.baseline|uv\.lock|.*\.lock)$
+
+# The full test suite and the evaluation regression gate are NOT run here.
+# They take too long for a commit hook and would push developers toward
+# `--no-verify`. Both run on every push via .github/workflows/.
+default_language_version:
+  python: python3.11
+
+ci:
+  autofix_prs: false

@@ -39,7 +39,12 @@ source .venv/bin/activate
 # Install package in editable mode with development tooling
 pip install --upgrade pip
 pip install -e .[dev]
+
+# Activate the Git pre-commit hooks (see section 3.0)
+pre-commit install
 ```
+
+> Or simply run `make install`, which performs both steps.
 
 ### Step 2.4: Configure Environment Variables
 Copy the template configuration file:
@@ -69,11 +74,46 @@ All development workflows are standardized via the project `Makefile`:
 
 ```mermaid
 graph LR
-    Code[Write Code] --> Lint[make lint<br/>Ruff & MyPy]
+    Code[Write Code] --> Hooks[git commit<br/>pre-commit hooks]
+    Hooks -->|blocked| Code
+    Hooks --> Lint[make lint<br/>Ruff & MyPy]
     Lint --> Test[make test<br/>Pytest >= 80% Cov]
     Test --> Eval[make eval<br/>Golden Regression Gate]
-    Eval --> Commit[Git Conventional Commit]
+    Eval --> Commit[Push / Open PR]
 ```
+
+### 3.0 Pre-Commit Hooks (First Line of Defence)
+
+Every commit is gated locally by [`.pre-commit-config.yaml`](file:///.pre-commit-config.yaml), so
+defects are caught in seconds on your machine rather than minutes later in Cloud Build.
+
+```bash
+make hooks        # one-time activation (also run by `make install`)
+make hooks-run    # run every hook against the whole repo - CI parity check
+```
+
+| Hook | What it blocks |
+|---|---|
+| `ruff` (autofix) | Lint violations and unsorted imports in `src/`, `tests/`, `scripts/`, `eval/` |
+| `mypy` | Type errors in `src/` |
+| `detect-secrets` | Credentials reaching the object store; reviewed findings live in `.secrets.baseline` |
+| `detect-private-key` | Committed private keys |
+| `check-yaml` / `check-toml` / `check-json` | Malformed `cloudbuild.yaml`, workflows, or configs |
+| `debug-statements` | A stray `breakpoint()` shipping to a Cloud Run revision |
+| `end-of-file-fixer` / `trailing-whitespace` | Whitespace noise in future diffs |
+| `check-added-large-files` | Accidental commits over 512 KB |
+
+Two deliberate omissions:
+
+- **No auto-formatter.** `ruff format` / `black` would rewrite 37 of the 61 Python files on the
+  first run, burying real changes in cosmetic churn. Ruff's linter already enforces import
+  ordering and the pycodestyle rules that matter. Adopting a formatter should be one isolated
+  `style:` commit first, then a hook.
+- **No test suite in the hook.** `make test` and `make eval` are too slow for a commit hook and
+  would push everyone toward `--no-verify`. Both run on every push in
+  [`.github/workflows/`](file:///.github/workflows/).
+
+To bypass in a genuine emergency: `git commit --no-verify`. CI will still enforce the same checks.
 
 ### 3.1 Automated Testing & Code Coverage
 Run the full unit, integration, and chaos test suites:

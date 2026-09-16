@@ -10,7 +10,7 @@
 2026-09-14
 
 ### Context & Problem Statement
-In institutional investment research, synthesizing an equity research brief requires extracting precise numerical tables from multi-hundred-page SEC filings, isolating executive sentiment from earnings call transcripts, and retrieving real-time macroeconomic news. 
+In institutional investment research, synthesizing an equity research brief requires extracting precise numerical tables from multi-hundred-page SEC filings, isolating executive sentiment from earnings call transcripts, and retrieving real-time macroeconomic news.
 
 We must decide on the agent orchestration topology: Should we utilize a **Monolithic ReAct (Reasoning + Acting) Agent** equipped with all tools simultaneously, or architect a **Hierarchical Multi-Agent System** using the Google Agent Development Kit (ADK) with a Root Coordinator and specialized domain sub-agents?
 
@@ -45,15 +45,15 @@ We must decide on the agent orchestration topology: Should we utilize a **Monoli
 ```mermaid
 graph TD
     Root[Root Coordinator Agent<br/>Gemini 2.5 Pro + Thinking Budget]
-    
+
     subgraph ParallelExecution [Concurrent Asynchronous Dispatch]
         SEC[SEC Filing Specialist<br/>Gemini 2.5 Flash]
         Trans[Earnings Transcript Specialist<br/>Gemini 2.5 Flash]
         Macro[Macro & News Specialist<br/>Vertex AI Search]
     end
-    
+
     Synth[Financial Synthesis & Verification Engine]
-    
+
     Root -->|Dispatch Plan| ParallelExecution
     SEC -->|Parsed Tables| Synth
     Trans -->|Segmented Quotes| Synth
