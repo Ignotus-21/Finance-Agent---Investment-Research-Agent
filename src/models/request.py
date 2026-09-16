@@ -2,7 +2,6 @@
 Pydantic Request Schemas for the IRA REST API.
 """
 
-from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -21,7 +20,7 @@ class EquityResearchRequest(BaseModel):
         le=2030,
         examples=[2024]
     )
-    focus_areas: List[str] = Field(
+    focus_areas: list[str] = Field(
         default_factory=lambda: ["Operating_Margin", "Segment_Revenue", "Risk_Factors"],
         description="Specific fundamental topics to analyze.",
         examples=[["Services_Margin", "China_Headwinds"]]
@@ -46,7 +45,7 @@ class FilingResearchRequest(BaseModel):
     ticker: str = Field(..., description="Equity ticker symbol.")
     fiscal_year: int = Field(..., description="Fiscal year to extract.")
     form: str = Field(default="10-K", description="SEC filing type (10-K, 10-Q, 8-K).")
-    sections: List[str] = Field(
+    sections: list[str] = Field(
         default_factory=lambda: ["BALANCE_SHEET", "INCOME_STATEMENT"],
         description="Statement sections to parse."
     )

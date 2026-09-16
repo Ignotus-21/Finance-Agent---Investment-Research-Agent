@@ -4,9 +4,9 @@ Asserts that evaluation scores on the Golden Benchmark Dataset meet all required
 Fails CI/CD builds with exit code 1 if quality regressions are detected.
 """
 
-import sys
 import asyncio
-import json
+import sys
+
 from eval.evaluate_golden_dataset import run_evaluation_benchmark
 
 

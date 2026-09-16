@@ -4,21 +4,22 @@ Cross-verifies quantitative numbers with qualitative commentary and assembles
 the final schema-validated ResearchBriefResponse conforming to the OpenAPI contract.
 """
 
-from typing import Dict, Any, List, Optional
-import uuid
 import datetime
+import uuid
+from typing import Any
+
+from src.config import Settings
+from src.engine.citation_verifier import CitationVerifier
 from src.models.request import EquityResearchRequest
 from src.models.response import (
-    ResearchBriefResponse,
-    QualitativeSynthesis,
-    RiskMatrixItem,
-    ResearchMetadata,
     EvidentiaryCitation,
     FinancialMetric,
+    QualitativeSynthesis,
+    ResearchBriefResponse,
+    ResearchMetadata,
+    RiskMatrixItem,
 )
 from src.tools.financial_calculator import FinancialCalculator
-from src.engine.citation_verifier import CitationVerifier
-from src.config import Settings
 
 
 class SynthesisEngine:
@@ -28,7 +29,7 @@ class SynthesisEngine:
     """
 
     def __init__(
-        self, calculator: FinancialCalculator, settings: Optional[Settings] = None
+        self, calculator: FinancialCalculator, settings: Settings | None = None
     ) -> None:
         self.calculator = calculator
         self.settings = settings or Settings()
@@ -36,10 +37,10 @@ class SynthesisEngine:
     async def synthesize_brief(
         self,
         request: EquityResearchRequest,
-        sec_data: Dict[str, Any],
-        transcript_data: Dict[str, Any],
-        macro_data: Dict[str, Any],
-        verified_metrics: List[FinancialMetric],
+        sec_data: dict[str, Any],
+        transcript_data: dict[str, Any],
+        macro_data: dict[str, Any],
+        verified_metrics: list[FinancialMetric],
         cache_hit: bool = True,
         latency_ms: int = 38500
     ) -> ResearchBriefResponse:
@@ -49,7 +50,7 @@ class SynthesisEngine:
         accession = sec_data.get("accession_number", "0000000000-24-000000")
         company_name = sec_data.get("company_name", f"{ticker} Corporation")
 
-        citations: List[EvidentiaryCitation] = []
+        citations: list[EvidentiaryCitation] = []
 
         # 1. Add primary filing citations for verified metrics
         for metric in verified_metrics:
@@ -61,7 +62,7 @@ class SynthesisEngine:
                     table_name="Consolidated Financial Statements",
                     row_item=metric.display_name,
                     column_header=f"FY{fiscal_year}",
-                    source_url=f"https://www.sec.gov/edgar/searchedgar/companysearch"
+                    source_url="https://www.sec.gov/edgar/searchedgar/companysearch"
                 )
             )
 
@@ -136,7 +137,7 @@ class SynthesisEngine:
         cost_usd = 0.165 if cache_hit else 0.420
 
         metadata = ResearchMetadata(
-            generation_timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            generation_timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
             latency_ms=latency_ms,
             total_tokens_consumed=tokens_consumed,
             context_cache_hit=cache_hit,

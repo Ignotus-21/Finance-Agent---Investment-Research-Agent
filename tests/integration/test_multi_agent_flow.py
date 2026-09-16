@@ -5,6 +5,7 @@ and synthesis with 100% line-item citation provenance.
 """
 
 import pytest
+
 from src.core.container import ApplicationContainer
 from src.models.request import EquityResearchRequest
 

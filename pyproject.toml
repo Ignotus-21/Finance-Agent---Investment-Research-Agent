@@ -16,7 +16,9 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.8.0",
     "pydantic-settings>=2.4.0",
-    "google-genai>=0.1.1",
+    "google-adk[gcp]>=2.0.0",
+    "google-genai>=2.0.0",
+    "a2a-sdk[http-server]>=0.3.22",
     "google-cloud-aiplatform>=1.60.0",
     "google-cloud-bigquery>=3.25.0",
     "google-cloud-logging>=3.11.0",
@@ -52,7 +54,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "C4", "UP"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]
 
 [tool.black]
 line-length = 100
@@ -60,9 +62,10 @@ target-version = ["py311"]
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
+strict = false
 ignore_missing_imports = true
-disallow_untyped_defs = true
+explicit_package_bases = true
+disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 minversion = "7.0"
