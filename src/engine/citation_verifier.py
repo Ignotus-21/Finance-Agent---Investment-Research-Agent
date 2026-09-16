@@ -4,10 +4,10 @@ Validates that 100% of numerical disclosures, calculated ratios, and executive c
 are backed by verified primary SEC Form 10-K/10-Q disclosures or transcript timestamps.
 """
 
-from typing import List, Dict, Any, Tuple
 import uuid
-from src.models.response import EvidentiaryCitation, FinancialMetric
+
 from src.core.exceptions import VerificationFailedException
+from src.models.response import EvidentiaryCitation, FinancialMetric
 
 
 class CitationVerifier:
@@ -35,7 +35,7 @@ class CitationVerifier:
             row_item=row_item,
             column_header=column_header,
             verbatim_quote=None,
-            source_url=source_url or f"https://www.sec.gov/edgar/searchedgar/companysearch",
+            source_url=source_url or "https://www.sec.gov/edgar/searchedgar/companysearch",
             confidence_score=1.0
         )
 
@@ -88,8 +88,8 @@ class CitationVerifier:
 
     @classmethod
     def assert_complete_provenance(
-        cls, metrics: List[FinancialMetric], citations: List[EvidentiaryCitation]
-    ) -> Tuple[bool, float]:
+        cls, metrics: list[FinancialMetric], citations: list[EvidentiaryCitation]
+    ) -> tuple[bool, float]:
         """
         Asserts that every metric has provenance_verified = True and has corresponding citations.
         Returns (is_fully_provenant, precision_score).

@@ -3,9 +3,10 @@ Chaos & Failure Injection Tests: Upstream SEC EDGAR 429 Rate Limiting.
 Simulates rapid bursts of queries and asserts token bucket rate limiting enforces the <= 8 req/s ceiling.
 """
 
-import pytest
 import time
-import asyncio
+
+import pytest
+
 from src.tools.sec_edgar_mcp import TokenBucketRateLimiter
 
 

@@ -3,8 +3,9 @@ Unit tests for SEC EDGAR MCP Client and Statement Parsing.
 """
 
 import pytest
-from src.tools.sec_edgar_mcp import SECFilingClient
+
 from src.core.exceptions import FilingNotFoundException
+from src.tools.sec_edgar_mcp import SECFilingClient
 
 
 @pytest.mark.asyncio

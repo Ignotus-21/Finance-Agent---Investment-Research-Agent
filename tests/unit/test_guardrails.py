@@ -3,10 +3,10 @@ Unit tests for Pre-Execution Guardrails, DLP Masking, and Scope Classification.
 """
 
 import pytest
-from src.guardrails.input_guardrail import InputGuardrail
+
+from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
 from src.guardrails.dlp_masker import CloudDLPMasker
-from src.guardrails.scope_classifier import ScopeClassifier
-from src.core.exceptions import SecurityViolationException, OutOfDomainQueryException
+from src.guardrails.input_guardrail import InputGuardrail
 
 
 def test_dlp_masker_redactions():

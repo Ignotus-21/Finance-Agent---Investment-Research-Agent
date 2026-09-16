@@ -2,12 +2,14 @@
 Pytest configuration and shared fixtures for unit, integration, and chaos testing.
 """
 
+from collections.abc import AsyncGenerator
+
 import pytest
-from typing import AsyncGenerator
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from src.api.app import app
-from src.core.container import ApplicationContainer
 from src.config import Settings
+from src.core.container import ApplicationContainer
 
 
 @pytest.fixture(scope="session")

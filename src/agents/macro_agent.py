@@ -4,10 +4,11 @@ Queries Vertex AI Search Grounding to capture interest rate environment,
 regulatory backdrop, and competitor industry dynamics.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
+
+from src.config import Settings
 from src.core.interfaces import BaseAgent
 from src.tools.search_grounding import VertexSearchClient
-from src.config import Settings
 
 
 class MacroSubAgent(BaseAgent):
@@ -15,7 +16,7 @@ class MacroSubAgent(BaseAgent):
     Sub-agent dedicated to real-time macroeconomic backdrop and financial news grounding.
     """
 
-    def __init__(self, client: VertexSearchClient, settings: Optional[Settings] = None) -> None:
+    def __init__(self, client: VertexSearchClient, settings: Settings | None = None) -> None:
         self.client = client
         self.settings = settings or Settings()
 
@@ -23,17 +24,17 @@ class MacroSubAgent(BaseAgent):
     def agent_name(self) -> str:
         return "macro_news_specialist"
 
-    async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, context: dict[str, Any]) -> dict[str, Any]:
         ticker = context.get("ticker", "")
         focus_areas = context.get("focus_areas", [])
         return await self.gather_macro_context(ticker, focus_areas)
 
     async def gather_macro_context(
-        self, ticker: str, focus_areas: List[str]
-    ) -> Dict[str, Any]:
+        self, ticker: str, focus_areas: list[str]
+    ) -> dict[str, Any]:
         """Queries grounded macroeconomic indicators and corporate news."""
         news_items = await self.client.query_market_context(ticker, focus_areas)
-        
+
         return {
             "agent": self.agent_name,
             "ticker": ticker.upper(),

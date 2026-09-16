@@ -4,25 +4,25 @@ Wires tools, sub-agents, calculators, caching managers, and coordinators.
 Allows complete dependency substitution for testing.
 """
 
-from typing import Optional
-from src.config import Settings
-from src.tools.financial_calculator import FinancialCalculator
-from src.tools.sec_edgar_mcp import SECFilingClient
-from src.tools.transcript_parser import TranscriptClient
-from src.tools.search_grounding import VertexSearchClient
-from src.cache.context_caching import ContextCachingManager
-from src.guardrails.input_guardrail import InputGuardrail
-from src.agents.sec_agent import SECSubAgent
-from src.agents.transcript_agent import TranscriptSubAgent
+
 from src.agents.macro_agent import MacroSubAgent
 from src.agents.root_coordinator import RootCoordinatorAgent
+from src.agents.sec_agent import SECSubAgent
+from src.agents.transcript_agent import TranscriptSubAgent
+from src.cache.context_caching import ContextCachingManager
+from src.config import Settings
 from src.engine.synthesis_engine import SynthesisEngine
+from src.guardrails.input_guardrail import InputGuardrail
+from src.tools.financial_calculator import FinancialCalculator
+from src.tools.search_grounding import VertexSearchClient
+from src.tools.sec_edgar_mcp import SECFilingClient
+from src.tools.transcript_parser import TranscriptClient
 
 
 class ApplicationContainer:
     """Central Dependency Injection Container assembling all components."""
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
 
         # Deterministic Tools & Adapters
