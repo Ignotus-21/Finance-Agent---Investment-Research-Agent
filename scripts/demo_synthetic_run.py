@@ -124,7 +124,7 @@ async def main():
     print(f"Attached ADK Tools: {[getattr(t, '__name__', str(t)) for t in adk_agent.tools]}")
 
     print("Testing ADK Tool fetch_sec_filing_section:")
-    sec_tool_output = fetch_sec_filing_section(ticker="SYNTH", fiscal_year=2024, section="Item 7")
+    sec_tool_output = await fetch_sec_filing_section(ticker="SYNTH", fiscal_year=2024, section="Item 7")
     print("  Tool Result:", sec_tool_output[:120] + "...")
 
     print("Testing ADK Tool compute_financial_ratios:")

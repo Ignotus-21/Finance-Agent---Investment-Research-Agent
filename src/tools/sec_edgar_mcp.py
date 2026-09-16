@@ -206,13 +206,6 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
     def description(self) -> str:
         return "Fetches parsed audited tables and XBRL line-item metadata from SEC Form 10-K/10-Q filings."
 
-    async def execute(self, **kwargs: Any) -> Any:
-        ticker = kwargs.get("ticker", "")
-        form = kwargs.get("form", "10-K")
-        fiscal_year = kwargs.get("fiscal_year", 2024)
-        section = kwargs.get("section", "INCOME_STATEMENT")
-        return await self.fetch_filing_section(ticker, form, fiscal_year, section)
-
     async def fetch_filing_section(
         self, ticker: str, form: str, fiscal_year: int, section: str
     ) -> dict[str, Any]:

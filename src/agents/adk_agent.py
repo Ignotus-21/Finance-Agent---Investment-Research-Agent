@@ -5,14 +5,12 @@ deterministic calculation tools, SEC EDGAR filing retrieval, earnings call trans
 and real-time macroeconomic search grounding.
 """
 
+import asyncio
 import json
 
 from google.adk.agents import Agent
 from google.adk.apps import App
-from google.adk.artifacts import InMemoryArtifactService
 from google.adk.models import Gemini
-from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from src.tools.financial_calculator import FinancialCalculator
@@ -27,7 +25,7 @@ _search_client = VertexSearchClient()
 _calculator = FinancialCalculator()
 
 
-def fetch_sec_filing_section(ticker: str, fiscal_year: int = 2024, section: str = "Item 7") -> str:
+async def fetch_sec_filing_section(ticker: str, fiscal_year: int = 2024, section: str = "Item 7") -> str:
     """Retrieves official SEC filing text and verified disclosures for a company.
 
     Args:
@@ -39,18 +37,20 @@ def fetch_sec_filing_section(ticker: str, fiscal_year: int = 2024, section: str 
         A JSON string containing the extracted text, section metadata, and official SEC citation string.
     """
     ticker_clean = ticker.strip().upper()
-    key = f"{ticker_clean}_{fiscal_year}_10-K"
-    filing = _sec_client._mock_edgar_filings.get(key)
-    if not filing:
-        filing = _sec_client._generate_generic_filing(ticker_clean, fiscal_year, "10-K")
+    internal_section = "MDA_ITEM_7" if "7" in section else "INCOME_STATEMENT"
 
-    statements = filing.get("statements", {})
-    if "7" in section:
-        mda = statements.get("MDA_ITEM_7", {})
-        content = mda.get("text_summary", "Item 7 MD&A content summary.")
-        focus = mda.get("focus_areas", {})
+    # Routed through the public client so the Token Bucket rate limiter and
+    # Circuit Breaker apply to the ADK path exactly as they do to the REST path.
+    filing = await _sec_client.fetch_filing_section(
+        ticker=ticker_clean, form="10-K", fiscal_year=fiscal_year, section=internal_section
+    )
+    section_data = filing.get("data", {})
+
+    if internal_section == "MDA_ITEM_7":
+        content = section_data.get("text_summary", "Item 7 MD&A content summary.")
+        focus = section_data.get("focus_areas", {})
     else:
-        content = str(statements.get("INCOME_STATEMENT", {}))
+        content = str(section_data)
         focus = {}
 
     return json.dumps({
@@ -59,12 +59,14 @@ def fetch_sec_filing_section(ticker: str, fiscal_year: int = 2024, section: str 
         "section": section,
         "content_excerpt": content[:1200],
         "focus_areas": focus,
+        "accession_number": filing.get("accession_number"),
         "sec_citation": f"[SEC: {ticker_clean} 10-K FY{fiscal_year} {section}]",
-        "provenance": "U.S. Securities and Exchange Commission EDGAR System"
+        "provenance": "U.S. Securities and Exchange Commission EDGAR System",
+        "provenance_signature": filing.get("provenance_signature"),
     })
 
 
-def extract_xbrl_financial_facts(ticker: str, fiscal_year: int = 2024) -> str:
+async def extract_xbrl_financial_facts(ticker: str, fiscal_year: int = 2024) -> str:
     """Extracts authoritative XBRL tagged financial facts directly from SEC 10-K Item 8.
 
     Args:
@@ -75,27 +77,25 @@ def extract_xbrl_financial_facts(ticker: str, fiscal_year: int = 2024) -> str:
         JSON string containing revenue, net income, operating income, cash balance, and XBRL tags.
     """
     ticker_clean = ticker.strip().upper()
-    key = f"{ticker_clean}_{fiscal_year}_10-K"
-    filing = _sec_client._mock_edgar_filings.get(key)
-    if not filing:
-        filing = _sec_client._generate_generic_filing(ticker_clean, fiscal_year, "10-K")
 
-    statements = filing.get("statements", {})
-    is_stmt = statements.get("INCOME_STATEMENT", {})
-    bs_stmt = statements.get("BALANCE_SHEET", {})
-    cf_stmt = statements.get("CASH_FLOW", {})
+    # Each statement is fetched concurrently through the guarded public client method.
+    income, balance, cash_flow = await asyncio.gather(*(
+        _sec_client.fetch_filing_section(ticker_clean, "10-K", fiscal_year, statement)
+        for statement in ("INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW")
+    ))
 
     return json.dumps({
         "ticker": ticker_clean,
         "fiscal_year": fiscal_year,
-        "income_statement": is_stmt,
-        "balance_sheet": bs_stmt,
-        "cash_flow": cf_stmt,
+        "income_statement": income.get("data", {}),
+        "balance_sheet": balance.get("data", {}),
+        "cash_flow": cash_flow.get("data", {}),
+        "accession_number": income.get("accession_number"),
         "source": f"[SEC: {ticker_clean} 10-K FY{fiscal_year} Item 8 Financial Statements]"
     })
 
 
-def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") -> str:
+async def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") -> str:
     """Retrieves and analyzes executive remarks and analyst Q&A from quarterly earnings calls.
 
     Args:
@@ -106,44 +106,20 @@ def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") -> str:
         JSON string containing executive guidance, Q&A sentiment score, key quotes, and transcript citations.
     """
     ticker_clean = ticker.strip().upper()
-    key = f"{ticker_clean}_{quarter.upper()}"
-    t_data = _transcript_client._transcripts.get(key)
-    if not t_data:
-        t_data = {
-            "event": f"{ticker_clean} {quarter} Earnings Call",
-            "date": "2024-10-15",
-            "prepared_remarks": [
-                {
-                    "speaker_name": "Executive Leadership",
-                    "speaker_role": "Chief Financial Officer",
-                    "text": f"{ticker_clean} delivered strong operating performance with disciplined execution in {quarter}.",
-                    "sentiment": 0.75
-                }
-            ],
-            "analyst_qa": [
-                {
-                    "analyst_name": "Wall Street Research",
-                    "analyst_firm": "Equity Research Desk",
-                    "question": "What is your capital allocation priority for next fiscal year?",
-                    "executive_response": "We are focused on high-ROIC internal growth and returning excess cash flow to shareholders."
-                }
-            ]
-        }
-
-    remarks = t_data.get("prepared_remarks", [])
-    qa = t_data.get("analyst_qa", [])
+    transcript = await _transcript_client.get_transcript(ticker_clean, quarter)
 
     return json.dumps({
         "ticker": ticker_clean,
         "quarter": quarter,
-        "event": t_data.get("event", f"{ticker_clean} Earnings Call"),
-        "prepared_remarks_sample": remarks[:2],
-        "analyst_qa_sample": qa[:2],
-        "citation": f"[Earnings Call: {ticker_clean} {quarter} Executive Remarks]"
+        "event": transcript.get("event", f"{ticker_clean} Earnings Call"),
+        "prepared_remarks_sample": transcript.get("prepared_remarks", [])[:2],
+        "analyst_qa_sample": transcript.get("analyst_qa", [])[:2],
+        "citation": f"[Earnings Call: {ticker_clean} {quarter} Executive Remarks]",
+        "provenance_signature": transcript.get("provenance_signature"),
     })
 
 
-def query_macro_market_news(query: str, ticker: str = "") -> str:
+async def query_macro_market_news(query: str, ticker: str = "") -> str:
     """Grounds analysis in real-time macroeconomic news, benchmark interest rates, and industry dynamics.
 
     Args:
@@ -154,7 +130,7 @@ def query_macro_market_news(query: str, ticker: str = "") -> str:
         JSON string with verified external search results, date stamps, and news citations.
     """
     ticker_clean = ticker.strip().upper() if ticker else "GLOBAL_MACRO"
-    results = _search_client._macro_backdrop.get(ticker_clean) or _search_client._macro_backdrop.get("GLOBAL_MACRO", [])
+    results = await _search_client.query_market_context(ticker_clean, [query])
     return json.dumps({
         "query": query,
         "ticker": ticker_clean,
@@ -244,24 +220,3 @@ def create_financial_adk_app(agent: Agent | None = None) -> App:
         name="finance_research_app",
     )
 
-
-class ADKResearchRunner:
-    """High-level runner for executing financial research sessions via Google ADK."""
-
-    def __init__(self, model_name: str = "gemini-2.5-pro"):
-        self.agent = create_financial_adk_agent(model_name=model_name)
-        self.app = create_financial_adk_app(self.agent)
-        self.session_service = InMemorySessionService()
-        self.artifact_service = InMemoryArtifactService()
-        self.runner = Runner(
-            app=self.app,
-            session_service=self.session_service,
-            artifact_service=self.artifact_service,
-            auto_create_session=True,
-        )
-
-    def get_agent(self) -> Agent:
-        return self.agent
-
-    def get_app(self) -> App:
-        return self.app

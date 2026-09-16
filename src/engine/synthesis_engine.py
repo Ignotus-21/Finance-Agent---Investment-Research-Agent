@@ -41,8 +41,8 @@ class SynthesisEngine:
         transcript_data: dict[str, Any],
         macro_data: dict[str, Any],
         verified_metrics: list[FinancialMetric],
+        latency_ms: int,
         cache_hit: bool = True,
-        latency_ms: int = 38500
     ) -> ResearchBriefResponse:
         """Assembles and verifies all multi-source components into ResearchBriefResponse."""
         ticker = request.ticker

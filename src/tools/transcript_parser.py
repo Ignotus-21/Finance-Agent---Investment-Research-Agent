@@ -115,12 +115,6 @@ class TranscriptClient(BaseTool):
     def description(self) -> str:
         return "Retrieves and segments quarterly earnings call transcripts with executive speaker attribution and Q&A analysis."
 
-    async def execute(self, **kwargs: Any) -> Any:
-        ticker = kwargs.get("ticker", "")
-        quarter = kwargs.get("quarter", "Q4_2024")
-        speaker_role = kwargs.get("speaker_role", "ALL")
-        return await self.get_transcript(ticker, quarter, speaker_role)
-
     async def get_transcript(self, ticker: str, quarter: str, speaker_role: str = "ALL") -> dict[str, Any]:
         key = f"{ticker.upper()}_{quarter.upper()}"
         transcript = self._transcripts.get(key)
