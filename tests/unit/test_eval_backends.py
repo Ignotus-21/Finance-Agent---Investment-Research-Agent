@@ -15,8 +15,8 @@ from eval.regression_gate import _check_coverage_floor, check_thresholds
 from eval.vertex_backend import (
     VertexBackendUnavailableError,
     build_context,
-    build_eval_dataframe,
     run_vertex_evaluation,
+    select_judge_rows,
 )
 
 cfc = EvaluationMetrics.compute_faithfulness_with_coverage
@@ -148,20 +148,21 @@ class TestVertexBackend:
 
     def test_adversarial_scenarios_are_excluded_from_the_judge(self):
         """A blocked prompt has no answer; grading it would penalise a correct refusal."""
-        df = build_eval_dataframe([
+        rows = select_judge_rows([
             {"id": "a", "archetype": "adversarial_security", "prompt": "p", "response": "r", "context": "c"},
             {"id": "b", "archetype": "out_of_scope", "prompt": "p", "response": "r", "context": "c"},
             {"id": "c", "archetype": "standard_extraction", "prompt": "p", "response": "r", "context": "c"},
         ])
-        assert list(df["scenario_id"]) == ["c"]
+        assert [r["scenario_id"] for r in rows] == ["c"]
 
     def test_rows_without_response_or_context_are_dropped(self):
-        df = build_eval_dataframe([
+        rows = select_judge_rows([
             {"id": "a", "archetype": "standard_extraction", "prompt": "p", "response": "", "context": "c"},
             {"id": "b", "archetype": "standard_extraction", "prompt": "p", "response": "r", "context": ""},
-            {"id": "c", "archetype": "standard_extraction", "prompt": "p", "response": "r", "context": "c"},
+            {"id": "c", "archetype": "standard_extraction", "prompt": "p", "response": " ", "context": "c"},
+            {"id": "d", "archetype": "standard_extraction", "prompt": "p", "response": "r", "context": "c"},
         ])
-        assert list(df["scenario_id"]) == ["c"]
+        assert [r["scenario_id"] for r in rows] == ["d"]
 
     def test_empty_dataset_raises_rather_than_submitting(self):
         """Never bill for a request that cannot produce a meaningful score."""

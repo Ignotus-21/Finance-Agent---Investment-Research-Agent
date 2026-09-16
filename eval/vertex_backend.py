@@ -89,25 +89,26 @@ def build_context(citations: list[dict[str, Any]], max_chars: int = 12000) -> st
     return context[:max_chars]
 
 
-def build_eval_dataframe(scenario_records: list[dict[str, Any]]) -> pd.DataFrame:
-    """Shape executed scenarios into the service's expected column contract.
+def select_judge_rows(scenario_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Choose which executed scenarios are worth sending to the judge.
 
-    The service requires `prompt`, `response` and (for groundedness) `context`.
-    Rows whose response or context is empty are dropped rather than sent: the
-    judge would score an empty string as ungrounded, which is true but
-    uninformative, and it would drag the mean down for a reason unrelated to
-    output quality. The count of dropped rows is returned to the caller via
-    `run_vertex_evaluation` so the omission is visible rather than silent.
+    Deliberately kept free of pandas. This is where every actual decision lives
+    - which archetypes to exclude, which rows to drop - and CI does not install
+    the `[eval]` extra, so putting this logic behind a pandas import would leave
+    the rules untested on every run. `build_eval_dataframe` is the thin wrapper
+    that needs the dependency.
+
+    Two filters apply:
+
+    * Adversarial / out-of-scope scenarios are excluded. A blocked prompt has no
+      answer, and asking a judge to grade one scores a correct refusal as a bad
+      response.
+    * Rows with an empty response or empty context are dropped. The judge would
+      mark an empty string ungrounded - true, but uninformative, and it drags
+      the mean down for a reason unrelated to output quality. The count is
+      surfaced by `run_vertex_evaluation` so the omission is never silent.
     """
-    try:
-        import pandas as pd
-    except ImportError as exc:  # pragma: no cover - environment dependent
-        raise VertexBackendUnavailableError(
-            "pandas is required for the Vertex backend. "
-            'Install with: pip install "google-cloud-aiplatform[evaluation]"'
-        ) from exc
-
-    rows = []
+    rows: list[dict[str, Any]] = []
     for rec in scenario_records:
         if rec.get("archetype") in _EXCLUDED_ARCHETYPES:
             continue
@@ -124,8 +125,20 @@ def build_eval_dataframe(scenario_records: list[dict[str, Any]]) -> pd.DataFrame
                 "reference": rec.get("reference", ""),
             }
         )
+    return rows
 
-    return pd.DataFrame(rows)
+
+def build_eval_dataframe(scenario_records: list[dict[str, Any]]) -> pd.DataFrame:
+    """Shape selected scenarios into the service's `prompt`/`response`/`context` contract."""
+    try:
+        import pandas as pd
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise VertexBackendUnavailableError(
+            "pandas is required for the Vertex backend. "
+            'Install with: pip install "google-cloud-aiplatform[evaluation]"'
+        ) from exc
+
+    return pd.DataFrame(select_judge_rows(scenario_records))
 
 
 def run_vertex_evaluation(
@@ -142,6 +155,21 @@ def run_vertex_evaluation(
     module scope would slow down - and could break - the default `local` path
     that most runs use and that CI depends on.
     """
+    # Validate the input before touching the SDK. "You gave me nothing to
+    # score" is a caller error that is detectable without any dependency, and
+    # diagnosing it first means the user gets the useful message rather than an
+    # install instruction that would not have helped.
+    rows = select_judge_rows(scenario_records)
+    eligible = sum(1 for r in scenario_records if r.get("archetype") not in _EXCLUDED_ARCHETYPES)
+    dropped = eligible - len(rows)
+
+    if not rows:
+        raise VertexBackendUnavailableError(
+            "No scenario produced both a response and citation-derived context, "
+            "so there is nothing for the judge to score. Check that the pipeline "
+            "ran and that citations carry verbatim_quote values."
+        )
+
     try:
         import vertexai
         from vertexai.preview.evaluation import EvalTask
@@ -152,15 +180,7 @@ def run_vertex_evaluation(
         ) from exc
 
     dataset = build_eval_dataframe(scenario_records)
-    eligible = sum(1 for r in scenario_records if r.get("archetype") not in _EXCLUDED_ARCHETYPES)
-    dropped = eligible - len(dataset)
 
-    if dataset.empty:
-        raise VertexBackendUnavailableError(
-            "No scenario produced both a response and citation-derived context, "
-            "so there is nothing for the judge to score. Check that the pipeline "
-            "ran and that citations carry verbatim_quote values."
-        )
 
     vertexai.init(project=project, location=location)
 
