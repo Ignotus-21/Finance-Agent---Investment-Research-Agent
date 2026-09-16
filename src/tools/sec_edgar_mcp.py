@@ -4,13 +4,13 @@ Enforces the Model Context Protocol (MCP) contract, token-bucket rate limiting (
 mandatory User-Agent header compliance, exponential backoff with jitter, and circuit breaking.
 """
 
-import time
 import asyncio
-import random
-from typing import Dict, Any, List, Optional
-from src.core.interfaces import FilingRetrievalInterface, BaseTool
-from src.core.exceptions import FilingNotFoundException, UpstreamRateLimitException
+import time
+from typing import Any
+
 from src.config import Settings
+from src.core.exceptions import FilingNotFoundException
+from src.core.interfaces import BaseTool, FilingRetrievalInterface
 
 
 class TokenBucketRateLimiter:
@@ -75,7 +75,7 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
     Extracts Balance Sheets, Income Statements, and Item 7 MD&A with XBRL tags.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
         self.rate_limiter = TokenBucketRateLimiter(rate=self.settings.sec_rate_limit_per_sec)
         self.circuit_breaker = CircuitBreaker(
@@ -84,7 +84,7 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
         )
 
         # High-fidelity primary SEC financial repositories for benchmark tickers
-        self._mock_edgar_filings: Dict[str, Dict[str, Any]] = {
+        self._mock_edgar_filings: dict[str, dict[str, Any]] = {
             "AAPL_2024_10-K": {
                 "accession_number": "0000320193-24-000106",
                 "filing_date": "2024-10-31",
@@ -215,7 +215,7 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
 
     async def fetch_filing_section(
         self, ticker: str, form: str, fiscal_year: int, section: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Fetches filing section under token bucket rate limit and circuit breaker protection."""
         # 1. Check Circuit Breaker
         if not self.circuit_breaker.is_available():
@@ -253,7 +253,7 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             "provenance_signature": f"SEC:{ticker}:{form}:{fiscal_year}:{filing['accession_number']}"
         }
 
-    def _get_cached_fallback(self, ticker: str, form: str, fiscal_year: int, section: str) -> Dict[str, Any]:
+    def _get_cached_fallback(self, ticker: str, form: str, fiscal_year: int, section: str) -> dict[str, Any]:
         """Fallback to cached historical data when upstream SEC EDGAR is down."""
         key = f"{ticker.upper()}_{fiscal_year}_{form.upper()}"
         filing = self._mock_edgar_filings.get(key) or self._generate_generic_filing(ticker.upper(), fiscal_year, form)
@@ -270,7 +270,7 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             "provenance_signature": f"SEC:CACHE:{ticker}:{form}:{fiscal_year}"
         }
 
-    def _generate_generic_filing(self, ticker: str, fiscal_year: int, form: str) -> Dict[str, Any]:
+    def _generate_generic_filing(self, ticker: str, fiscal_year: int, form: str) -> dict[str, Any]:
         return {
             "accession_number": f"0000{abs(hash(ticker)) % 900000 + 100000}-24-000001",
             "filing_date": f"{fiscal_year}-10-15",

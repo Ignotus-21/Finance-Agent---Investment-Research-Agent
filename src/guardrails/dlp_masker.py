@@ -5,7 +5,6 @@ prior to entering the LLM reasoning context or the audit logs.
 """
 
 import re
-from typing import Dict, Any, Tuple
 
 
 class CloudDLPMasker:
@@ -24,7 +23,7 @@ class CloudDLPMasker:
     ]
 
     @classmethod
-    def sanitize_text(cls, text: str) -> Tuple[str, bool]:
+    def sanitize_text(cls, text: str) -> tuple[str, bool]:
         """
         Scrub sensitive PII and proprietary fund metadata.
         Returns: (sanitized_text, was_modified)

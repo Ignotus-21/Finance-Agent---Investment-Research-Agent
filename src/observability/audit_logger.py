@@ -4,13 +4,14 @@ Streams tamper-evident compliance audit records to Google Cloud Logging and BigQ
 Fulfills FINRA Rule 2241 regulatory compliance and provenance traceability.
 """
 
-import json
-import hashlib
 import datetime
+import hashlib
+import json
 import uuid
-from typing import Dict, Any, List, Optional
-from src.models.audit import AuditLogEntry
+from typing import Any
+
 from src.config import Settings
+from src.models.audit import AuditLogEntry
 
 
 class AuditLogger:
@@ -18,9 +19,9 @@ class AuditLogger:
     Compliance audit logger streaming execution records to Cloud Logging and BigQuery.
     """
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        self.audit_records: List[Dict[str, Any]] = []
+        self.audit_records: list[dict[str, Any]] = []
 
     @staticmethod
     def hash_prompt(prompt: str) -> str:
@@ -33,7 +34,7 @@ class AuditLogger:
         fiscal_year: int,
         prompt: str,
         user_id: str,
-        tools_called: List[str],
+        tools_called: list[str],
         latency_ms: int,
         total_tokens: int,
         cost_usd: float,
@@ -44,7 +45,7 @@ class AuditLogger:
         Creates and emits an immutable compliance record.
         """
         audit_id = f"audit-{uuid.uuid4().hex[:12]}"
-        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        timestamp = datetime.datetime.now(datetime.UTC).isoformat()
         prompt_hash = self.hash_prompt(prompt)
 
         entry = AuditLogEntry(

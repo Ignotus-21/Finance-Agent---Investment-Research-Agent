@@ -4,8 +4,7 @@ Implements Faithfulness / Groundedness, Answer Relevance, Citation Precision,
 and Guardrail Interception Rate metrics conforming to Vertex AI Gen AI Evaluation standards.
 """
 
-from typing import Dict, Any, List, Optional
-import math
+from typing import Any
 
 
 class EvaluationMetrics:
@@ -13,7 +12,7 @@ class EvaluationMetrics:
 
     @staticmethod
     def compute_faithfulness(
-        actual_figures: Dict[str, float], ground_truth_figures: Dict[str, float], tolerance: float = 0.05
+        actual_figures: dict[str, float], ground_truth_figures: dict[str, float], tolerance: float = 0.05
     ) -> float:
         """
         Faithfulness / Groundedness score on numerical disclosures.
@@ -40,7 +39,7 @@ class EvaluationMetrics:
 
     @staticmethod
     def compute_citation_precision(
-        citations: List[Dict[str, Any]], expected_citations: List[Dict[str, Any]]
+        citations: list[dict[str, Any]], expected_citations: list[dict[str, Any]]
     ) -> float:
         """
         Citation Precision score. Target: 1.0 (100% verifiable source alignment).
@@ -66,7 +65,7 @@ class EvaluationMetrics:
 
     @staticmethod
     def compute_relevance(
-        actual_summary: str, expected_behavior: str, focus_areas: List[str]
+        actual_summary: str, expected_behavior: str, focus_areas: list[str]
     ) -> float:
         """
         Answer Relevance & Completeness score. Target: >= 0.90.
@@ -76,7 +75,7 @@ class EvaluationMetrics:
             return 0.0
 
         summary_lower = actual_summary.lower()
-        
+
         # Check focus areas coverage
         focus_matches = sum(
             1 for fa in focus_areas if any(term in summary_lower for term in fa.lower().split("_"))

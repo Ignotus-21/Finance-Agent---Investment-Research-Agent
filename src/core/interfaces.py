@@ -4,8 +4,7 @@ Enables dependency injection and isolated unit test mocking.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from typing import Any
 
 
 class BaseAgent(ABC):
@@ -18,7 +17,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, context: dict[str, Any]) -> dict[str, Any]:
         """Execute agent reasoning or data processing loop."""
         pass
 
@@ -50,7 +49,7 @@ class FilingRetrievalInterface(ABC):
     @abstractmethod
     async def fetch_filing_section(
         self, ticker: str, form: str, fiscal_year: int, section: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Retrieve and parse a specific SEC filing section."""
         pass
 
@@ -60,8 +59,8 @@ class MarketDataInterface(ABC):
 
     @abstractmethod
     async def query_market_context(
-        self, ticker: str, focus_areas: List[str]
-    ) -> List[Dict[str, Any]]:
+        self, ticker: str, focus_areas: list[str]
+    ) -> list[dict[str, Any]]:
         """Retrieve live macroeconomic context and grounded news snippets."""
         pass
 

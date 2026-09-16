@@ -4,10 +4,11 @@ Ingests, parses, and normalizes audited SEC Form 10-K, 10-Q, and 8-K disclosures
 Extracts Balance Sheets, Statements of Operations, Cash Flows, and Item 7 MD&A.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
+
+from src.config import Settings
 from src.core.interfaces import BaseAgent
 from src.tools.sec_edgar_mcp import SECFilingClient
-from src.config import Settings
 
 
 class SECSubAgent(BaseAgent):
@@ -16,7 +17,7 @@ class SECSubAgent(BaseAgent):
     Normalizes tabular financial statements and attaches XBRL tags.
     """
 
-    def __init__(self, client: SECFilingClient, settings: Optional[Settings] = None) -> None:
+    def __init__(self, client: SECFilingClient, settings: Settings | None = None) -> None:
         self.client = client
         self.settings = settings or Settings()
 
@@ -24,15 +25,15 @@ class SECSubAgent(BaseAgent):
     def agent_name(self) -> str:
         return "sec_filing_specialist"
 
-    async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, context: dict[str, Any]) -> dict[str, Any]:
         ticker = context.get("ticker", "")
         fiscal_year = context.get("fiscal_year", 2024)
         focus_areas = context.get("focus_areas", [])
         return await self.extract_filing_data(ticker, fiscal_year, focus_areas)
 
     async def extract_filing_data(
-        self, ticker: str, fiscal_year: int, focus_areas: List[str]
-    ) -> Dict[str, Any]:
+        self, ticker: str, fiscal_year: int, focus_areas: list[str]
+    ) -> dict[str, Any]:
         """Extracts complete audited financial statement package for a ticker and fiscal year."""
         # Query Statements of Operations
         inc_res = await self.client.fetch_filing_section(ticker, "10-K", fiscal_year, "INCOME_STATEMENT")
