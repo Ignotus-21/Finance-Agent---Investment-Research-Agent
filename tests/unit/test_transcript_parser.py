@@ -3,6 +3,7 @@ Unit tests for Transcript Parser and Speaker Segmentation.
 """
 
 import pytest
+
 from src.tools.transcript_parser import TranscriptClient
 
 

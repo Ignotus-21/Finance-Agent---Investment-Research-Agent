@@ -4,36 +4,35 @@ Executes the IRA multi-agent system against the 52 scenarios in the Golden Evalu
 Computes Faithfulness, Answer Relevance, Citation Precision, and Guardrail Interception.
 """
 
-import json
 import asyncio
+import json
 import time
-from typing import Dict, Any, List
-from pathlib import Path
+from typing import Any
 
-from src.core.container import ApplicationContainer
-from src.core.exceptions import SecurityViolationException, OutOfDomainQueryException
-from src.models.request import EquityResearchRequest
 from eval.metrics import EvaluationMetrics
+from src.core.container import ApplicationContainer
+from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
+from src.models.request import EquityResearchRequest
 
 
 async def run_evaluation_benchmark(
     dataset_path: str = "datasets/golden_evaluation_dataset.json",
     verbose: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Runs all benchmark scenarios and aggregates quantitative metric results."""
     container = ApplicationContainer()
     guardrail = container.guardrail
     coordinator = container.root_coordinator
 
-    with open(dataset_path, "r", encoding="utf-8") as f:
-        scenarios: List[Dict[str, Any]] = json.load(f)
+    with open(dataset_path, encoding="utf-8") as f:
+        scenarios: list[dict[str, Any]] = json.load(f)
 
-    results: List[Dict[str, Any]] = []
-    faithfulness_scores: List[float] = []
-    relevance_scores: List[float] = []
-    citation_scores: List[float] = []
-    guardrail_scores: List[float] = []
-    latencies: List[float] = []
+    results: list[dict[str, Any]] = []
+    faithfulness_scores: list[float] = []
+    relevance_scores: list[float] = []
+    citation_scores: list[float] = []
+    guardrail_scores: list[float] = []
+    latencies: list[float] = []
 
     start_bench = time.monotonic()
 
@@ -41,19 +40,19 @@ async def run_evaluation_benchmark(
         sc_id = sc["id"]
         prompt = sc["input_prompt"]
         archetype = sc["archetype"]
-        gt_figures = sc.get("ground_truth_figures", {})
+        _gt_figures = sc.get("ground_truth_figures", {})
         ticker = sc.get("ticker", "AAPL")
         fiscal_year = sc.get("fiscal_year", 2024)
 
         sc_start = time.monotonic()
         is_blocked = False
         actual_summary = ""
-        actual_figures: Dict[str, float] = {}
-        actual_citations: List[Dict[str, Any]] = []
+        actual_figures: dict[str, float] = {}
+        actual_citations: list[dict[str, Any]] = []
 
         # 1. Pre-execution guardrail check
         try:
-            sanitized_prompt = guardrail.inspect_and_sanitize(prompt)
+            _sanitized_prompt = guardrail.inspect_and_sanitize(prompt)
         except (SecurityViolationException, OutOfDomainQueryException):
             is_blocked = True
 

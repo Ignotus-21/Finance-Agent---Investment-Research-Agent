@@ -3,7 +3,7 @@ Domain-Specific Exception Hierarchy.
 Enables structured error handling and standard RFC 7807 problem responses.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class FinancialAgentException(Exception):
@@ -14,7 +14,7 @@ class FinancialAgentException(Exception):
         message: str,
         error_code: str = "INTERNAL_AGENT_ERROR",
         status_code: int = 500,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -26,7 +26,7 @@ class FinancialAgentException(Exception):
 class SecurityViolationException(FinancialAgentException):
     """Raised when an adversarial prompt injection or jailbreak is detected."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(
             message=message,
             error_code="SECURITY_VIOLATION",
@@ -38,7 +38,7 @@ class SecurityViolationException(FinancialAgentException):
 class OutOfDomainQueryException(FinancialAgentException):
     """Raised when a request falls outside financial equity research boundaries."""
 
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(
             message=message,
             error_code="OUT_OF_DOMAIN_QUERY",
@@ -62,7 +62,7 @@ class FilingNotFoundException(FinancialAgentException):
 class UpstreamRateLimitException(FinancialAgentException):
     """Raised when an upstream service returns 429 after retries."""
 
-    def __init__(self, service: str, retry_after: Optional[int] = None) -> None:
+    def __init__(self, service: str, retry_after: int | None = None) -> None:
         super().__init__(
             message=f"Upstream provider '{service}' rate limit reached. Circuit breaker engaged.",
             error_code="UPSTREAM_RATE_LIMIT",

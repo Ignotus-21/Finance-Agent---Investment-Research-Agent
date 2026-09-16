@@ -3,7 +3,8 @@ Pydantic Response Schemas for the IRA REST API.
 Enforces strict schema validation with 100% evidentiary provenance.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -15,16 +16,16 @@ class EvidentiaryCitation(BaseModel):
         ...,
         description="Source type: SEC_FORM_10K, SEC_FORM_10Q, TRANSCRIPT_REMARKS, TRANSCRIPT_QA, MACRO_NEWS"
     )
-    filing_accession_number: Optional[str] = Field(
+    filing_accession_number: str | None = Field(
         default=None,
         description="SEC EDGAR accession number (e.g. 0000320193-24-000106)."
     )
     document_period: str = Field(..., description="Period string (e.g. FY2024, Q4_2024).")
     table_or_section_name: str = Field(..., description="Name of the statement, table, or transcript section.")
-    row_item: Optional[str] = Field(default=None, description="Exact row title from SEC table.")
-    column_header: Optional[str] = Field(default=None, description="Exact column header / reporting date.")
-    verbatim_quote: Optional[str] = Field(default=None, description="Verbatim statement or transcript excerpt.")
-    source_url: Optional[str] = Field(default=None, description="Direct URL to SEC EDGAR filing or source article.")
+    row_item: str | None = Field(default=None, description="Exact row title from SEC table.")
+    column_header: str | None = Field(default=None, description="Exact column header / reporting date.")
+    verbatim_quote: str | None = Field(default=None, description="Verbatim statement or transcript excerpt.")
+    source_url: str | None = Field(default=None, description="Direct URL to SEC EDGAR filing or source article.")
     confidence_score: float = Field(default=1.0, ge=0.0, le=1.0, description="Verification confidence score.")
 
 
@@ -36,8 +37,8 @@ class FinancialMetric(BaseModel):
     value: float = Field(..., description="Computed numerical value.")
     unit: str = Field(..., description="Unit of measurement (percentage, bps, currency_usd, ratio_multiple).")
     formula_applied: str = Field(..., description="Explicit formula used to compute the value.")
-    prior_period_value: Optional[float] = Field(default=None, description="Value for period t-1 if comparative.")
-    current_period_value: Optional[float] = Field(default=None, description="Value for period t.")
+    prior_period_value: float | None = Field(default=None, description="Value for period t-1 if comparative.")
+    current_period_value: float | None = Field(default=None, description="Value for period t.")
     provenance_verified: bool = Field(default=True, description="Whether line-item provenance was confirmed.")
 
 
@@ -75,7 +76,7 @@ class ResearchMetadata(BaseModel):
     total_tokens_consumed: int
     context_cache_hit: bool
     estimated_cost_usd: float
-    model_routing: Dict[str, str] = Field(
+    model_routing: dict[str, str] = Field(
         default_factory=lambda: {
             "root_coordinator": "gemini-2.5-pro",
             "sec_agent": "gemini-2.5-flash",
@@ -93,10 +94,10 @@ class ResearchBriefResponse(BaseModel):
     company_name: str = Field(..., description="Full corporate name.")
     fiscal_year: int = Field(..., description="Fiscal reporting year analyzed.")
     executive_summary: str = Field(..., description="High-level investment summary and thesis.")
-    key_financial_metrics: List[FinancialMetric] = Field(default_factory=list)
+    key_financial_metrics: list[FinancialMetric] = Field(default_factory=list)
     qualitative_synthesis: QualitativeSynthesis
-    risk_matrices: List[RiskMatrixItem] = Field(default_factory=list)
-    citations: List[EvidentiaryCitation] = Field(default_factory=list)
+    risk_matrices: list[RiskMatrixItem] = Field(default_factory=list)
+    citations: list[EvidentiaryCitation] = Field(default_factory=list)
     metadata: ResearchMetadata
 
 
@@ -105,5 +106,5 @@ class ErrorResponse(BaseModel):
 
     error_code: str
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
     timestamp: str

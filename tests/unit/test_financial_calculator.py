@@ -3,7 +3,6 @@ Unit tests for Deterministic Financial Calculator.
 Asserts mathematical precision, IEEE 754 float safety, and zero-denominator handling.
 """
 
-import pytest
 from src.tools.financial_calculator import FinancialCalculator
 
 

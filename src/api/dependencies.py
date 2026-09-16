@@ -3,10 +3,10 @@ FastAPI Dependencies Module.
 Provides authentication verification and Dependency Injection container access.
 """
 
-from typing import Optional
-from fastapi import Header, HTTPException, Depends
+
+from fastapi import Header, HTTPException
+
 from src.core.container import ApplicationContainer, container
-from src.core.exceptions import FinancialAgentException
 
 
 async def get_container() -> ApplicationContainer:
@@ -15,7 +15,7 @@ async def get_container() -> ApplicationContainer:
 
 
 async def verify_auth_token(
-    authorization: Optional[str] = Header(None)
+    authorization: str | None = Header(None)
 ) -> str:
     """
     Validates Bearer token / Cloud IAM authorization header.

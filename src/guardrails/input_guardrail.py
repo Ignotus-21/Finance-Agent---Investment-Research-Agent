@@ -5,12 +5,12 @@ before dispatching queries to downstream LLM reasoning loops.
 """
 
 import re
-from typing import Tuple, Dict, Any, Optional
+
+from src.config import Settings
+from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
 from src.core.interfaces import GuardrailInterface
-from src.core.exceptions import SecurityViolationException, OutOfDomainQueryException
 from src.guardrails.dlp_masker import CloudDLPMasker
 from src.guardrails.scope_classifier import ScopeClassifier
-from src.config import Settings
 
 
 class InputGuardrail(GuardrailInterface):
@@ -44,10 +44,10 @@ class InputGuardrail(GuardrailInterface):
         r"(?i)rm\s+-rf\s+/",
     ]
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
 
-    def validate_input(self, prompt: str) -> Tuple[bool, str]:
+    def validate_input(self, prompt: str) -> tuple[bool, str]:
         """
         Validates the incoming user prompt.
         Returns: (is_valid, message)

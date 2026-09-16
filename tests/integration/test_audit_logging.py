@@ -3,6 +3,7 @@ Integration tests for Structured Audit Logging and Pub/Sub Event Broadcasting.
 """
 
 import pytest
+
 from src.observability.audit_logger import AuditLogger
 from src.observability.pubsub_broadcaster import PubSubBroadcaster
 

@@ -5,7 +5,8 @@ the system gracefully serves cached historical filings without dropping queries.
 """
 
 import pytest
-from src.tools.sec_edgar_mcp import SECFilingClient, CircuitBreaker
+
+from src.tools.sec_edgar_mcp import CircuitBreaker, SECFilingClient
 
 
 def test_circuit_breaker_state_transitions():
