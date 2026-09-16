@@ -1,0 +1,408 @@
+openapi: 3.1.0
+info:
+  title: Autonomous Investment Research Intelligence Agent (IRA) API
+  version: 1.0.0
+  description: |
+    Enterprise multi-agent equity due diligence API built on Google Cloud Platform and Google Agent Development Kit (ADK).
+    Orchestrates specialized sub-agents across audited SEC filings, earnings transcripts, and macroeconomic intelligence
+    to generate audit-ready research briefs with 100% line-item citation provenance in under 60 seconds.
+  contact:
+    name: Institutional Financial Engineering Desk
+    email: engineering@ira-research.cloud.internal
+servers:
+  - url: https://ira-gateway-prod-uc.a.run.app
+    description: Production Google Cloud Run Service
+  - url: http://localhost:8080
+    description: Local Development Environment
+
+security:
+  - BearerAuth: []
+
+paths:
+  /v1/research/equity:
+    post:
+      summary: Synthesize Comprehensive Equity Research Brief
+      description: |
+        Triggers the Root Coordinator Agent to execute a Plan-and-Execute multi-agent research workflow.
+        Decomposes query across SEC EDGAR filings, earnings call transcripts, and live macro news,
+        calculates deterministic financial ratios, and verifies line-item evidentiary citations.
+      operationId: generateEquityResearchBrief
+      tags:
+        - Equity Research
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquityResearchRequest'
+      responses:
+        '200':
+          description: Successfully synthesized audit-ready research brief.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchBriefResponse'
+        '400':
+          description: Security policy violation, prompt injection attempt, or out-of-scope query.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid OAuth2 / Cloud IAM Bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Upstream SEC or LLM rate limit encountered; circuit breaker active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal multi-agent runtime or execution error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/research/filings:
+    post:
+      summary: Extract & Normalize SEC Filing Statements
+      description: Ingests and extracts audited financial tables and XBRL metadata directly from SEC EDGAR via MCP.
+      operationId: extractFilingData
+      tags:
+        - Regulatory Filings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilingResearchRequest'
+      responses:
+        '200':
+          description: Successfully parsed financial statements and XBRL tags.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilingExtractionResponse'
+        '404':
+          description: Filing not found for requested ticker and fiscal year.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /healthz:
+    get:
+      summary: Liveness Probe
+      description: Returns service liveness state for Google Cloud Run health checks.
+      operationId: getHealthStatus
+      security: []
+      tags:
+        - Health & Diagnostics
+      responses:
+        '200':
+          description: Service is healthy and responsive.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "HEALTHY"
+                  uptime_seconds:
+                    type: number
+                    example: 3600.5
+
+  /readyz:
+    get:
+      summary: Readiness Probe
+      description: Validates backend datastore, Secret Manager credentials, and Vertex AI API connectivity.
+      operationId: getReadinessStatus
+      security: []
+      tags:
+        - Health & Diagnostics
+      responses:
+        '200':
+          description: Service dependencies are initialized and ready to accept traffic.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "READY"
+                  dependencies:
+                    type: object
+                    properties:
+                      vertex_ai:
+                        type: string
+                        example: "CONNECTED"
+                      bigquery:
+                        type: string
+                        example: "CONNECTED"
+                      secret_manager:
+                        type: string
+                        example: "CONNECTED"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Google Cloud IAM OIDC Identity Token or OAuth2 JWT
+
+  schemas:
+    EquityResearchRequest:
+      type: object
+      required:
+        - ticker
+        - fiscal_year
+      properties:
+        ticker:
+          type: string
+          description: Official equity ticker symbol (e.g. AAPL, MSFT, NVDA).
+          example: "AAPL"
+        fiscal_year:
+          type: integer
+          description: Fiscal year for audited 10-K primary financial extraction.
+          example: 2024
+        focus_areas:
+          type: array
+          items:
+            type: string
+          description: Specific qualitative and quantitative focus areas to evaluate.
+          example: ["Services_Margin", "China_Headwinds", "AI_CapEx"]
+        include_macro_context:
+          type: boolean
+          default: true
+          description: Whether to trigger the Macro News sub-agent for live search grounding.
+
+    FilingResearchRequest:
+      type: object
+      required:
+        - ticker
+        - fiscal_year
+        - form
+      properties:
+        ticker:
+          type: string
+          example: "AAPL"
+        fiscal_year:
+          type: integer
+          example: 2024
+        form:
+          type: string
+          enum: ["10-K", "10-Q", "8-K"]
+          example: "10-K"
+        sections:
+          type: array
+          items:
+            type: string
+            enum: ["BALANCE_SHEET", "INCOME_STATEMENT", "CASH_FLOW", "MDA_ITEM_7"]
+          example: ["BALANCE_SHEET", "INCOME_STATEMENT"]
+
+    EvidentiaryCitation:
+      type: object
+      required:
+        - citation_id
+        - source_type
+        - document_period
+        - table_or_section_name
+        - confidence_score
+      properties:
+        citation_id:
+          type: string
+          example: "cite-7e4a-9821"
+        source_type:
+          type: string
+          enum: ["SEC_FORM_10K", "SEC_FORM_10Q", "TRANSCRIPT_REMARKS", "TRANSCRIPT_QA", "MACRO_NEWS"]
+          example: "SEC_FORM_10K"
+        filing_accession_number:
+          type: string
+          nullable: true
+          example: "0000320193-24-000106"
+        document_period:
+          type: string
+          example: "FY2024"
+        table_or_section_name:
+          type: string
+          example: "Consolidated Statements of Operations"
+        row_item:
+          type: string
+          nullable: true
+          example: "Services net sales"
+        column_header:
+          type: string
+          nullable: true
+          example: "September 28, 2024"
+        verbatim_quote:
+          type: string
+          nullable: true
+          example: "Services revenue reached an all-time record of $96.2 billion, up 12.9% year over year."
+        source_url:
+          type: string
+          nullable: true
+          example: "https://www.sec.gov/ix?doc=/Archives/edgar/data/0000320193/000032019324000106/aapl-20240928.htm"
+        confidence_score:
+          type: number
+          format: float
+          example: 1.0
+
+    FinancialMetric:
+      type: object
+      required:
+        - name
+        - value
+        - unit
+        - formula
+        - provenance_verified
+      properties:
+        name:
+          type: string
+          example: "yoy_revenue_growth_pct"
+        value:
+          type: number
+          example: 2.02
+        unit:
+          type: string
+          example: "percentage"
+        formula:
+          type: string
+          example: "((revenue_current - revenue_prior) / revenue_prior) * 100"
+        prior_period_value:
+          type: number
+          nullable: true
+          example: 383285000000.0
+        current_period_value:
+          type: number
+          nullable: true
+          example: 391035000000.0
+        provenance_verified:
+          type: boolean
+          example: true
+
+    ResearchBriefResponse:
+      type: object
+      required:
+        - brief_id
+        - ticker
+        - fiscal_year
+        - executive_summary
+        - key_financial_metrics
+        - qualitative_synthesis
+        - risk_matrices
+        - citations
+        - metadata
+      properties:
+        brief_id:
+          type: string
+          example: "brief-a1b2-c3d4"
+        ticker:
+          type: string
+          example: "AAPL"
+        fiscal_year:
+          type: integer
+          example: 2024
+        executive_summary:
+          type: string
+          description: High-level investment thesis and executive commentary synthesis.
+        key_financial_metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialMetric'
+        qualitative_synthesis:
+          type: object
+          properties:
+            executive_commentary_analysis:
+              type: string
+            analyst_qa_highlights:
+              type: string
+            macro_market_context:
+              type: string
+        risk_matrices:
+          type: array
+          items:
+            type: object
+            properties:
+              risk_category:
+                type: string
+                example: "Geopolitical & Supply Chain"
+              description:
+                type: string
+                example: "Greater China revenue contraction and supply chain concentration."
+              severity:
+                type: string
+                enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+                example: "HIGH"
+              source_disclosure:
+                type: string
+                example: "Form 10-K Item 1A Risk Factors"
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidentiaryCitation'
+        metadata:
+          type: object
+          properties:
+            generation_timestamp:
+              type: string
+              example: "2026-09-14T12:00:00Z"
+            latency_ms:
+              type: integer
+              example: 42150
+            total_tokens_consumed:
+              type: integer
+              example: 32400
+            context_cache_hit:
+              type: boolean
+              example: true
+            estimated_cost_usd:
+              type: number
+              example: 0.165
+
+    FilingExtractionResponse:
+      type: object
+      properties:
+        ticker:
+          type: string
+          example: "AAPL"
+        form:
+          type: string
+          example: "10-K"
+        fiscal_year:
+          type: integer
+          example: 2024
+        tables:
+          type: object
+          additionalProperties:
+            type: string
+        xbrl_facts:
+          type: object
+          additionalProperties:
+            type: number
+
+    ErrorResponse:
+      type: object
+      required:
+        - error_code
+        - message
+        - timestamp
+      properties:
+        error_code:
+          type: string
+          example: "SECURITY_VIOLATION"
+        message:
+          type: string
+          example: "Adversarial prompt injection detected."
+        details:
+          type: object
+          nullable: true
+        timestamp:
+          type: string
+          example: "2026-09-14T12:00:00Z"
