@@ -4,11 +4,9 @@ Validates end-to-end multi-agent research generation on un-cached synthetic corp
 """
 
 import pytest
+from google.adk.tools.mcp_tool import McpToolset
 
-from src.agents.adk_agent import (
-    create_financial_adk_agent,
-    fetch_sec_filing_section,
-)
+from src.agents.adk_agent import create_financial_adk_agent
 from src.core.container import ApplicationContainer
 from src.guardrails.input_guardrail import InputGuardrail
 from src.models.request import EquityResearchRequest
@@ -47,8 +45,10 @@ async def test_synthetic_equity_research_pipeline():
     assert growth.provenance_verified is True
     assert growth.value == 11.11
 
-    # 5. Assert ADK Agent tools
+    # 5. Assert ADK agent tool wiring: three native tools plus SEC over MCP.
+    # The SEC call itself is exercised across a real protocol round trip in
+    # tests/integration/test_mcp_sec_edgar_server.py, so repeating it here
+    # would only re-test retrieval logic that is already covered.
     adk_agent = create_financial_adk_agent()
-    assert len(adk_agent.tools) == 5
-    sec_data = await fetch_sec_filing_section(ticker="SYNTH", fiscal_year=2024, section="Item 7")
-    assert "SYNTH" in sec_data
+    assert len(adk_agent.tools) == 4
+    assert sum(isinstance(t, McpToolset) for t in adk_agent.tools) == 1

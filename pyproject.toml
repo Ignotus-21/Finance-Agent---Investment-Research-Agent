@@ -30,6 +30,11 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.47b0",
     "opentelemetry-exporter-gcp-trace>=1.6.0",
     "httpx>=0.27.0",
+    # Imported directly by src/mcp_servers/sec_edgar_server.py and by the
+    # agent's StdioServerParameters, so it is declared rather than relied on
+    # as a transitive extra of google-adk. Pinned >=2 because the 2.x server
+    # API (mcp.server.mcpserver.MCPServer) replaced 1.x FastMCP.
+    "mcp>=2.2.0",
     "tenacity>=8.5.0",
     "pyyaml>=6.0.2",
     "jinja2>=3.1.4"
