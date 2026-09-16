@@ -11,31 +11,69 @@ class EvaluationMetrics:
     """Computes quantitative evaluation scores across golden benchmark scenarios."""
 
     @staticmethod
+    def compute_faithfulness_with_coverage(
+        actual_figures: dict[str, float],
+        ground_truth_figures: dict[str, float],
+        tolerance: float = 0.05,
+    ) -> tuple[float | None, int, int]:
+        """Faithfulness / Groundedness on numerical disclosures, with coverage.
+
+        Returns ``(score, checked, expected)`` where:
+
+        * ``checked`` is the number of ground-truth keys the system actually
+          emitted, and therefore the number it was possible to verify;
+        * ``expected`` is the total number of ground-truth keys;
+        * ``score`` is the fraction of *checked* keys that matched, or ``None``
+          when ``checked == 0``.
+
+        ``None`` rather than ``1.0`` for the unverifiable case is the whole
+        point of this function. Scoring "we could not check anything" as a
+        perfect result is indistinguishable, in any aggregate, from "we checked
+        everything and it was right" - which is how a hardcoded 1.0 went
+        unnoticed in this harness for the project's entire history. Callers
+        must decide explicitly what an unmeasured scenario means to them.
+        """
+        expected = len(ground_truth_figures)
+        if expected == 0:
+            # Adversarial / out-of-scope scenarios assert no figures at all, so
+            # there is nothing to be unfaithful about.
+            return 1.0, 0, 0
+
+        checked = 0
+        matches = 0
+
+        for key, gt_val in ground_truth_figures.items():
+            if key not in actual_figures:
+                # Not emitted, so not verifiable. Counted as missing coverage
+                # rather than as a failure: the system never made this claim.
+                continue
+            checked += 1
+            diff = abs(actual_figures[key] - gt_val)
+            if diff <= tolerance or (gt_val != 0 and (diff / abs(gt_val)) <= 0.01):
+                matches += 1
+
+        if checked == 0:
+            return None, 0, expected
+
+        return float(matches / checked), checked, expected
+
+    @staticmethod
     def compute_faithfulness(
         actual_figures: dict[str, float], ground_truth_figures: dict[str, float], tolerance: float = 0.05
     ) -> float:
+        """Faithfulness score collapsed to a single float.
+
+        Unverifiable scenarios collapse to ``0.0``: if the system emitted none
+        of the figures the scenario asserts, it has demonstrated no
+        groundedness. Use :meth:`compute_faithfulness_with_coverage` when the
+        distinction between "wrong" and "unverifiable" matters - for reporting
+        it almost always does.
         """
-        Faithfulness / Groundedness score on numerical disclosures.
-        Score = 1.0 if all figures match ground truth within tolerance; 0.0 otherwise.
-        """
-        if not ground_truth_figures:
-            return 1.0  # Adversarial / out-of-scope scenarios have no expected numbers
+        score, _checked, _expected = EvaluationMetrics.compute_faithfulness_with_coverage(
+            actual_figures, ground_truth_figures, tolerance
+        )
+        return 0.0 if score is None else score
 
-        if not actual_figures:
-            return 0.0
-
-        matches = 0
-        total = len(ground_truth_figures)
-
-        for key, gt_val in ground_truth_figures.items():
-            if key in actual_figures:
-                act_val = actual_figures[key]
-                diff = abs(act_val - gt_val)
-                # Check absolute and relative tolerance
-                if diff <= tolerance or (gt_val != 0 and (diff / abs(gt_val)) <= 0.01):
-                    matches += 1
-
-        return float(matches / total) if total > 0 else 1.0
 
     @staticmethod
     def compute_citation_precision(

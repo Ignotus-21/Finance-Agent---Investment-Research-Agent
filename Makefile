@@ -1,4 +1,4 @@
-.PHONY: help install hooks hooks-run test lint eval run adk-run adk-web docker-build docker-run clean
+.PHONY: help install hooks hooks-run test lint eval eval-vertex run adk-run adk-web docker-build docker-run clean
 
 help:
 	@echo "Available commands:"
@@ -7,6 +7,7 @@ help:
 	@echo "  make hooks-run    Run every pre-commit hook against all files (CI parity check)"
 	@echo "  make test         Execute unit, integration, and chaos test suites (assert >=80% coverage)"
 	@echo "  make eval         Execute Golden Evaluation Benchmark regression gate"
+	@echo "  make eval-vertex  Score with Vertex AI Gen AI Evaluation (billable, opt-in)"
 	@echo "  make lint         Run Ruff linter and static type checks"
 	@echo "  make run          Launch local FastAPI server on port 8080"
 	@echo "  make adk-run      Run ADK agent in interactive terminal REPL"
@@ -32,6 +33,11 @@ test:
 
 eval:
 	python -m eval.regression_gate
+
+eval-vertex:
+	@# Billable and non-deterministic, which is why it is a separate target and
+	@# not part of `make eval` or CI. Needs: pip install -e ".[dev,eval]"
+	python -m eval.evaluate_golden_dataset --backend=vertex --project=$${GCP_PROJECT_ID}
 
 lint:
 	ruff check src/ tests/

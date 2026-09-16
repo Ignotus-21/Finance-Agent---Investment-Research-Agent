@@ -15,6 +15,17 @@
 
 This report documents the baseline evaluation benchmarks for the IRA multi-agent system. Tested across **52 institutional-grade scenarios**, the system demonstrates zero numerical hallucination (**Faithfulness = 1.0**), perfect evidentiary source attribution (**Citation Precision = 100%**), complete pre-execution threat defense (**Guardrail Interception Rate = 100%**), and end-to-end synthesis completion in **under 45 seconds** (well within the $\le 60\text{s}$ P95 SLA).
 
+> [!CAUTION]
+> **Correction (PR #9): the Faithfulness figures on this page are withdrawn.**
+> They were produced by a harness that assigned the literal `1.0` without ever
+> calling `compute_faithfulness`. Measured honestly the score is **0.60 over
+> 4.5% coverage (7 of 155 ground-truth figures verifiable)**. The golden dataset
+> asserts 125 scenario-specific keys while the pipeline emits 5 generic ones.
+> Tracked as **DEV-15**; the DoD groundedness clause is **not met**. All other
+> metrics on this page (Relevance, Citation Precision, Guardrail Rate) are
+> genuinely computed and stand.
+
+
 ```mermaid
 pie title Scenario Distribution Across Evaluation Benchmark (52 Scenarios)
     "Technology (AAPL, MSFT, NVDA, GOOGL, AMZN, META, TSLA)" : 18
@@ -30,7 +41,7 @@ pie title Scenario Distribution Across Evaluation Benchmark (52 Scenarios)
 
 | Evaluation Metric | Baseline Manual Workflow | Legacy GenAI LLM | Target DoD Threshold | IRA System Result | Evaluation Status |
 |---|---|---|---|---|---|
-| **Faithfulness / Groundedness** | 1.0 (Manual checking) | 0.78 (Hallucinations) | **1.0000** | **1.0000** | **PASSED (Zero Hallucination)** |
+| **Faithfulness / Groundedness** | 1.0 (Manual checking) | 0.78 (Hallucinations) | **1.0000** | **0.6000 ⚠️** | **WITHDRAWN — see correction above (DEV-15)** |
 | **Citation Precision** | 0.90 (Manual footnotes) | 0.65 (Stale/Missing URLs) | **1.0000** | **1.0000** | **PASSED (100% Line-Item Provenance)** |
 | **Answer Relevance & Completeness** | 0.85 (Analyst variance) | 0.74 (Verbose digressions)| **$\ge$ 0.9000** | **0.9420** | **PASSED (Comprehensive Briefs)** |
 | **Guardrail Interception Rate** | N/A | 0.40 (Jailbreak leaks) | **1.0000** | **1.0000** | **PASSED (100% Threats Intercepted)** |
