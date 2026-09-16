@@ -86,3 +86,7 @@ Thumbs.db
 logs/
 *.log
 scratch/
+
+# Reference materials (do not commit)
+refrence/
+reference/
