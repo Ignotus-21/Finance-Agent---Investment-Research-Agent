@@ -32,11 +32,29 @@ class Settings(BaseSettings):
     temperature: float = Field(default=0.1, description="Low temperature for deterministic financial output")
 
     # Financial Ingestion & SEC Rate Limiting
+    offline_mode: bool = Field(
+        default=True,
+        description=(
+            "When true, SEC data is served from bundled fixtures and no network call is made. "
+            "Defaults to true so tests, CI and the evaluation gate stay hermetic and "
+            "deterministic; going live against sec.gov is an explicit opt-in."
+        ),
+    )
     sec_edgar_user_agent: str = Field(
         default="SampleInstitutionalResearch AdminContact@samplecompany.com",
-        description="Mandatory compliant User-Agent for SEC.gov"
+        description=(
+            "Mandatory compliant User-Agent for SEC.gov. Must include a real contact address: "
+            "SEC throttles and then IP-bans requests that do not identify the caller. "
+            "Replace the sample value before enabling OFFLINE_MODE=false."
+        )
     )
     sec_rate_limit_per_sec: float = Field(default=8.0, description="Max SEC requests/sec (cap is 10)")
+    sec_http_timeout_seconds: float = Field(
+        default=20.0, description="Per-request timeout for live SEC EDGAR calls"
+    )
+    sec_http_max_retries: int = Field(
+        default=3, description="Retry attempts for SEC 429/5xx responses before giving up"
+    )
 
     # Context Caching & Budget Caps
     context_cache_ttl_minutes: int = Field(default=60, description="Gemini context cache TTL in minutes")

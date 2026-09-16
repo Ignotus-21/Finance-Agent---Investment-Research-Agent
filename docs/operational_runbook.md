@@ -191,3 +191,46 @@ gcloud run services describe ira-multiagent-service \
 
 **Post-rollback:** the bad revision keeps its `green-<sha>` tag and 0% traffic. Leave it in place
 for forensics; Cloud Run retains it at no cost while it serves no requests.
+
+---
+
+## 5. Switching Between Fixture and Live SEC Data
+
+The SEC ingestion path has two modes, selected by the `OFFLINE_MODE` environment variable.
+
+| | `OFFLINE_MODE=true` (default) | `OFFLINE_MODE=false` |
+|---|---|---|
+| Source | Bundled fixtures | Live `sec.gov` / `data.sec.gov` |
+| Network | None | Outbound HTTPS |
+| Determinism | Fully deterministic | Varies with filings and restatements |
+| Used by | Tests, CI, evaluation gate | Production research |
+
+### 5.1 Before enabling live mode
+
+1. **Set a real `SEC_EDGAR_USER_AGENT`.** It must contain an organisation name and a working
+   contact address. SEC throttles anonymous callers and then blocks the source IP. The client
+   refuses to construct without an `@` in the value, but it cannot tell whether the mailbox is real.
+2. **Confirm egress.** Cloud Run runs with `--vpc-egress all-traffic`, so the VPC must have a NAT
+   route to the public internet or every SEC call will time out and trip the circuit breaker.
+3. **Expect the evaluation gate to drift.** Golden answers were recorded against fixtures. Run the
+   gate against live data in a scratch environment before trusting its verdict.
+
+### 5.2 Reading the provenance label
+
+Every filing response carries a `data_source` field. Check it when a figure looks wrong:
+
+| `data_source` | Meaning |
+|---|---|
+| `SEC_EDGAR_LIVE` | Read from the registrant's XBRL tags. Trustworthy. |
+| `OFFLINE_FIXTURE` | Curated fixture transcribed from a real filing. Accurate but frozen in time. |
+| `OFFLINE_SYNTHETIC_PLACEHOLDER` | **Invented placeholder numbers.** Never cite these. Appears when an unknown ticker is requested in offline mode. |
+| `CACHED_FALLBACK_CIRCUIT_BREAKER_ACTIVE` | Live fetch failed; serving cached data. Investigate upstream. |
+
+> [!CAUTION]
+> If a production brief comes back with `OFFLINE_SYNTHETIC_PLACEHOLDER`, the service is running in
+> offline mode when it should not be. Check the `OFFLINE_MODE` env var on the serving revision.
+
+### 5.3 Reverting to fixtures
+
+Set `OFFLINE_MODE=true` and deploy. No code change and no data migration; the switch is read per
+request from settings, so the next revision picks it up immediately.
