@@ -73,15 +73,17 @@ def check_thresholds(summary: dict) -> tuple[bool, list[str]]:
         print("   ⚠️  Low coverage: this score is evidence about a subset, not about the system.")
         print("      See refrence/plan_deviation.md DEV-15 before quoting it.")
 
-    # The faithfulness result is currently WAIVED from the exit code, not from
-    # the report. The score printed above is the real measured value and is
-    # never adjusted to manufacture a pass; only the build-blocking decision is
-    # suspended, and only because the root cause is a golden-dataset alignment
-    # gap (DEV-15) that cannot be fixed by changing application code.
+    # The waiver escape hatch is retained but no longer used:
+    # `enforce_faithfulness` is now true. It was false while DEV-15 was open,
+    # because the honest score could only reach 4.5% of the ground truth and
+    # blocking on that would have punished the measurement rather than the
+    # defect.
     #
-    # Flip `enforce_faithfulness` to true the moment the dataset is aligned.
-    # Leaving this waiver in place indefinitely recreates, in a slower and more
-    # respectable-looking form, exactly the problem it replaced.
+    # The mechanism stays because deleting it would mean the next person who
+    # needs to ship past a red metric does it by editing the threshold, which
+    # leaves no trace. A waiver has to be an explicit, greppable config change
+    # with a reason attached - and it prints on every run, so it cannot quietly
+    # become permanent. The score itself is never adjusted either way.
     if not faith_ok:
         if targets.get("enforce_faithfulness", True):
             all_passed = False

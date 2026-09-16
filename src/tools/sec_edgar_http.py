@@ -51,6 +51,11 @@ XBRL_CONCEPTS: dict[str, tuple[str, ...]] = {
     "revenue": (
         "RevenueFromContractWithCustomerExcludingAssessedTax",
         "RevenueFromContractWithCustomerIncludingAssessedTax",
+        # Banks and brokers report a top line net of interest expense and tag
+        # it exclusively. Without this, WFC, GS and MS have no revenue at all,
+        # and it is ordered ahead of "Revenues" because for an asset manager
+        # like BLK "Revenues" is only a component ($12.8bn of a $20.4bn total).
+        "RevenuesNetOfInterestExpense",
         "Revenues",
         "SalesRevenueNet",
     ),

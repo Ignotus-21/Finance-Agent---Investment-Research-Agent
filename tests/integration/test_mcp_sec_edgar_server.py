@@ -107,7 +107,7 @@ async def test_fetch_filing_section_returns_cited_fixture_data() -> None:
     assert not result.is_error
     payload = unwrap(result)
     assert payload["data_source"] == "OFFLINE_FIXTURE"
-    assert payload["accession_number"] == "0000320193-24-000106"
+    assert payload["accession_number"] == "0000320193-24-000123"
     assert payload["data"]["revenue_current"] == 391035000000.0
 
 
@@ -145,7 +145,7 @@ async def test_extract_xbrl_returns_all_three_statements_from_one_filing() -> No
         "BALANCE_SHEET",
         "CASH_FLOW",
     }
-    assert payload["accession_number"] == "0000320193-24-000106"
+    assert payload["accession_number"] == "0000320193-24-000123"
     assert payload["data_source"] == "OFFLINE_FIXTURE"
 
 

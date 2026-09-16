@@ -1,10 +1,11 @@
 # Build context exclusions for `docker build` / `make docker-build`.
 #
-# The Dockerfile only COPYs pyproject.toml, src/, configs/ and openapi.yaml, so
-# nothing here can reach the image. It is still worth excluding: the daemon
-# transfers the whole context before reading the Dockerfile, and .venv/ alone is
-# 870 MB. refrence/ is listed because local reference material should not end up
-# in a build context even transiently.
+# The Dockerfile only COPYs pyproject.toml, src/, configs/, openapi.yaml and
+# datasets/sec_fixtures_fy2024.json, so nothing else here can reach the image.
+# It is still worth excluding: the daemon transfers the whole context before
+# reading the Dockerfile, and .venv/ alone is 870 MB. refrence/ is listed
+# because local reference material should not end up in a build context even
+# transiently.
 
 .git/
 refrence/
