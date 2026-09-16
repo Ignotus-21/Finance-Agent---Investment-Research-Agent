@@ -19,7 +19,8 @@ locals {
 }
 
 resource "google_project_iam_member" "ira_sa_roles" {
-  for_each = toset(locals.runtime_roles)
+  # NOTE: the accessor prefix is the singular `local.`, not `locals.`.
+  for_each = toset(local.runtime_roles)
   project  = var.project_id
   role     = each.value
   member   = "serviceAccount:${google_service_account.ira_runtime_sa.email}"

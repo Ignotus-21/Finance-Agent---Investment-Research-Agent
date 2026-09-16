@@ -39,3 +39,15 @@ variable "container_concurrency" {
   type        = number
   default     = 80
 }
+
+variable "artifact_repository_id" {
+  description = "Artifact Registry repository name. MUST match the _ARTIFACT_REPO substitution in cloudbuild.yaml, otherwise the pipeline pushes to a repository Terraform does not manage."
+  type        = string
+  default     = "ira-repo"
+}
+
+variable "oncall_email" {
+  description = "Email address that receives Cloud Monitoring alert notifications"
+  type        = string
+  default     = "ira-oncall@example.com"
+}

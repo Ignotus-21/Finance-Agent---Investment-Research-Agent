@@ -1,14 +1,14 @@
 resource "google_bigquery_dataset" "ira_dataset" {
-  dataset_id                  = var.dataset_id
-  friendly_name               = "IRA Financial Intelligence & Audit Dataset"
-  description                 = "Immutable storage for multi-agent compliance audits and verified financial metrics."
-  location                    = var.region
-  project                     = var.project_id
-  delete_contents_on_destroy  = false
+  dataset_id                 = var.dataset_id
+  friendly_name              = "IRA Financial Intelligence & Audit Dataset"
+  description                = "Immutable storage for multi-agent compliance audits and verified financial metrics."
+  location                   = var.region
+  project                    = var.project_id
+  delete_contents_on_destroy = false
 
   labels = {
-    env       = "production"
-    workload  = "financial-intelligence"
+    env        = "production"
+    workload   = "financial-intelligence"
     governance = "finra-rule-2241"
   }
 }
