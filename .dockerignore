@@ -1,0 +1,38 @@
+# Build context exclusions for `docker build` / `make docker-build`.
+#
+# The Dockerfile only COPYs pyproject.toml, src/, configs/ and openapi.yaml, so
+# nothing here can reach the image. It is still worth excluding: the daemon
+# transfers the whole context before reading the Dockerfile, and .venv/ alone is
+# 870 MB. refrence/ is listed because local reference material should not end up
+# in a build context even transiently.
+
+.git/
+refrence/
+
+.venv/
+venv/
+env/
+
+.env
+*.pem
+*.key
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.egg-info/
+dist/
+build/
+
+.vscode/
+.idea/
+.DS_Store
+
+tests/
+docs/
+terraform/
+.github/
