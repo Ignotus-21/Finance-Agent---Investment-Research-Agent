@@ -1,4 +1,4 @@
-.PHONY: help install test lint eval run docker-build docker-run clean
+.PHONY: help install test lint eval run adk-run adk-web docker-build docker-run clean
 
 help:
 	@echo "Available commands:"
@@ -7,6 +7,8 @@ help:
 	@echo "  make eval         Execute Golden Evaluation Benchmark regression gate"
 	@echo "  make lint         Run Ruff linter and static type checks"
 	@echo "  make run          Launch local FastAPI server on port 8080"
+	@echo "  make adk-run      Run ADK agent in interactive terminal REPL"
+	@echo "  make adk-web      Launch ADK agent Web UI playground on port 8501"
 	@echo "  make docker-build Build production container image"
 	@echo "  make docker-run   Run containerized service locally"
 	@echo "  make clean        Remove cache and build artifacts"
@@ -26,6 +28,12 @@ lint:
 
 run:
 	uvicorn src.api.app:app --host 0.0.0.0 --port 8080 --reload
+
+adk-run:
+	adk run src/agents
+
+adk-web:
+	adk web src/agents --port 8501
 
 docker-build:
 	docker build -t ira-multiagent-service:latest .
