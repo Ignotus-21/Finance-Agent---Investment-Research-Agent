@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from datetime import date as _date
 from typing import Any
 
 import httpx
@@ -154,18 +155,63 @@ class SECEdgarHTTPClient:
         fiscal_year: int,
         client: httpx.AsyncClient,
     ) -> dict[str, Any]:
-        """Locate the filing of `form` whose report period falls in `fiscal_year`."""
+        """Locate the filing of `form` whose report period falls in `fiscal_year`.
+
+        Searches ``filings.recent`` first, then the paginated overflow chunks.
+        The overflow pass is not optional: ``recent`` is capped, and for a
+        prolific filer it overflows with routine paperwork. JPMorgan's recent
+        block holds 26,144 filings and contains exactly one 10-K - everything
+        older has rolled into 70 overflow files. Searching only ``recent``
+        therefore reports "no FY2024 10-K" for most large banks, for a filing
+        that plainly exists.
+        """
         response = await self._get(f"{SEC_DATA}/submissions/CIK{cik}.json", client)
         payload = response.json()
 
         company_name = payload.get("name", "")
-        recent = payload.get("filings", {}).get("recent", {})
 
-        forms = recent.get("form", [])
-        report_dates = recent.get("reportDate", [])
-        filing_dates = recent.get("filingDate", [])
-        accessions = recent.get("accessionNumber", [])
-        documents = recent.get("primaryDocument", [])
+        match = self._scan_filings(payload.get("filings", {}).get("recent", {}), form, fiscal_year)
+        if match:
+            return {"company_name": company_name, **match}
+
+        for chunk in self._relevant_chunks(payload.get("filings", {}).get("files", []), fiscal_year):
+            chunk_response = await self._get(f"{SEC_DATA}/submissions/{chunk}", client)
+            match = self._scan_filings(chunk_response.json(), form, fiscal_year)
+            if match:
+                return {"company_name": company_name, **match}
+
+        raise FilingNotFoundException(ticker=cik, form=form, fiscal_year=fiscal_year)
+
+    @staticmethod
+    def _relevant_chunks(files: list[dict[str, Any]], fiscal_year: int) -> list[str]:
+        """Overflow chunks that could plausibly contain `fiscal_year`'s annual report.
+
+        Each chunk advertises the filing-date range it covers. A 10-K for a
+        fiscal year is filed within roughly two years of that year starting, so
+        chunks outside that window are skipped rather than downloaded - the
+        difference between 2-3 requests and 70 for a large bank.
+        """
+        lower, upper = str(fiscal_year), str(fiscal_year + 2)
+        relevant = []
+        for entry in files:
+            name = entry.get("name")
+            if not name:
+                continue
+            starts = str(entry.get("filingFrom", ""))[:4]
+            ends = str(entry.get("filingTo", ""))[:4]
+            # Keep the chunk if its window overlaps [fiscal_year, fiscal_year+2].
+            if not starts or not ends or (ends >= lower and starts <= upper):
+                relevant.append(name)
+        return relevant
+
+    @staticmethod
+    def _scan_filings(block: dict[str, Any], form: str, fiscal_year: int) -> dict[str, Any] | None:
+        """Find `form` for `fiscal_year` within one submissions block."""
+        forms = block.get("form", [])
+        report_dates = block.get("reportDate", [])
+        filing_dates = block.get("filingDate", [])
+        accessions = block.get("accessionNumber", [])
+        documents = block.get("primaryDocument", [])
 
         for i, filed_form in enumerate(forms):
             if filed_form.upper() != form.upper():
@@ -178,25 +224,27 @@ class SECEdgarHTTPClient:
                 continue
 
             return {
-                "company_name": company_name,
                 "accession_number": accessions[i],
-                "filing_date": filing_dates[i],
+                "filing_date": filing_dates[i] if i < len(filing_dates) else "",
                 "report_date": report_date,
                 "primary_document": documents[i] if i < len(documents) else "",
             }
 
-        raise FilingNotFoundException(ticker=cik, form=form, fiscal_year=fiscal_year)
+        return None
 
     async def fetch_xbrl_facts(
         self,
         cik: str,
         fiscal_year: int,
         client: httpx.AsyncClient,
+        period_end: str = "",
     ) -> dict[str, float]:
         """Pull tagged financial facts for `fiscal_year` from the companyfacts API.
 
-        Only annual (FY) figures from 10-K filings are accepted. Quarterly
-        frames would otherwise be silently mixed into an annual comparison.
+        `period_end` is the filing's `reportDate` (from :meth:`find_filing`) and
+        is what actually identifies the period. See
+        :meth:`_extract_annual_value` for why the `fy` tag cannot be used for
+        this on its own.
         """
         response = await self._get(f"{SEC_DATA}/api/xbrl/companyfacts/CIK{cik}.json", client)
         us_gaap = response.json().get("facts", {}).get("us-gaap", {})
@@ -204,7 +252,7 @@ class SECEdgarHTTPClient:
         facts: dict[str, float] = {}
         for concept, candidate_tags in XBRL_CONCEPTS.items():
             for tag in candidate_tags:
-                value = self._extract_annual_value(us_gaap.get(tag), fiscal_year)
+                value = self._extract_annual_value(us_gaap.get(tag), fiscal_year, period_end)
                 if value is not None:
                     facts[concept] = value
                     break
@@ -212,23 +260,68 @@ class SECEdgarHTTPClient:
         return facts
 
     @staticmethod
-    def _extract_annual_value(tag_data: dict[str, Any] | None, fiscal_year: int) -> float | None:
-        """Return the USD annual value for `fiscal_year`, or None if not tagged."""
+    def _extract_annual_value(
+        tag_data: dict[str, Any] | None,
+        fiscal_year: int,
+        period_end: str = "",
+    ) -> float | None:
+        """Return the USD annual value for `fiscal_year`, or None if not tagged.
+
+        The `fy` / `fp` fields in companyfacts identify **the filing that
+        reported the fact, not the period the fact covers.** A FY2024 10-K
+        restates FY2023 and FY2022 for comparison, and all three rows carry
+        ``fy=2024, fp=FY, form=10-K``. Selecting on those fields alone matches
+        all three and - taking the first - returns the *oldest*: for AAPL FY2024
+        that yielded $394.3bn, which is the FY2022 figure, presented under a
+        genuine FY2024 accession number. Live data, wrong period, and no label
+        could have caught it.
+
+        Selection is therefore anchored on the period end date:
+
+        1. Prefer an exact match on the filing's own ``reportDate``.
+        2. Otherwise accept an end date within the fiscal year, taking the
+           latest, which handles small discrepancies between the submissions
+           index and the XBRL tagging.
+
+        Duration facts are additionally required to span 300-400 days so a
+        quarterly figure can never satisfy an annual concept. Instant facts
+        (balance-sheet items, which have no ``start``) are exempt from that.
+        """
         if not tag_data:
             return None
 
+        candidates: list[tuple[str, float]] = []
+
         for unit_values in tag_data.get("units", {}).get("USD", []):
-            if unit_values.get("fy") != fiscal_year:
-                continue
-            if unit_values.get("fp") != "FY":
-                continue
             if unit_values.get("form") != "10-K":
                 continue
+
+            end = unit_values.get("end", "")
+            if not end:
+                continue
+
+            start = unit_values.get("start")
+            if start:
+                days = (_date.fromisoformat(end) - _date.fromisoformat(start)).days
+                if not 300 <= days <= 400:
+                    continue
+
             value = unit_values.get("val")
-            if isinstance(value, int | float):
+            if not isinstance(value, int | float):
+                continue
+
+            if period_end and end == period_end:
                 return float(value)
 
-        return None
+            if end.startswith(str(fiscal_year)):
+                candidates.append((end, float(value)))
+
+        if not candidates:
+            return None
+
+        # Latest period end wins: for a fiscal year ending mid-calendar-year the
+        # comparative prior-year row can also start with the same four digits.
+        return max(candidates, key=lambda pair: pair[0])[1]
 
     async def fetch_mda_text(
         self,
