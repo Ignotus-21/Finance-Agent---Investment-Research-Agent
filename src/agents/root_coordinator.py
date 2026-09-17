@@ -118,8 +118,6 @@ class RootCoordinatorAgent(BaseAgent):
 
         # Step 5: Multi-Source Synthesis and Provenance Cross-Verification
         elapsed_ms = int((time.monotonic() - start_time) * 1000)
-        # Add realistic execution simulation timing for reporting if under test
-        reported_latency = max(elapsed_ms, 38500 if elapsed_ms < 1000 else elapsed_ms)
 
         brief = await self.synthesis_engine.synthesize_brief(
             request=request,
@@ -128,7 +126,7 @@ class RootCoordinatorAgent(BaseAgent):
             macro_data=macro_data,
             verified_metrics=verified_metrics,
             cache_hit=cache_status["cache_hit"],
-            latency_ms=reported_latency
+            latency_ms=elapsed_ms
         )
 
         return brief

@@ -50,5 +50,5 @@ async def test_synthetic_equity_research_pipeline():
     # 5. Assert ADK Agent tools
     adk_agent = create_financial_adk_agent()
     assert len(adk_agent.tools) == 5
-    sec_data = fetch_sec_filing_section(ticker="SYNTH", fiscal_year=2024, section="Item 7")
+    sec_data = await fetch_sec_filing_section(ticker="SYNTH", fiscal_year=2024, section="Item 7")
     assert "SYNTH" in sec_data
