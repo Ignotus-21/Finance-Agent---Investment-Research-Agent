@@ -1,98 +1,37 @@
 """
 Google ADK (Agent Development Kit) Integration for Investment Research Agent.
-Exposes a production-ready Google ADK Agent (LlmAgent) and App configured with Gemini 2.5 Pro,
-deterministic calculation tools, SEC EDGAR filing retrieval, earnings call transcript analysis,
-and real-time macroeconomic search grounding.
+
+Exposes a production-ready Google ADK Agent (LlmAgent) and App configured with
+Gemini 2.5 Pro, deterministic calculation tools, earnings call transcript
+analysis, real-time macroeconomic search grounding, and SEC EDGAR filing
+retrieval over the Model Context Protocol.
+
+SEC tools are NOT defined in this module. They are served by
+:mod:`src.mcp_servers.sec_edgar_server` and reached over MCP, which is what
+ADR-002 specified. Defining local copies as well would create two paths to the
+same data that can silently drift apart.
 """
 
-import asyncio
 import json
+import os
+import sys
 
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
+from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
 from google.genai import types
+from mcp import StdioServerParameters
 
 from src.tools.financial_calculator import FinancialCalculator
 from src.tools.search_grounding import VertexSearchClient
-from src.tools.sec_edgar_mcp import SECFilingClient
 from src.tools.transcript_parser import TranscriptClient
 
-# Initialize tool dependencies
-_sec_client = SECFilingClient()
+# Initialize tool dependencies for the natively-hosted tools. SEC retrieval has
+# no client here: it lives in the MCP server subprocess.
 _transcript_client = TranscriptClient()
 _search_client = VertexSearchClient()
 _calculator = FinancialCalculator()
-
-
-async def fetch_sec_filing_section(ticker: str, fiscal_year: int = 2024, section: str = "Item 7") -> str:
-    """Retrieves official SEC filing text and verified disclosures for a company.
-
-    Args:
-        ticker: The equity stock ticker (e.g. AAPL, MSFT, GOOGL, NVDA, SYNTH).
-        fiscal_year: The fiscal year of the 10-K filing (e.g. 2024).
-        section: The target 10-K section, e.g. 'Item 1' (Business), 'Item 7' (MD&A), 'Item 8' (Financials).
-
-    Returns:
-        A JSON string containing the extracted text, section metadata, and official SEC citation string.
-    """
-    ticker_clean = ticker.strip().upper()
-    internal_section = "MDA_ITEM_7" if "7" in section else "INCOME_STATEMENT"
-
-    # Routed through the public client so the Token Bucket rate limiter and
-    # Circuit Breaker apply to the ADK path exactly as they do to the REST path.
-    filing = await _sec_client.fetch_filing_section(
-        ticker=ticker_clean, form="10-K", fiscal_year=fiscal_year, section=internal_section
-    )
-    section_data = filing.get("data", {})
-
-    if internal_section == "MDA_ITEM_7":
-        content = section_data.get("text_summary", "Item 7 MD&A content summary.")
-        focus = section_data.get("focus_areas", {})
-    else:
-        content = str(section_data)
-        focus = {}
-
-    return json.dumps({
-        "ticker": ticker_clean,
-        "fiscal_year": fiscal_year,
-        "section": section,
-        "content_excerpt": content[:1200],
-        "focus_areas": focus,
-        "accession_number": filing.get("accession_number"),
-        "sec_citation": f"[SEC: {ticker_clean} 10-K FY{fiscal_year} {section}]",
-        "provenance": "U.S. Securities and Exchange Commission EDGAR System",
-        "provenance_signature": filing.get("provenance_signature"),
-    })
-
-
-async def extract_xbrl_financial_facts(ticker: str, fiscal_year: int = 2024) -> str:
-    """Extracts authoritative XBRL tagged financial facts directly from SEC 10-K Item 8.
-
-    Args:
-        ticker: The equity stock ticker symbol.
-        fiscal_year: The fiscal reporting year (e.g. 2024).
-
-    Returns:
-        JSON string containing revenue, net income, operating income, cash balance, and XBRL tags.
-    """
-    ticker_clean = ticker.strip().upper()
-
-    # Each statement is fetched concurrently through the guarded public client method.
-    income, balance, cash_flow = await asyncio.gather(*(
-        _sec_client.fetch_filing_section(ticker_clean, "10-K", fiscal_year, statement)
-        for statement in ("INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW")
-    ))
-
-    return json.dumps({
-        "ticker": ticker_clean,
-        "fiscal_year": fiscal_year,
-        "income_statement": income.get("data", {}),
-        "balance_sheet": balance.get("data", {}),
-        "cash_flow": cash_flow.get("data", {}),
-        "accession_number": income.get("accession_number"),
-        "source": f"[SEC: {ticker_clean} 10-K FY{fiscal_year} Item 8 Financial Statements]"
-    })
 
 
 async def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") -> str:
@@ -193,8 +132,41 @@ Follow these strict operating procedures:
 """
 
 
+def create_sec_edgar_mcp_toolset() -> McpToolset:
+    """Connect to the in-repo SEC EDGAR MCP server.
+
+    The server runs as a stdio subprocess launched with the *current*
+    interpreter (``sys.executable``), so it inherits this virtualenv and its
+    configuration - including ``OFFLINE_MODE``. Hard-coding ``python`` would
+    silently pick up a different interpreter under Cloud Run.
+
+    stdio rather than SSE/HTTP: the agent and the server share a lifecycle and
+    a trust boundary, so there is no reason to open a listening port.
+
+    ADK establishes the connection lazily on first tool listing, which is why
+    constructing this is cheap and safe at import time.
+    """
+    return McpToolset(
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(
+                command=sys.executable,
+                args=["-m", "src.mcp_servers.sec_edgar_server"],
+                # Inherit the parent environment so OFFLINE_MODE, the SEC
+                # User-Agent and GCP credentials reach the subprocess.
+                env=dict(os.environ),
+            ),
+        ),
+    )
+
+
 def create_financial_adk_agent(model_name: str = "gemini-2.5-pro") -> Agent:
-    """Creates an ADK Agent instance for Financial Investment Research."""
+    """Creates an ADK Agent instance for Financial Investment Research.
+
+    SEC retrieval is provided by the MCP toolset rather than by in-process
+    functions. The remaining three tools stay native: transcripts and search
+    have no external protocol server, and the calculator is pure local
+    arithmetic where a protocol hop would add latency and nothing else.
+    """
     return Agent(
         name="finance_investment_research_agent",
         model=Gemini(
@@ -203,8 +175,7 @@ def create_financial_adk_agent(model_name: str = "gemini-2.5-pro") -> Agent:
         ),
         instruction=FINANCE_AGENT_INSTRUCTION,
         tools=[
-            fetch_sec_filing_section,
-            extract_xbrl_financial_facts,
+            create_sec_edgar_mcp_toolset(),
             get_earnings_call_transcript,
             query_macro_market_news,
             compute_financial_ratios,
