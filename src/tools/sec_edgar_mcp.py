@@ -1,7 +1,18 @@
 """
-SEC EDGAR MCP Client Adapter.
-Enforces the Model Context Protocol (MCP) contract, token-bucket rate limiting (<= 8 req/s),
-mandatory User-Agent header compliance, exponential backoff with jitter, and circuit breaking.
+SEC EDGAR filing client.
+
+Provides one public entry point, :meth:`SECFilingClient.fetch_filing_section`,
+backed by two interchangeable retrieval paths:
+
+* **Offline** (``OFFLINE_MODE=true``, the default) - bundled fixtures. Keeps
+  tests, CI and the evaluation regression gate hermetic and deterministic.
+* **Live** (``OFFLINE_MODE=false``) - real HTTP against sec.gov via
+  :mod:`src.tools.sec_edgar_http`, reading financial figures from the
+  registrant's own XBRL tags.
+
+Both paths run behind the same token-bucket rate limiter (<= 8 req/s, under
+SEC's 10 req/s ceiling) and the same circuit breaker, and every response
+carries a ``data_source`` field identifying which path produced it.
 """
 
 import asyncio
@@ -11,6 +22,7 @@ from typing import Any
 from src.config import Settings
 from src.core.exceptions import FilingNotFoundException
 from src.core.interfaces import BaseTool, FilingRetrievalInterface
+from src.tools.sec_edgar_http import SECEdgarHTTPClient
 
 
 class TokenBucketRateLimiter:
@@ -82,6 +94,9 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             failure_threshold=self.settings.circuit_breaker_failure_threshold,
             recovery_timeout=float(self.settings.circuit_breaker_recovery_timeout_seconds)
         )
+        # Constructed lazily: SECEdgarHTTPClient validates the User-Agent in its
+        # constructor, and that must not be able to break offline startup.
+        self._http: SECEdgarHTTPClient | None = None
 
         # High-fidelity primary SEC financial repositories for benchmark tickers
         self._mock_edgar_filings: dict[str, dict[str, Any]] = {
@@ -199,6 +214,23 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
         }
 
     @property
+    def http(self) -> SECEdgarHTTPClient:
+        """The live EDGAR transport.
+
+        Built on first use rather than in ``__init__`` because
+        :class:`SECEdgarHTTPClient` rejects a non-compliant User-Agent at
+        construction time, and that must not be able to break startup for a
+        deployment running entirely offline.
+        """
+        if self._http is None:
+            self._http = SECEdgarHTTPClient(
+                user_agent=self.settings.sec_edgar_user_agent,
+                timeout_seconds=self.settings.sec_http_timeout_seconds,
+                max_retries=self.settings.sec_http_max_retries,
+            )
+        return self._http
+
+    @property
     def name(self) -> str:
         return "fetch_sec_filing_section"
 
@@ -209,30 +241,46 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
     async def fetch_filing_section(
         self, ticker: str, form: str, fiscal_year: int, section: str
     ) -> dict[str, Any]:
-        """Fetches filing section under token bucket rate limit and circuit breaker protection."""
-        # 1. Check Circuit Breaker
+        """Fetch a filing section under rate-limit and circuit-breaker protection.
+
+        Two paths, selected by ``settings.offline_mode``:
+
+        * **Offline** (default) - served from the bundled fixtures. Every
+          response is stamped ``data_source: OFFLINE_FIXTURE`` so a caller can
+          never mistake it for filed data.
+        * **Live** - real HTTP against sec.gov, with financial figures read
+          from the registrant's own XBRL tags.
+        """
+        # 1. Circuit breaker. When open we serve the last-known-good fixture
+        #    rather than failing the whole brief.
         if not self.circuit_breaker.is_available():
-            # Return cached fallback
             return self._get_cached_fallback(ticker, form, fiscal_year, section)
 
-        # 2. Enforce Token Bucket Rate Limiting
+        # 2. Token bucket. Applies to both paths: it is what keeps us under
+        #    SEC's 10 req/s ceiling, and it makes offline timing realistic.
         await self.rate_limiter.acquire()
 
-        # 3. Simulate SEC API call with exponential backoff & jitter
+        if self.settings.offline_mode:
+            return self._fetch_from_fixtures(ticker, form, fiscal_year, section)
+
+        return await self._fetch_from_edgar(ticker, form, fiscal_year, section)
+
+    def _fetch_from_fixtures(
+        self, ticker: str, form: str, fiscal_year: int, section: str
+    ) -> dict[str, Any]:
+        """Offline path: bundled fixtures, explicitly labelled as such."""
         key = f"{ticker.upper()}_{fiscal_year}_{form.upper()}"
         filing = self._mock_edgar_filings.get(key)
+        is_curated = filing is not None
 
-        if not filing:
-            # Generate valid audited filing for requested ticker
-            if ticker and ticker.replace('.', '').isalnum() and len(ticker) <= 8:
-                filing = self._generate_generic_filing(ticker.upper(), fiscal_year, form)
-            else:
+        if filing is None:
+            if not (ticker and ticker.replace('.', '').isalnum() and len(ticker) <= 8):
                 self.circuit_breaker.record_failure()
                 raise FilingNotFoundException(ticker=ticker, form=form, fiscal_year=fiscal_year)
+            filing = self._generate_generic_filing(ticker.upper(), fiscal_year, form)
 
         self.circuit_breaker.record_success()
-        statements = filing.get("statements", {})
-        section_data = statements.get(section.upper(), {})
+        section_data = filing.get("statements", {}).get(section.upper(), {})
 
         return {
             "ticker": ticker.upper(),
@@ -243,8 +291,117 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             "company_name": filing["company_name"],
             "section_requested": section.upper(),
             "data": section_data,
-            "provenance_signature": f"SEC:{ticker}:{form}:{fiscal_year}:{filing['accession_number']}"
+            # Provenance is explicit about what this actually is. A curated
+            # fixture is transcribed from a real filing; a generated one is
+            # invented placeholder arithmetic and must never be presented as
+            # evidence.
+            "data_source": "OFFLINE_FIXTURE" if is_curated else "OFFLINE_SYNTHETIC_PLACEHOLDER",
+            "provenance_signature": (
+                f"FIXTURE:{ticker.upper()}:{form.upper()}:{fiscal_year}:{filing['accession_number']}"
+                if is_curated
+                else f"SYNTHETIC:{ticker.upper()}:{form.upper()}:{fiscal_year}"
+            ),
         }
+
+    async def _fetch_from_edgar(
+        self, ticker: str, form: str, fiscal_year: int, section: str
+    ) -> dict[str, Any]:
+        """Live path: real SEC EDGAR data, or an honest failure.
+
+        Never falls back to synthetic data. If EDGAR is unreachable the circuit
+        breaker records the failure and the cached fixture is returned - clearly
+        labelled - which is a different thing from inventing numbers.
+        """
+        try:
+            async with self.http.build_client() as client:
+                cik = await self.http.resolve_cik(ticker, client)
+                filing = await self.http.find_filing(cik, form, fiscal_year, client)
+
+                section_upper = section.upper()
+                if section_upper == "MDA_ITEM_7":
+                    text = await self.http.fetch_mda_text(
+                        cik,
+                        filing["accession_number"],
+                        filing["primary_document"],
+                        client,
+                    )
+                    section_data: dict[str, Any] = {
+                        "section_title": "Item 7 MD&A",
+                        "text_summary": text,
+                        "extraction_status": "EXTRACTED" if text else "SECTION_BOUNDARY_NOT_FOUND",
+                    }
+                else:
+                    facts = await self.http.fetch_xbrl_facts(cik, fiscal_year, client)
+                    prior = await self.http.fetch_xbrl_facts(cik, fiscal_year - 1, client)
+                    section_data = self._shape_statement(section_upper, facts, prior)
+
+        except FilingNotFoundException:
+            # A genuine "SEC does not have this" is a client error, not an
+            # upstream fault. Do not trip the breaker on it.
+            raise
+        except Exception:
+            self.circuit_breaker.record_failure()
+            return self._get_cached_fallback(ticker, form, fiscal_year, section)
+
+        self.circuit_breaker.record_success()
+
+        return {
+            "ticker": ticker.upper(),
+            "form": form.upper(),
+            "fiscal_year": fiscal_year,
+            "accession_number": filing["accession_number"],
+            "filing_date": filing["filing_date"],
+            "company_name": filing["company_name"],
+            "section_requested": section.upper(),
+            "data": section_data,
+            "data_source": "SEC_EDGAR_LIVE",
+            "provenance_signature": (
+                f"SEC:{ticker.upper()}:{form.upper()}:{fiscal_year}:{filing['accession_number']}"
+            ),
+        }
+
+    @staticmethod
+    def _shape_statement(
+        section: str, facts: dict[str, float], prior: dict[str, float]
+    ) -> dict[str, Any]:
+        """Project flat XBRL concepts onto the statement shape callers expect.
+
+        Keys absent from the filing are omitted rather than defaulted to zero;
+        a missing tag means "the registrant did not report this", and zero
+        would be a materially different claim.
+        """
+        shapes: dict[str, dict[str, float | None]] = {
+            "INCOME_STATEMENT": {
+                "revenue_current": facts.get("revenue"),
+                "revenue_prior": prior.get("revenue"),
+                "operating_income_current": facts.get("operating_income"),
+                "operating_income_prior": prior.get("operating_income"),
+                "net_income": facts.get("net_income"),
+            },
+            "BALANCE_SHEET": {
+                "cash_and_equivalents": facts.get("cash_and_equivalents"),
+                "total_debt": facts.get("total_debt"),
+                "shareholders_equity": facts.get("shareholders_equity"),
+            },
+            "CASH_FLOW": {
+                "cash_from_operations": facts.get("cash_from_operations"),
+                "capital_expenditures": facts.get("capital_expenditures"),
+            },
+        }
+
+        names = {
+            "INCOME_STATEMENT": "Consolidated Statements of Income",
+            "BALANCE_SHEET": "Consolidated Balance Sheets",
+            "CASH_FLOW": "Consolidated Statements of Cash Flows",
+        }
+
+        selected = shapes.get(section)
+        if selected is None:
+            return {}
+
+        result: dict[str, Any] = {"statement_name": names[section], "xbrl_source": "us-gaap"}
+        result.update({k: v for k, v in selected.items() if v is not None})
+        return result
 
     def _get_cached_fallback(self, ticker: str, form: str, fiscal_year: int, section: str) -> dict[str, Any]:
         """Fallback to cached historical data when upstream SEC EDGAR is down."""
