@@ -59,8 +59,8 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
    - *Proof Artifact:* [`docs/prd_functional_requirements.md#section-7`](file:///docs/prd_functional_requirements.md).
 9. **System Design Artifacts (Score: 3):** Visual system block diagrams, C4 container & component diagrams, UML sequence diagrams, data flow diagrams.
    - *Proof Artifact:* [`docs/tdd_part1_system_architecture.md`](file:///docs/tdd_part1_system_architecture.md).
-10. **Decision Records (ADRs) (Score: 3):** ADR-001 (Multi-Agent Hierarchical vs Monolithic), ADR-002 (MCP Tool Integration vs Proprietary REST), ADR-003 (Gemini Context Caching vs Chunk-based Vector RAG).
-    - *Proof Artifact:* [`docs/adrs/`](file:///docs/adrs/).
+10. **Decision Records (ADRs) (Score: 3):** ADR-001 (Multi-Agent Hierarchical vs Monolithic), ADR-002 (MCP Tool Integration vs Proprietary REST), ADR-003 (Gemini Context Caching vs Chunk-based Vector RAG). ADR-003 additionally carries a formal **"Deliberately Not Provisioned"** waiver recording why no Vertex AI Vector Search index or endpoint exists in the Terraform estate.
+    - *Proof Artifact:* [`docs/adrs/`](file:///docs/adrs/), [`ADR-003 § Deliberately Not Provisioned`](file:///docs/adrs/ADR-003-gemini-context-caching-vs-vector-rag.md).
 11. **API Documentation (Score: 3):** OpenAPI 3.1 contract specification (`openapi.yaml`), interactive Swagger/ReDoc docs, typed request/response models.
     - *Proof Artifact:* [`openapi.yaml`](file:///openapi.yaml).
 12. **Operational Documentation (Score: 3):** Operational Runbook (maintenance, Secret Manager rotation, incident triage), Developer Onboarding Guide, and User & API Demo Walkthrough.
@@ -75,8 +75,8 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
     - *Proof Artifact:* [`terraform/modules/vpc/main.tf`](file:///terraform/modules/vpc/main.tf).
 15. **Data Protection & Privacy (Score: 3):** Google Cloud DLP inspection rules redacting analyst IDs and proprietary portfolio metadata; Cloud KMS customer-managed encryption keys; Secret Manager.
     - *Proof Artifact:* [`src/guardrails/dlp_masker.py`](file:///src/guardrails/dlp_masker.py), [`terraform/modules/secret_manager/main.tf`](file:///terraform/modules/secret_manager/main.tf).
-16. **AI-Specific Security (Score: 3):** Pre-execution classifier guardrail callbacks intercepting prompt injection, jailbreaks, and out-of-domain queries before model dispatch; tool execution whitelist.
-    - *Proof Artifact:* [`src/guardrails/input_guardrail.py`](file:///src/guardrails/input_guardrail.py), [`src/guardrails/scope_classifier.py`](file:///src/guardrails/scope_classifier.py).
+16. **AI-Specific Security (Score: 3):** Pre-execution classifier guardrail callbacks intercepting prompt injection, jailbreaks, and out-of-domain queries before model dispatch; tool execution whitelist. Backed by a formal STRIDE threat model with a trust-boundary data flow diagram, risk register, and mitigation-to-test traceability.
+    - *Proof Artifact:* [`docs/threat_model.md`](file:///docs/threat_model.md), [`src/guardrails/input_guardrail.py`](file:///src/guardrails/input_guardrail.py), [`src/guardrails/scope_classifier.py`](file:///src/guardrails/scope_classifier.py).
 17. **Compliance & Governance (Score: 3):** Immutable audit logging to Cloud Logging and BigQuery capturing timestamp, user_id, prompt_hash, tools_called, latency, token_usage, and safety verdict.
     - *Proof Artifact:* [`src/observability/audit_logger.py`](file:///src/observability/audit_logger.py), [`terraform/ddl/01_audit_log.sql`](file:///terraform/ddl/01_audit_log.sql).
 
