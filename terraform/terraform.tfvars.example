@@ -5,3 +5,10 @@ container_image       = "us-central1-docker.pkg.dev/ira-capstone-finance-prod/ir
 min_instances         = 1
 max_instances         = 50
 container_concurrency = 80
+
+# Must match the _ARTIFACT_REPO substitution in cloudbuild.yaml.
+artifact_repository_id = "ira-repo"
+
+# Destination for every Cloud Monitoring alert policy. Set this to a real
+# address or the alerts fire into a mailbox nobody reads.
+oncall_email = "ira-oncall@example.com"

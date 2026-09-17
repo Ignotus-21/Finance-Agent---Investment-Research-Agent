@@ -17,3 +17,23 @@ output "runtime_service_account" {
   description = "Least privilege service account executing agent workloads"
   value       = module.iam.service_account_email
 }
+
+output "artifact_registry_url" {
+  description = "Base docker push/pull URL; must match the image path built by cloudbuild.yaml"
+  value       = module.artifact_registry.repository_url
+}
+
+output "research_briefs_bucket" {
+  description = "CMEK-encrypted bucket archiving generated research briefs"
+  value       = module.storage.research_briefs_bucket
+}
+
+output "eval_artifacts_bucket" {
+  description = "CMEK-encrypted bucket holding CI evaluation artefacts"
+  value       = module.storage.eval_artifacts_bucket
+}
+
+output "slo_ids" {
+  description = "Cloud Monitoring SLOs enforcing the Definition of Done thresholds"
+  value       = module.monitoring.slo_ids
+}
