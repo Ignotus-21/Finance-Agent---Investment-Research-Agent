@@ -29,7 +29,7 @@ graph TB
 
     subgraph AgentRuntime [Vertex AI Multi-Agent Runtime]
         RootAgent[Root Coordinator Agent<br/>Gemini 2.5 Pro + Thinking Budget Planner]
-        
+
         subgraph SpecializedAgents [Domain Specialized Sub-Agents]
             SECAgent[SEC Filing Specialist<br/>Form 10-K/10-Q XBRL Parser]
             TranscriptAgent[Earnings Transcript Specialist<br/>Executive Remarks vs Q&A Segmenter]
@@ -105,11 +105,11 @@ sequenceDiagram
     DLP-->>API: Sanitized request payload
     API->>Guard: Inspect prompt for injection & domain scope
     Guard-->>API: Verdict: PASS (Security score 1.0)
-    
+
     API->>Root: Dispatch sanitized research request
     Note over Root: Plan-and-Execute reasoning loop with thinking budget
     Root->>Root: Formulate Decomposed Execution Plan
-    
+
     par Concurrent Sub-Agent Data Gathering
         Root->>SEC: fetch_sec_filing_section(ticker="AAPL", form="10-K", year=2024)
         SEC->>SEC: Query SEC EDGAR MCP / Check Context Cache

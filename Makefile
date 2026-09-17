@@ -1,8 +1,10 @@
-.PHONY: help install test lint eval run adk-run adk-web docker-build docker-run clean
+.PHONY: help install hooks hooks-run test lint eval run adk-run adk-web docker-build docker-run clean
 
 help:
 	@echo "Available commands:"
-	@echo "  make install      Install application dependencies"
+	@echo "  make install      Install application dependencies and activate Git pre-commit hooks"
+	@echo "  make hooks        Install the Git pre-commit hooks only"
+	@echo "  make hooks-run    Run every pre-commit hook against all files (CI parity check)"
 	@echo "  make test         Execute unit, integration, and chaos test suites (assert >=80% coverage)"
 	@echo "  make eval         Execute Golden Evaluation Benchmark regression gate"
 	@echo "  make lint         Run Ruff linter and static type checks"
@@ -15,6 +17,15 @@ help:
 
 install:
 	pip install -e .[dev]
+	$(MAKE) hooks
+
+# Chained onto `install` so a fresh clone gets the hooks without a second,
+# easily-forgotten step. Hooks that nobody installs never run.
+hooks:
+	pre-commit install
+
+hooks-run:
+	pre-commit run --all-files
 
 test:
 	pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -v

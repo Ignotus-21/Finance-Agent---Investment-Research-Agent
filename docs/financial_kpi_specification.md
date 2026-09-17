@@ -79,7 +79,7 @@ $$\text{Operating Margin Compression (bps)} = \left( \text{Operating Margin}_{t-
 
 #### SEC Primary Line-Item Sources:
 - **Statement:** Consolidated Statements of Operations
-- **XBRL Tags:** 
+- **XBRL Tags:**
   - Operating Income: `us-gaap:OperatingIncomeLoss`
   - Total Net Sales: `us-gaap:Revenues`
 - **Periodicity:** Fiscal Year or Trailing Twelve Months (TTM)

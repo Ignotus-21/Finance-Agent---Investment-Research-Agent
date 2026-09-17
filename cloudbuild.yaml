@@ -48,9 +48,12 @@ steps:
       - 'push'
       - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'
 
-  # 6. Zero-Downtime Blue/Green Rolling Deployment to Cloud Run
+  # 6. Blue/Green Deploy - Stage GREEN revision with ZERO production traffic.
+  #    The currently serving revision (BLUE) keeps 100% of traffic until the
+  #    smoke test in step 7 passes. The revision is reachable in isolation via
+  #    its tagged URL (https://green-<sha>---<service-url>).
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-to-cloud-run'
+    id: 'deploy-green-revision-no-traffic'
     entrypoint: 'gcloud'
     args:
       - 'run'
@@ -78,6 +81,77 @@ steps:
       - 'ira-vpc-connector'
       - '--vpc-egress'
       - 'all-traffic'
+      - '--revision-suffix'
+      - 'green-$SHORT_SHA'
+      - '--tag'
+      - 'green-$SHORT_SHA'
+      - '--no-traffic'
+
+  # 7. Smoke test the GREEN revision on its tagged URL before any cutover.
+  #    A non-zero exit here aborts the build and leaves BLUE serving, which is
+  #    the entire point of staging with --no-traffic.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'smoke-test-green-revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        TAG="green-$SHORT_SHA"
+
+        # Resolve the tagged URL from the service's traffic block rather than
+        # string-building it, so a Cloud Run URL format change cannot silently
+        # point the smoke test at the wrong endpoint.
+        # NOTE: shell expansions are escaped as $$ so Cloud Build passes them
+        # through to bash instead of resolving them as build substitutions.
+        TAG_URL=$$(gcloud run services describe "$_SERVICE_NAME" \
+          --region "$_REGION" --platform managed --format=json \
+          | python3 -c "import json,sys; t=json.load(sys.stdin)['status']['traffic']; print(next(r['url'] for r in t if r.get('tag')=='$$TAG'))")
+
+        echo "GREEN revision staged at: $$TAG_URL"
+
+        # The service is private, so probes must carry an identity token.
+        TOKEN=$$(gcloud auth print-identity-token)
+
+        for ENDPOINT in /healthz /readyz; do
+          echo "Probing $$ENDPOINT ..."
+          for ATTEMPT in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 20 \
+                 -H "Authorization: Bearer $$TOKEN" \
+                 "$$TAG_URL$$ENDPOINT" > /tmp/probe.json; then
+              cat /tmp/probe.json
+              echo ""
+              break
+            fi
+            if [ "$$ATTEMPT" = "5" ]; then
+              echo "SMOKE TEST FAILED on $$ENDPOINT after 5 attempts. Aborting before cutover; BLUE remains live."
+              exit 1
+            fi
+            echo "  attempt $$ATTEMPT failed, retrying in 10s (cold start)..."
+            sleep 10
+          done
+        done
+
+        echo "Smoke test passed. GREEN is healthy."
+
+  # 8. Cutover - shift 100% of production traffic to the verified GREEN revision.
+  #    Rollback is a single command against the previous revision:
+  #      gcloud run services update-traffic $_SERVICE_NAME \
+  #        --region $_REGION --to-revisions <previous-revision>=100
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'cutover-traffic-to-green'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update-traffic'
+      - '$_SERVICE_NAME'
+      - '--region'
+      - '$_REGION'
+      - '--platform'
+      - 'managed'
+      - '--to-tags'
+      - 'green-$SHORT_SHA=100'
 
 substitutions:
   _REGION: 'us-central1'

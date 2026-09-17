@@ -39,7 +39,7 @@ graph TB
 
     subgraph AgenticCore [Vertex AI Multi-Agent Core - Google ADK]
         Root[Root Coordinator Agent<br/>Gemini 2.5 Pro + 2k Thinking Budget]
-        
+
         subgraph SubAgents [Concurrent Domain Sub-Agents]
             SEC[SEC Filing Specialist<br/>MCP EDGAR / XBRL Tables]
             Trans[Transcript Specialist<br/>Executive Remarks vs Q&A]

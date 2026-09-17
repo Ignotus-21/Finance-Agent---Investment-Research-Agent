@@ -10,7 +10,7 @@
 2026-09-14
 
 ### Context & Problem Statement
-The SEC Filing Specialist sub-agent requires access to SEC EDGAR submissions, XBRL company facts, and filing sections (10-K, 10-Q, 8-K). Traditionally, engineering teams build ad-hoc Python wrapper functions wrapping `requests` or `httpx` to parse SEC endpoints. 
+The SEC Filing Specialist sub-agent requires access to SEC EDGAR submissions, XBRL company facts, and filing sections (10-K, 10-Q, 8-K). Traditionally, engineering teams build ad-hoc Python wrapper functions wrapping `requests` or `httpx` to parse SEC endpoints.
 
 However, open tool ecosystems increasingly converge around the **Model Context Protocol (MCP)**, an open standard created to standardize how LLMs discover, inspect, and invoke external tools and resources across process boundaries.
 
@@ -45,7 +45,7 @@ sequenceDiagram
     participant Client as MCP Client Adapter
     participant Server as SEC EDGAR MCP Server
     participant SEC as SEC.gov EDGAR API
-    
+
     Agent->>Client: Call Tool: fetch_sec_filing_section(ticker="AAPL", form="10-K")
     Client->>Server: JSON-RPC 2.0 Request: tools/call
     Server->>Server: Enforce Token Bucket (<=8 req/s) & User-Agent Header

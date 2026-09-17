@@ -156,3 +156,38 @@ AS SELECT *
 FROM `ira_financial_intelligence.compliance_audit_log`
 FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR);
 ```
+
+### 4.3 Rolling Back a Blue/Green Deployment
+
+`cloudbuild.yaml` stages each release as a **GREEN** revision with `--no-traffic`, smoke-tests it on
+its tagged URL (`/healthz` and `/readyz`), and only then shifts 100% of traffic. Two failure modes:
+
+**Case A - the smoke test failed.** The build aborts before the cutover step. BLUE is still serving
+100% of traffic and **no operator action is required**. Read the `smoke-test-green-revision` step
+log, fix forward, and re-run the build. The failed GREEN revision remains deployed at zero traffic
+and can be inspected via its tagged URL.
+
+**Case B - GREEN passed the smoke test but is misbehaving in production.** Roll back by name:
+
+```bash
+# 1. List revisions newest-first; identify the last known-good (previous) revision.
+gcloud run revisions list \
+    --service=ira-multiagent-service --region=us-central1 \
+    --format="table(metadata.name, status.conditions[0].lastTransitionTime, spec.containers[0].image)"
+
+# 2. Send all traffic back to it. Takes effect in seconds; no rebuild, no redeploy.
+gcloud run services update-traffic ira-multiagent-service \
+    --region=us-central1 \
+    --to-revisions=<LAST_KNOWN_GOOD_REVISION>=100
+
+# 3. Confirm the split.
+gcloud run services describe ira-multiagent-service \
+    --region=us-central1 --format="value(status.traffic)"
+```
+
+> Revisions are named `ira-multiagent-service-green-<SHORT_SHA>`, so the offending revision maps
+> directly back to its Git commit. Record that SHA in the incident ticket and revert it on `main`
+> so the next build does not redeploy the same defect.
+
+**Post-rollback:** the bad revision keeps its `green-<sha>` tag and 0% traffic. Leave it in place
+for forensics; Cloud Run retains it at no cost while it serves no requests.

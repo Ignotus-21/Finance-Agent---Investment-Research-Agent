@@ -47,16 +47,16 @@ We must decide on the optimal strategy for processing annual 10-K filings.
 ```mermaid
 flowchart TD
     Request[Research Query: AAPL FY2024] --> CacheCheck{Gemini Context<br/>Cache Exists?}
-    
+
     CacheCheck -- No --> Ingest10K[Download & Normalize Form 10-K<br/>~150k Tokens]
     Ingest10K --> CreateCache[Create Vertex AI Context Cache<br/>TTL: 60 mins]
     CreateCache --> BindAgent[Bind Model to Context Cache]
-    
+
     CacheCheck -- Yes --> BindAgent
-    
+
     BindAgent --> Query1[SEC Agent: Extract Balance Sheet & MD&A<br/>Cached Input: $0.3125 / 1M]
     BindAgent --> Query2[Synthesis Engine: Cross-Verify Footnotes<br/>Cached Input: $0.3125 / 1M]
-    
+
     Query1 --> Result[100% Table Fidelity & Verified Provenance]
     Query2 --> Result
 ```

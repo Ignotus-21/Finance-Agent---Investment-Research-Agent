@@ -219,4 +219,3 @@ def create_financial_adk_app(agent: Agent | None = None) -> App:
         root_agent=root,
         name="finance_research_app",
     )
-
