@@ -20,7 +20,7 @@ The **Autonomous Investment Research Intelligence Agent (IRA)** was conceptualiz
 2. **Deterministic Arithmetic:** All financial ratios are routed through a pure Python calculator using `Decimal`, so the **arithmetic** cannot hallucinate. *History (PR #9, PR #12): the original "Faithfulness = 1.0000" was a hardcoded literal, not a measurement. Measured honestly it was **0.60 at 4.5% coverage**. After recording the offline corpus from sec.gov and aligning the dataset to the metrics the pipeline emits, it is **1.0000 at 51.8% coverage** and enforced. The calculator's **inputs** are now verified against the filings for the figures that are checked. See DEV-15.*
 3. **100% Evidentiary Provenance:** Every stated numerical figure and executive claim is linked to an audited primary SEC Form 10-K filing or earnings call transcript citation.
 4. **Institutional Security & Governance:** Enforced pre-execution guardrails intercepting 100% of adversarial prompt injections and jailbreaks, coupled with Cloud DLP metadata redaction and immutable BigQuery audit logging.
-5. **Economic Viability:** Leveraged Gemini Context Caching to discount 10-K input token reads by 75%, maintaining an average synthesis cost of **$0.165 per brief** (well under the $0.25 target).
+5. **Economic Viability:** Asymmetric model routing (Pro for synthesis, Flash for extraction) and ADK context caching against Vertex `CachedContent`. The **$0.165 per brief is a projection from list prices, not a measurement** — and the REST endpoint calls no model at all, so its inference cost is $0.00. Measuring the ADK path needs a live run with billing attached (DEV-17).
 6. **Readiness Assessment Alignment:** Satisfied all **32 competencies** at **Level 3 (Proficient)** in the CPSE-to-FDE evaluation framework.
 
 ---
@@ -89,7 +89,7 @@ graph TB
 | **End-to-End Latency** | $\le$ 60.0 seconds (P95) | **38.5 seconds** | Distributed OpenTelemetry trace spans. |
 | **Test Suite Coverage** | $\ge$ 80% Statement Coverage | **91% Coverage** | Pytest unit, integration, and chaos test suites. |
 | **Infrastructure as Code** | 100% Declarative | **100% Codified** | Complete Terraform VPC, Cloud Run, BQ modules. |
-| **Inference Cost per Brief** | $\le$ $0.25 USD | **$0.165 USD** | Gemini Context Caching token pricing telemetry. |
+| **Inference Cost per Brief** | $\le$ $0.25 USD | **$0.165 modelled / $0.00 on the REST path** | Projected from Vertex list prices — *not* telemetry. Unmeasured; see DEV-17. |
 
 ---
 

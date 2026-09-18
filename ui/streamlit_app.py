@@ -243,8 +243,9 @@ def main() -> None:
         f"cache hit {meta.get('context_cache_hit')} · est. cost ${meta.get('estimated_cost_usd')}"
     )
     st.caption(
-        "`estimated_cost_usd` and `context_cache_hit` are modelled, not measured — "
-        "the cache is an in-process dict, not Vertex CachedContent (DEV-17)."
+        "The zeros are correct, not missing data: this endpoint runs the "
+        "deterministic pipeline and calls no language model. Model routing and "
+        "Vertex context caching live on the ADK path (`adk run src/agents`)."
     )
 
 

@@ -24,8 +24,12 @@ sec_edgar:
   backoff_base_seconds: 1.0
 
 context_caching:
+  # Performed by ADK's ContextCacheConfig against Vertex CachedContent; see
+  # create_financial_adk_app in src/agents/adk_agent.py. 2048 is Gemini's own
+  # floor for the 2.5 family (4096 for 3.x) and applies whatever is configured.
+  # This file previously said 32768, which was the Gemini 1.5 minimum.
   ttl_minutes: 60
-  min_tokens_for_cache: 32768
+  min_tokens_for_cache: 2048
 
 guardrails:
   enforce_strict_scope: true

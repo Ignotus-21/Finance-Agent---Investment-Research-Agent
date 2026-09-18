@@ -26,7 +26,7 @@
 |  - Numerical Faithfulness: 1.0000 at 51.8% coverage - TARGET MET, enforced in CI        |
 |  - Evidentiary Provenance: 100% Verifiable Primary SEC Form 10-K & Transcript Citations |
 |  - Unit & Integration Test Coverage: 91% (DoD Threshold: >= 80%)                        |
-|  - Per-Query Cost: $0.165 (DoD Budget Cap: <= $0.25) via Gemini Context Caching         |
+|  - Per-Query Cost: $0.165 MODELLED, not measured (Cap <= $0.25); REST path = $0.00      |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -99,8 +99,8 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
     - *Proof Artifact:* [`src/agents/root_coordinator.py`](file:///src/agents/root_coordinator.py).
 23. **Resource Efficiency (Score: 3):** Sizing Cloud Run containers (2 vCPU, 4GB RAM, 80 concurrency), memory-efficient streaming parsers for large 10-K files.
     - *Proof Artifact:* [`terraform/modules/cloud_run/main.tf`](file:///terraform/modules/cloud_run/main.tf).
-24. **AI Cost Management (Score: 3):** Model routing (Flash for extraction, Pro for synthesis); Gemini Context Caching reducing token costs by >70% on static 10-Ks; cost model maintaining <$0.25 per query ($0.165 actual).
-    - *Proof Artifact:* [`src/cache/context_caching.py`](file:///src/cache/context_caching.py), [`docs/cost_and_token_analysis.md`](file:///docs/cost_and_token_analysis.md).
+24. **AI Cost Management (Score: 2):** Model routing is real — the ADK coordinator runs on `coordinator_model` and delegates retrieval to a specialist on `extraction_model` via `AgentTool`. Context caching is real — ADK's `ContextCacheConfig` against Vertex `CachedContent`. **The cost is not measured.** The $0.165 is a projection from list prices; the REST path calls no model and costs $0.00 in inference. Scored 2 rather than 3 deliberately: the mechanisms exist, the evidence does not yet. Closing it needs a live run with billing attached (DEV-17).
+    - *Proof Artifact:* [`src/agents/adk_agent.py`](file:///src/agents/adk_agent.py), [`tests/unit/test_adk_model_routing.py`](file:///tests/unit/test_adk_model_routing.py), [`docs/cost_and_token_analysis.md`](file:///docs/cost_and_token_analysis.md).
 
 ---
 

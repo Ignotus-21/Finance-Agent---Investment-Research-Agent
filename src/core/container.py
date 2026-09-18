@@ -9,7 +9,6 @@ from src.agents.macro_agent import MacroSubAgent
 from src.agents.root_coordinator import RootCoordinatorAgent
 from src.agents.sec_agent import SECSubAgent
 from src.agents.transcript_agent import TranscriptSubAgent
-from src.cache.context_caching import ContextCachingManager
 from src.config import Settings
 from src.engine.synthesis_engine import SynthesisEngine
 from src.guardrails.input_guardrail import InputGuardrail
@@ -30,7 +29,6 @@ class ApplicationContainer:
         self.sec_client = SECFilingClient(settings=self.settings)
         self.transcript_client = TranscriptClient(settings=self.settings)
         self.search_client = VertexSearchClient(settings=self.settings)
-        self.cache_manager = ContextCachingManager(settings=self.settings)
 
         # Pre-execution Security Guardrails
         self.guardrail = InputGuardrail(settings=self.settings)
@@ -50,7 +48,6 @@ class ApplicationContainer:
             macro_agent=self.macro_agent,
             calculator=self.calculator,
             synthesis_engine=self.synthesis_engine,
-            context_cache_manager=self.cache_manager,
             settings=self.settings
         )
 

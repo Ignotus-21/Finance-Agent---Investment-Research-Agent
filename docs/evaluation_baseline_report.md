@@ -55,7 +55,7 @@ pie title Scenario Distribution Across Evaluation Benchmark (52 Scenarios)
 | **Answer Relevance & Completeness** | 0.85 (Analyst variance) | 0.74 (Verbose digressions)| **$\ge$ 0.9000** | **1.0000** | **PASSED** — but see the caveat on the relevance scorer below |
 | **Guardrail Interception Rate** | N/A | 0.40 (Jailbreak leaks) | **1.0000** | **1.0000** | **PASSED (100% Threats Intercepted)** |
 | **P95 Synthesis Latency** | 14,400s (4 hours) | 180s (Sequential) | **$\le$ 60.0s** | **0.25s** | **PASSED** — offline; no LLM call on this path (see below) |
-| **Average Cost per Brief** | $200.00 (Labor) | $2.10 (Token burn) | **$\le$ $0.25** | **$0.165** | **PASSED (Context Cache Discount)** |
+| **Average Cost per Brief** | $200.00 (Labor) | $2.10 (Token burn) | **$\le$ $0.25** | **$0.165 modelled** | **NOT MEASURED** — projected from list prices. The scored path calls no model, so its true inference cost is $0.00. DEV-17. |
 
 ### What these numbers do and do not establish
 
@@ -146,4 +146,4 @@ gantt
 | **SEC EDGAR 429 Rate Limit** | Upstream API drops requests | Token Bucket rate limiter (max 8 req/s) + Tenacity exponential backoff with full jitter. | Verified with chaos test harness. |
 | **Upstream 503 Outage** | External service temporarily unreachable | Circuit Breaker pattern trips to `OPEN` after 5 failures; falls back to cached 10-K filing extract. | Verified; graceful degradation without dropping user query. |
 | **Prompt Injection Attacks** | Potential leakage of system prompts / keys | Pre-execution classifier regex & scope filters reject before dispatch. | 100% blocked across all benchmark attack vectors. |
-| **Token Cost Overruns** | Excessive token burn on 150-page 10-Ks | Gemini Context Caching provides 75% token discount on repeated reads. | Brief cost capped at ~$0.165 vs $0.25 ceiling. |
+| **Token Cost Overruns** | Excessive token burn on 150-page 10-Ks | ADK `ContextCacheConfig` (Vertex `CachedContent`) plus routing retrieval to Flash. Neither applies to the first turn of a session or to prefixes under 2,048 tokens. | Projected ~$0.165 vs the $0.25 ceiling. Unverified until a live run. |

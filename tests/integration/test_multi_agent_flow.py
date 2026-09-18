@@ -43,12 +43,22 @@ async def test_end_to_end_research_synthesis():
     assert growth.value == 2.02
     assert growth.provenance_verified is True
 
-    # 4. Assert Operational Metadata & Gemini Context Caching
+    # 4. Assert operational metadata.
     # Real measured wall-clock latency (fixtures resolve sub-millisecond).
     # Asserts the value is populated and inside the 60s P95 SLO from the PRD.
     assert 0 <= brief.metadata.latency_ms <= 60_000
 
-    # Execute subsequent query for same ticker to assert Gemini Context Caching hit & <= $0.25 SLA
-    brief_cached = await coordinator.execute_research(request)
-    assert brief_cached.metadata.context_cache_hit is True
-    assert brief_cached.metadata.estimated_cost_usd <= 0.25
+    # 5. Assert the inference telemetry is zero, and stays zero.
+    #
+    # This replaces an assertion that a second identical request produced
+    # `context_cache_hit is True` and `estimated_cost_usd <= 0.25`. Both passed,
+    # and neither meant anything: the cache was an in-process dict that called
+    # no Vertex API, and the cost was one of two hardcoded constants selected by
+    # that dict. This path calls no language model, so the honest values are
+    # zero - and a future change that reintroduces a fabricated figure here
+    # fails this test instead of quietly appearing in the cost report.
+    for result in (brief, await coordinator.execute_research(request)):
+        assert result.metadata.total_tokens_consumed == 0
+        assert result.metadata.estimated_cost_usd == 0.0
+        assert result.metadata.context_cache_hit is False
+        assert result.metadata.model_routing == {}
