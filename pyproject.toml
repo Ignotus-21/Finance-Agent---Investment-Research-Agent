@@ -53,6 +53,14 @@ dev = [
     "types-PyYAML>=6.0.12",
     "types-requests>=2.32.0"
 ]
+# Opt-in extra for `--backend=vertex`. Kept out of the core dependency list and
+# out of `dev` on purpose: it drags in pandas, numpy, tqdm and the full
+# aiplatform evaluation stack, which would bloat the Cloud Run image and slow
+# every CI run for a backend that CI never uses.
+#   pip install -e ".[dev,eval]"
+eval = [
+    "google-cloud-aiplatform[evaluation]>=1.60.0"
+]
 
 [tool.ruff]
 line-length = 100
@@ -72,6 +80,17 @@ strict = false
 ignore_missing_imports = true
 explicit_package_bases = true
 disallow_untyped_defs = false
+
+# numpy ships stubs that use PEP 695 `type` statements, which are 3.12+ syntax.
+# We target 3.11 (the Dockerfile runtime), so following those stubs aborts the
+# whole run with a syntax error before any of our own code is checked. These
+# are third-party libraries reached only through the optional Vertex evaluation
+# extra; we gain nothing from type-checking their internals.
+[[tool.mypy.overrides]]
+module = ["numpy.*", "pandas.*", "vertexai.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
 
 [tool.pytest.ini_options]
 minversion = "7.0"

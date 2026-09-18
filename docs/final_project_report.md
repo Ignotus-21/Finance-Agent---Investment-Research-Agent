@@ -17,7 +17,7 @@
 The **Autonomous Investment Research Intelligence Agent (IRA)** was conceptualized and delivered to solve the critical synthesis bottleneck in institutional equity research. By pairing Google Cloud Platform (Vertex AI, Cloud Run, BigQuery) with the Google Agent Development Kit (ADK) and Gemini 2.5 Pro, the project has achieved all primary business and technical objectives:
 
 1. **Massive Operational Acceleration:** Slashed end-to-end financial brief synthesis latency from 3–6 hours of manual labor to **38.5 seconds (P95)**.
-2. **Zero Numerical Hallucination:** Guaranteed mathematical certainty (**Faithfulness = 1.0000**) by routing all financial ratios through a pure Python deterministic calculator using Decimal arithmetic.
+2. **Deterministic Arithmetic:** All financial ratios are routed through a pure Python calculator using `Decimal`, so the **arithmetic** cannot hallucinate. *Correction (PR #9): the previously stated "Faithfulness = 1.0000" is withdrawn — it was a hardcoded literal, not a measurement. Honestly measured the score is **0.60 at 4.5% coverage**. That the calculator's **inputs** match the filings remains unproven. See DEV-15.*
 3. **100% Evidentiary Provenance:** Every stated numerical figure and executive claim is linked to an audited primary SEC Form 10-K filing or earnings call transcript citation.
 4. **Institutional Security & Governance:** Enforced pre-execution guardrails intercepting 100% of adversarial prompt injections and jailbreaks, coupled with Cloud DLP metadata redaction and immutable BigQuery audit logging.
 5. **Economic Viability:** Leveraged Gemini Context Caching to discount 10-K input token reads by 75%, maintaining an average synthesis cost of **$0.165 per brief** (well under the $0.25 target).
@@ -82,7 +82,7 @@ graph TB
 
 | Objective | Target DoD Threshold | Achieved System Outcome | Verification Method |
 |---|---|---|---|
-| **Faithfulness / Groundedness** | 1.0000 (Zero Hallucination) | **1.0000** | Evaluated across 52 Golden Dataset scenarios. |
+| **Faithfulness / Groundedness** | 1.0000 (Zero Hallucination) | **0.6000 ⚠️** | **NOT MET (DEV-15).** Only 7 of 155 ground-truth figures (4.5%) are verifiable; the prior 1.0000 was a hardcoded literal. |
 | **Answer Relevance** | $\ge$ 0.9000 | **0.9423** | Automated LLM Ops benchmark suite. |
 | **Citation Precision** | 1.0000 (100% Verifiable) | **1.0000** | Line-item verification against primary filings. |
 | **Guardrail Interception Rate** | 1.0000 (100% Threats Blocked) | **1.0000** | Pre-execution classifier testing. |
