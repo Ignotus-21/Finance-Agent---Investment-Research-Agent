@@ -77,7 +77,7 @@ graph TB
 - **Asymmetric Model Routing:** The ADK agent is two agents. The coordinator plans and synthesises on **Gemini 2.5 Pro**; a `filing_extraction_specialist` reached through `AgentTool` pulls 10-K sections and transcripts on **Gemini 2.5 Flash**. Retrieval is where the tokens are and where the reasoning is not.
 - **Gemini Context Caching:** Enabled through ADK's `ContextCacheConfig`, which calls Vertex's `CachedContent` API. Two honest caveats: nothing is cached on the first turn of a session, and Gemini will not cache a prefix under 2,048 tokens. **The per-brief cost has not been measured** — the $0.165 in [Cost & Token Consumption Analysis](docs/cost_and_token_analysis.md) is a projection from list prices. The REST endpoint calls no model at all, so its inference cost is genuinely $0.00.
 - **Pre-Execution Defense-in-Depth:** Incoming prompts are inspected for adversarial prompt injections (DAN jailbreaks, system prompt overrides) and financial domain boundaries before invoking LLMs or tools.
-- **Enterprise Observability & Compliance:** Full-stack OpenTelemetry tracing exported to Google Cloud Trace, structured compliance audit logging streamed to Google Cloud Logging and BigQuery, and asynchronous event broadcasting via Cloud Pub/Sub.
+- **Enterprise Observability & Compliance:** Full-stack OpenTelemetry tracing exported to Google Cloud Trace, structured compliance audit logging emitted to Google Cloud Logging and exported to BigQuery by a logging sink (outside the request path, so a BigQuery outage cannot fail a brief), and asynchronous event broadcasting via Cloud Pub/Sub.
 
 ---
 

@@ -59,6 +59,40 @@ class FilingNotFoundException(FinancialAgentException):
         )
 
 
+class RegistrantMismatchException(FinancialAgentException):
+    """The entity holding the ticker today is not the one that filed the report.
+
+    Distinct from FilingNotFoundException on purpose. "This company has no
+    FY2024 10-K" and "you are looking at the wrong company" need different
+    answers, and conflating them sent a reader hunting for a missing filing
+    when the filing exists under another CIK.
+    """
+
+    def __init__(
+        self, ticker: str, cik: str, entity_name: str, form: str, fiscal_year: int
+    ) -> None:
+        super().__init__(
+            message=(
+                f"Ticker '{ticker}' currently resolves to '{entity_name}' (CIK {cik}), "
+                f"which has never filed a {form}. The ticker has most likely moved "
+                f"registrant - a reorganisation, merger or holding-company insertion - "
+                f"so the FY{fiscal_year} {form} belongs to a predecessor entity under a "
+                f"different CIK. SEC publishes no reverse index from ticker to former "
+                f"registrant; map it explicitly in TICKER_CIK_OVERRIDES "
+                f"(src/tools/sec_edgar_http.py)."
+            ),
+            error_code="REGISTRANT_MISMATCH",
+            status_code=404,
+            details={
+                "ticker": ticker,
+                "resolved_cik": cik,
+                "resolved_entity": entity_name,
+                "form": form,
+                "fiscal_year": fiscal_year,
+            },
+        )
+
+
 class UpstreamRateLimitException(FinancialAgentException):
     """Raised when an upstream service returns 429 after retries."""
 

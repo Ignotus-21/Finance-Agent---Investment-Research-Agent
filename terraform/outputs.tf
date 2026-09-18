@@ -47,3 +47,23 @@ output "accepted_token_audiences" {
   description = "Values the service will accept in the aud claim, besides its own run.app URL"
   value       = var.custom_audiences
 }
+
+output "research_events_topic" {
+  description = "Pub/Sub topic carrying research.brief.completed events"
+  value       = google_pubsub_topic.research_events.name
+}
+
+output "research_events_subscription" {
+  description = "Pull here to verify a deployment is actually emitting events: gcloud pubsub subscriptions pull <this> --auto-ack"
+  value       = google_pubsub_subscription.research_events_default.name
+}
+
+output "audit_log_sink_writer" {
+  description = "Cloud Logging sink identity exporting compliance audit records to BigQuery"
+  value       = module.bigquery.audit_sink_writer_identity
+}
+
+output "audit_export_table" {
+  description = "BigQuery table the audit sink writes to, inside bigquery_dataset_id"
+  value       = module.bigquery.audit_table_id
+}

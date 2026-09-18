@@ -29,6 +29,13 @@ provider "google" {
   region  = var.region
 }
 
+locals {
+  # Declared once: the Cloud Run module names the service with it, and the
+  # audit log sink filters on it. Two literals would drift, and the failure
+  # mode of that drift is a sink that silently exports nothing.
+  cloud_run_service_name = "ira-service-${var.environment}"
+}
+
 # 0. Project API enablement.
 # Every service listed is a hard dependency of some resource below. Declaring
 # them here is what makes a brand-new project deployable without the manual
@@ -96,10 +103,16 @@ module "secret_manager" {
 
 # 4. BigQuery Datasets & Audit Logging Module
 module "bigquery" {
-  source     = "./modules/bigquery"
-  project_id = var.project_id
-  region     = var.region
-  dataset_id = "ira_financial_intelligence_${var.environment}"
+  source      = "./modules/bigquery"
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+  dataset_id  = "ira_financial_intelligence_${var.environment}"
+
+  # The literal, not module.cloud_run.service_name: the sink only needs the
+  # name for a log filter, and taking it from the module would make the audit
+  # trail depend on the service it audits.
+  cloud_run_service_name = local.cloud_run_service_name
 
   depends_on = [google_project_service.required]
 }
@@ -110,7 +123,7 @@ module "cloud_run" {
   project_id            = var.project_id
   region                = var.region
   environment           = var.environment
-  service_name          = "ira-service-${var.environment}"
+  service_name          = local.cloud_run_service_name
   container_image       = var.container_image
   service_account_email = module.iam.service_account_email
   vpc_connector_id      = module.vpc.connector_id
@@ -125,6 +138,7 @@ module "cloud_run" {
   sec_edgar_user_agent = var.sec_edgar_user_agent
   custom_audiences     = var.custom_audiences
   ingress              = var.ingress
+  pubsub_topic_id      = google_pubsub_topic.research_events.name
 
   # The caller SA is appended rather than left to the operator: it is the only
   # identity that can actually mint an acceptable token, so a service deployed
@@ -179,6 +193,57 @@ module "monitoring" {
   dashboard_json_path = "${path.root}/../configs/monitoring/cloud_monitoring_dashboard.json"
 
   depends_on = [google_project_service.required]
+}
+
+# 8b. Research event topic.
+#
+# This did not exist. `PubSubBroadcaster` named a topic, the runtime service
+# account was granted project-wide `roles/pubsub.publisher`, and no topic was
+# ever created - so the first real publish would have failed NOT_FOUND. The
+# broadcaster now publishes for real, which means the topic has to be real too.
+resource "google_pubsub_topic" "research_events" {
+  name    = "ira-research-events-${var.environment}"
+  project = var.project_id
+
+  labels = {
+    env      = var.environment
+    workload = "financial-intelligence"
+  }
+
+  # Events are notifications, not a system of record - the brief itself is
+  # archived in GCS and the audit record reaches BigQuery via the log sink. A
+  # day is long enough for a consumer to recover from an outage and short
+  # enough to bound storage.
+  message_retention_duration = "86400s"
+
+  depends_on = [google_project_service.required]
+}
+
+# Pub/Sub discards messages published to a topic with no subscription, so
+# without this the publish would succeed and the event would vanish - which is
+# indistinguishable from the bug being fixed here. This subscription is also
+# how a deployment is verified: `gcloud pubsub subscriptions pull --auto-ack`.
+resource "google_pubsub_subscription" "research_events_default" {
+  name    = "${google_pubsub_topic.research_events.name}-default"
+  topic   = google_pubsub_topic.research_events.id
+  project = var.project_id
+
+  ack_deadline_seconds       = 20
+  message_retention_duration = "86400s"
+
+  expiration_policy {
+    ttl = "" # never expire; an auto-deleted subscription drops events silently
+  }
+}
+
+# Topic-scoped, replacing the project-wide grant that used to live in the IAM
+# module. The runtime publishes to exactly one topic; it has no business
+# publishing to any other.
+resource "google_pubsub_topic_iam_member" "runtime_publisher" {
+  project = var.project_id
+  topic   = google_pubsub_topic.research_events.name
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:${module.iam.service_account_email}"
 }
 
 # 9. Continuous delivery trigger.

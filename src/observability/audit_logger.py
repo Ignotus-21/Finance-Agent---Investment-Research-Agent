@@ -1,9 +1,26 @@
 """
 Structured Audit Logging Middleware.
-Streams tamper-evident compliance audit records to Google Cloud Logging and BigQuery.
-Fulfills FINRA Rule 2241 regulatory compliance and provenance traceability.
+
+Emits tamper-evident compliance audit records to Google Cloud Logging as
+structured JSON on stdout, which Cloud Run ingests. BigQuery receives them via
+a Cloud Logging sink (``google_logging_project_sink`` in
+``terraform/modules/bigquery``), not from this process.
+
+That split is deliberate, and it is a correction. The docstring here used to
+claim records were streamed to BigQuery, Terraform created the dataset and the
+tables, and the runtime service account was granted ``bigquery.dataEditor`` -
+for a write that no code performed. The fix is the sink rather than a client
+here, for three reasons:
+
+* An audit record the application can fail to write is not an audit record. A
+  log sink is outside the process; the application cannot skip it, and a
+  BigQuery outage cannot fail a research request.
+* Export is configuration, so it stays declarative in Terraform.
+* Cloud Logging retains and exports the same record, so nothing is lost if the
+  sink is reconfigured.
 """
 
+import collections
 import datetime
 import hashlib
 import json
@@ -13,15 +30,25 @@ from typing import Any
 from src.config import Settings
 from src.models.audit import AuditLogEntry
 
+# Audit records are emitted to Cloud Logging; this deque is a small in-process
+# tail for tests and for /readyz-style introspection. It was an unbounded list,
+# which on a revision with min_instances=1 is a slow memory leak that only
+# shows up in production, weeks in.
+_AUDIT_TAIL_SIZE = 256
+
 
 class AuditLogger:
     """
-    Compliance audit logger streaming execution records to Cloud Logging and BigQuery.
+    Compliance audit logger emitting execution records to Cloud Logging as
+    structured stdout JSON. BigQuery is fed downstream by a log sink, not by
+    this class - see the module docstring for why.
     """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
-        self.audit_records: list[dict[str, Any]] = []
+        self.audit_records: collections.deque[dict[str, Any]] = collections.deque(
+            maxlen=_AUDIT_TAIL_SIZE
+        )
 
     @staticmethod
     def hash_prompt(prompt: str) -> str:
@@ -74,7 +101,8 @@ class AuditLogger:
             "logging.googleapis.com/trace": audit_id,
             "compliance_metadata": record_dict
         }
-        # Print formatted log (captured by Cloud Logging agent on Cloud Run)
+        # stdout is the transport. Cloud Run forwards it to Cloud Logging, and
+        # the log sink forwards it from there to BigQuery.
         print(json.dumps(cloud_log_payload))
 
         return entry

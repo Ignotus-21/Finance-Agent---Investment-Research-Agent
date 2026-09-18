@@ -79,7 +79,20 @@ def build_headers(url: str, impersonate: str, audience: str) -> dict[str, str]:
             "A remote target needs a service account to impersonate. A user "
             "account cannot mint an ID token for a custom audience."
         )
-    return {"Authorization": f"Bearer {mint_identity_token(audience or url, impersonate)}"}
+    if not audience:
+        # Falling back to the URL here looked harmless and was not. Cloud Run
+        # IAM accepts a token whose `aud` is the run.app URL, forwards it
+        # unchanged, and the application then rejects it because
+        # AUTH_ALLOWED_AUDIENCES lists only the custom audience. The result is
+        # a 401 that arrives after a successful IAM check, from a console that
+        # gave no hint the box mattered.
+        raise RuntimeError(
+            "Audience is required for a remote target. Use the service's "
+            "custom audience (e.g. `ira-service-test`), which is the value in "
+            "the deployment's AUTH_ALLOWED_AUDIENCES. The run.app URL will "
+            "pass IAM and then be rejected by the application."
+        )
+    return {"Authorization": f"Bearer {mint_identity_token(audience, impersonate)}"}
 
 
 def render_metrics(metrics: list[dict[str, Any]]) -> None:

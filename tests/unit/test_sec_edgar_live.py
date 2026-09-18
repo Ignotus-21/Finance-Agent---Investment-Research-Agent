@@ -6,14 +6,15 @@ touching the network. Nothing here hits sec.gov.
 """
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
 from pydantic import ValidationError
 
 from src.config import SAMPLE_SEC_USER_AGENT, Settings
-from src.core.exceptions import FilingNotFoundException
-from src.tools.sec_edgar_http import SECEdgarHTTPClient
+from src.core.exceptions import FilingNotFoundException, RegistrantMismatchException
+from src.tools.sec_edgar_http import TICKER_CIK_OVERRIDES, SECEdgarHTTPClient
 from src.tools.sec_edgar_mcp import SECFilingClient
 
 VALID_UA = "IRA Capstone Research analyst@example.com"
@@ -517,3 +518,130 @@ def test_shape_statement_unknown_section_is_empty() -> None:
 def test_ticker_file_fixture_is_valid_json() -> None:
     """Guards the fixture itself against drift."""
     assert json.loads(json.dumps(TICKER_FILE))["0"]["ticker"] == "AAPL"
+
+
+# ---------------------------------------------------------------------------
+# Registrant resolution: ticker -> CIK is point-in-time, requests are historical
+# ---------------------------------------------------------------------------
+
+# A successor shell: it holds the ticker today and has filed nothing but the
+# paperwork that created it. This is the shape of the XOM defect, reduced.
+SUCCESSOR_TICKER_FILE = {
+    "0": {"cik_str": 2115436, "ticker": "XOM", "title": "ExxonMobil Holdings Corp"},
+}
+
+SUCCESSOR_SUBMISSIONS = {
+    "name": "ExxonMobil Holdings Corp",
+    "filings": {
+        "recent": {
+            "form": ["8-K", "S-4"],
+            "reportDate": ["2025-05-01", "2025-03-01"],
+            "filingDate": ["2025-05-02", "2025-03-02"],
+            "accessionNumber": ["0002115436-25-000002", "0002115436-25-000001"],
+            "primaryDocument": ["xom-8k.htm", "xom-s4.htm"],
+        }
+    },
+}
+
+
+def _successor_handler(request: httpx.Request) -> httpx.Response:
+    url = str(request.url)
+    if "company_tickers.json" in url:
+        return httpx.Response(200, json=SUCCESSOR_TICKER_FILE)
+    if "/submissions/" in url:
+        return httpx.Response(200, json=SUCCESSOR_SUBMISSIONS)
+    return httpx.Response(404, json={"error": "not found"})
+
+
+async def test_override_wins_over_the_current_ticker_holder() -> None:
+    """SEC's mapping is right about today and wrong about last year.
+
+    `company_tickers.json` points XOM at the holding company inserted above the
+    operating business in 2025. The FY2024 10-K was filed by the predecessor,
+    whose `tickers` array is now empty - so following SEC's own mapping returns
+    a company that never filed the report being asked for.
+    """
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(_successor_handler)
+    ) as client:
+        assert await edgar.resolve_cik("XOM", client) == "0000034088"
+        # Lower case too: callers pass whatever the user typed.
+        assert await edgar.resolve_cik("xom", client) == "0000034088"
+
+
+async def test_override_short_circuits_the_network() -> None:
+    """An override is a decision, not a hint; it must not depend on SEC agreeing."""
+    calls: list[str] = []
+
+    def counting_handler(request: httpx.Request) -> httpx.Response:
+        calls.append(str(request.url))
+        return _successor_handler(request)
+
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(counting_handler)
+    ) as client:
+        await edgar.resolve_cik("XOM", client)
+
+    assert calls == []
+
+
+async def test_overrides_agree_with_the_offline_corpus() -> None:
+    """
+    The two data paths must name the same registrant.
+
+    They did not. `datasets/sec_fixtures_fy2024.json` carried XOM at the
+    correct predecessor CIK, so offline mode served it, the golden dataset
+    scored it, and the eval gate reported perfect faithfulness - while the live
+    path 404'd on the same ticker. A divergence between these two is invisible
+    in CI by construction, which is exactly why it needs an assertion.
+    """
+    corpus = json.loads(
+        (Path(__file__).resolve().parents[2] / "datasets/sec_fixtures_fy2024.json")
+        .read_text()
+    )
+    for ticker, cik in TICKER_CIK_OVERRIDES.items():
+        assert ticker in corpus, f"{ticker} is overridden but absent from the corpus"
+        assert corpus[ticker]["cik"] == cik, (
+            f"{ticker}: live path resolves to {cik}, offline corpus says "
+            f"{corpus[ticker]['cik']}"
+        )
+
+
+async def test_successor_shell_raises_registrant_mismatch_not_not_found() -> None:
+    """
+    "No FY2024 10-K" and "wrong company" need different answers.
+
+    An entity with no 10-K anywhere in its history is not having a quiet year.
+    Reporting that as a missing filing sends the reader hunting for a document
+    that exists, under a CIK nobody mentioned.
+    """
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(_successor_handler)
+    ) as client:
+        with pytest.raises(RegistrantMismatchException) as excinfo:
+            await edgar.find_filing(
+                "0002115436", "10-K", 2024, client, ticker="XOM"
+            )
+
+    exc = excinfo.value
+    assert exc.error_code == "REGISTRANT_MISMATCH"
+    assert exc.details["resolved_entity"] == "ExxonMobil Holdings Corp"
+    assert exc.details["resolved_cik"] == "0002115436"
+    # The ticker slot holds a ticker. It used to hold the CIK, which read as
+    # though the caller had asked for something nonsensical.
+    assert exc.details["ticker"] == "XOM"
+
+
+async def test_a_real_filer_missing_one_year_is_still_not_found() -> None:
+    """The mismatch check must not swallow the ordinary case.
+
+    Apple files 10-Ks; it just has none for FY2019 in the fixture. That is a
+    missing filing, not a wrong company.
+    """
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with _mock_client() as client:
+        with pytest.raises(FilingNotFoundException):
+            await edgar.find_filing("0000320193", "10-K", 2019, client, ticker="AAPL")

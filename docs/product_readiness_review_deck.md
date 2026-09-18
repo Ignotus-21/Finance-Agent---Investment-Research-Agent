@@ -77,7 +77,7 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
     - *Proof Artifact:* [`src/guardrails/dlp_masker.py`](file:///src/guardrails/dlp_masker.py), [`terraform/modules/secret_manager/main.tf`](file:///terraform/modules/secret_manager/main.tf), [`terraform/modules/storage/main.tf`](file:///terraform/modules/storage/main.tf).
 16. **AI-Specific Security (Score: 3):** Pre-execution classifier guardrail callbacks intercepting prompt injection, jailbreaks, and out-of-domain queries before model dispatch; tool execution whitelist. Backed by a formal STRIDE threat model with a trust-boundary data flow diagram, risk register, and mitigation-to-test traceability.
     - *Proof Artifact:* [`docs/threat_model.md`](file:///docs/threat_model.md), [`src/guardrails/input_guardrail.py`](file:///src/guardrails/input_guardrail.py), [`src/guardrails/scope_classifier.py`](file:///src/guardrails/scope_classifier.py).
-17. **Compliance & Governance (Score: 3):** Immutable audit logging to Cloud Logging and BigQuery capturing timestamp, user_id, prompt_hash, tools_called, latency, token_usage, and safety verdict.
+17. **Compliance & Governance (Score: 3):** Immutable audit logging to Cloud Logging - capturing timestamp, user_id, prompt_hash, tools_called, latency, token_usage, and safety verdict - exported to BigQuery by a `google_logging_project_sink` rather than an in-process client, so the record cannot be lost to an application-side failure.
     - *Proof Artifact:* [`src/observability/audit_logger.py`](file:///src/observability/audit_logger.py), [`terraform/ddl/01_audit_log.sql`](file:///terraform/ddl/01_audit_log.sql).
 
 ---

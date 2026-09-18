@@ -186,15 +186,25 @@ graph TD
 - Alert: `GuardrailBlockedRate > 10%` over a 5-minute rolling window.
 
 #### Triage Action:
-1. Run BigQuery query to extract malicious IP addresses and prompt fingerprints:
+1. Run BigQuery query to extract malicious IP addresses and prompt fingerprints.
+   Audit records reach BigQuery via the Cloud Logging sink
+   (`terraform/modules/bigquery`), so they land in the sink-owned
+   `run_googleapis_com_stdout` table with the audit fields nested under
+   `jsonPayload.compliance_metadata`:
    ```sql
-   SELECT user_id, prompt_hash, COUNT(*) as attack_count
-   FROM `ira_financial_intelligence.compliance_audit_log`
-   WHERE guardrail_verdict = 'REJECT_INJECTION'
+   SELECT
+     jsonPayload.compliance_metadata.user_id     AS user_id,
+     jsonPayload.compliance_metadata.prompt_hash AS prompt_hash,
+     COUNT(*) AS attack_count
+   FROM `ira_financial_intelligence_production.run_googleapis_com_stdout`
+   WHERE jsonPayload.compliance_metadata.guardrail_verdict = 'REJECT_INJECTION'
      AND timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
    GROUP BY user_id, prompt_hash
    ORDER BY attack_count DESC;
    ```
+   > The `timestamp` column is the LogEntry's, and the table is day-partitioned
+   > on it, so always filter on it — filtering only on a nested field scans the
+   > whole table.
 2. Blacklist offending IP blocks or IAM user principals in Cloud Armor WAF security policy:
    ```bash
    gcloud compute security-policies rules create 1000 \
@@ -220,11 +230,16 @@ gcloud beta ai cached-contents delete <CACHE_ID> --location=us-central1
 ### 4.2 Restoring BigQuery Audit Datasets
 BigQuery datasets are protected by 7-day Time Travel. To recover an accidentally modified or deleted audit partition:
 ```sql
-CREATE OR REPLACE TABLE `ira_financial_intelligence.compliance_audit_log_restored`
+CREATE OR REPLACE TABLE `ira_financial_intelligence_production.audit_export_restored`
 AS SELECT *
-FROM `ira_financial_intelligence.compliance_audit_log`
+FROM `ira_financial_intelligence_production.run_googleapis_com_stdout`
 FOR SYSTEM_TIME AS OF TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR);
 ```
+
+> Restore into a new table, never over the sink's own. The sink recreates and
+> appends to `run_googleapis_com_stdout` continuously; overwriting it races the
+> exporter. Cloud Logging also retains the same records independently, so a
+> corrupted export can always be re-derived.
 
 ### 4.3 Rolling Back a Blue/Green Deployment
 
