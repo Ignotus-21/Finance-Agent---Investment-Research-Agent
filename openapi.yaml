@@ -136,18 +136,30 @@ paths:
                   status:
                     type: string
                     example: "READY"
+                  runtime:
+                    type: object
+                    description: >-
+                      Which data path this revision is on. Offline and live
+                      responses are otherwise indistinguishable without reading
+                      the provenance field on a generated brief.
+                    properties:
+                      environment:
+                        type: string
+                        example: "production"
+                      offline_mode:
+                        type: boolean
+                        example: false
                   dependencies:
                     type: object
+                    description: >-
+                      Only state the process can establish without a network
+                      call. The previous vertex_ai / bigquery / secret_manager
+                      entries were string literals that could not fail.
                     properties:
-                      vertex_ai:
+                      circuit_breaker:
                         type: string
-                        example: "CONNECTED"
-                      bigquery:
-                        type: string
-                        example: "CONNECTED"
-                      secret_manager:
-                        type: string
-                        example: "CONNECTED"
+                        enum: [CLOSED, OPEN, HALF_OPEN]
+                        example: "CLOSED"
 
 components:
   securitySchemes:
