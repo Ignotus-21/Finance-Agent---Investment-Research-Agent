@@ -16,8 +16,15 @@ async def test_healthz_and_readyz_probes(async_client: AsyncClient):
 
     res_ready = await async_client.get("/readyz")
     assert res_ready.status_code == 200
-    assert res_ready.json()["status"] == "READY"
-    assert res_ready.json()["dependencies"]["vertex_ai"] == "CONNECTED"
+    body = res_ready.json()
+    assert body["status"] == "READY"
+
+    # Readiness must report which data path the revision is on. This assertion
+    # replaces one against a hard-coded "vertex_ai": "CONNECTED" literal, which
+    # could not have failed and therefore verified nothing.
+    assert body["runtime"]["offline_mode"] is True
+    assert "environment" in body["runtime"]
+    assert body["dependencies"]["circuit_breaker"] in {"CLOSED", "OPEN", "HALF_OPEN"}
 
 
 @pytest.mark.asyncio

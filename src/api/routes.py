@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.api.dependencies import get_container, verify_auth_token
+from src.config import settings
 from src.core.container import ApplicationContainer
 from src.core.exceptions import (
     FilingNotFoundException,
@@ -161,13 +162,27 @@ async def healthz() -> dict[str, Any]:
 
 @router.get("/readyz", tags=["Health & Diagnostics"])
 async def readyz(app_container: ApplicationContainer = Depends(get_container)) -> dict[str, Any]:
-    """Cloud Run readiness probe."""
+    """
+    Cloud Run readiness probe.
+
+    Reports only what the process can establish without making a network call.
+    The `vertex_ai`, `bigquery` and `secret_manager` entries this used to return
+    were not checks - they were the string literal "CONNECTED", and would have
+    gone on saying CONNECTED through a total outage of all three. A probe that
+    cannot fail is not a probe.
+
+    `runtime` answers the question an operator actually has after a deploy: is
+    this revision reading sec.gov, or the recorded FY2024 corpus? Both paths
+    return HTTP 200 with an identical response shape, so short of inspecting the
+    provenance field on a generated brief there was no way to tell them apart.
+    """
     return {
         "status": "READY",
+        "runtime": {
+            "environment": settings.environment,
+            "offline_mode": settings.offline_mode,
+        },
         "dependencies": {
-            "vertex_ai": "CONNECTED",
-            "bigquery": "CONNECTED",
-            "secret_manager": "CONNECTED",
             "circuit_breaker": app_container.sec_client.circuit_breaker.state
         }
     }

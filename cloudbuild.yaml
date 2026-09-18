@@ -7,7 +7,7 @@ steps:
       - '-c'
       - |
         pip install ruff mypy pydantic pydantic-settings
-        ruff check src/ tests/
+        ruff check src/ tests/ scripts/ eval/
         mypy src/ --ignore-missing-imports
 
   # 2. Automated Unit, Integration & Chaos Tests (Coverage >= 80%)
@@ -66,7 +66,7 @@ steps:
       - '--platform'
       - 'managed'
       - '--service-account'
-      - 'ira-runtime-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '$_RUNTIME_SA@$PROJECT_ID.iam.gserviceaccount.com'
       - '--cpu'
       - '2'
       - '--memory'
@@ -153,10 +153,16 @@ steps:
       - '--to-tags'
       - 'green-$SHORT_SHA=100'
 
+# These must agree with what Terraform creates, or the pipeline deploys a
+# second, unmanaged service next to the managed one and the smoke test proves
+# nothing about what production is serving. The names below are
+# `ira-service-${var.environment}` and `ira-runtime-${var.environment}-sa`
+# from terraform/main.tf with environment = "production". Change both together.
 substitutions:
   _REGION: 'us-central1'
   _ARTIFACT_REPO: 'ira-repo'
-  _SERVICE_NAME: 'ira-multiagent-service'
+  _SERVICE_NAME: 'ira-service-production'
+  _RUNTIME_SA: 'ira-runtime-production-sa'
 
 images:
   - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'

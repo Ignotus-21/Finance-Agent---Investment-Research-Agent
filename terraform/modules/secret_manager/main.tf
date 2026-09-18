@@ -32,12 +32,12 @@ resource "google_secret_manager_secret" "market_api_key" {
   }
 }
 
-# Secret for SEC EDGAR Admin Contact Token
-resource "google_secret_manager_secret" "sec_contact_secret" {
-  secret_id = "ira-sec-edgar-contact"
-  project   = var.project_id
-
-  replication {
-    auto {}
-  }
-}
+# There is deliberately no secret here for the SEC EDGAR contact string.
+#
+# `ira-sec-edgar-contact` used to be declared in this module and was never wired
+# to anything. It could not have been: a User-Agent header is transmitted in
+# cleartext on every request to sec.gov, so it is not confidential, and routing
+# it through Secret Manager would have bought a cold-start secret fetch and an
+# extra IAM surface in exchange for no secrecy at all. It is now a plain env var
+# on the Cloud Run revision (see modules/cloud_run/main.tf), where an operator
+# debugging a 403 from sec.gov can actually read it.

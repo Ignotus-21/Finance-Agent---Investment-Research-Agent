@@ -1,0 +1,27 @@
+# Partial backend configuration for the GCS remote state backend.
+#
+# The `backend "gcs" {}` block in main.tf is intentionally empty: a backend
+# cannot interpolate variables, and the state bucket is per-project, so the
+# bucket name has to arrive at init time rather than being baked into the repo.
+#
+#   cp backend.hcl.example backend.hcl        # backend.hcl is gitignored
+#   terraform init -backend-config=backend.hcl -migrate-state
+#
+# The bucket must already exist. The configuration that keeps its state in a
+# bucket cannot also be the configuration that creates that bucket, so this one
+# resource is bootstrapped by hand, exactly once, per project:
+#
+#   gcloud storage buckets create "gs://${PROJECT_ID}-ira-tfstate" \
+#     --project="${PROJECT_ID}" \
+#     --location="us-central1" \
+#     --uniform-bucket-level-access \
+#     --public-access-prevention
+#   gcloud storage buckets update "gs://${PROJECT_ID}-ira-tfstate" --versioning
+#
+# Versioning is the undo button for a truncated or corrupted state file. The
+# lock object the backend takes for the duration of an apply is the other half
+# of why this exists: concurrent applies fail fast instead of interleaving and
+# leaving orphaned resources that nothing tracks.
+
+bucket = "ira-capstone-finance-prod-ira-tfstate"
+prefix = "ira/production"
