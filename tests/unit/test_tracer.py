@@ -95,6 +95,78 @@ def test_active_span_yields_a_correctly_formatted_trace_resource_name() -> None:
     assert len(fields["logging.googleapis.com/spanId"]) == 16
 
 
+def test_trace_sampled_is_a_real_boolean() -> None:
+    """Cloud Logging only promotes this special field when it is typed right.
+
+    It was emitted as the string "true"/"false". Cloud Logging accepted the
+    record, declined to promote the field, and left it sitting in jsonPayload
+    where nothing reads it - so the entry's `traceSampled` was never set.
+    Confirmed against the live deployment before this was pinned.
+    """
+    from opentelemetry.sdk.trace import TracerProvider
+
+    tracer = TracerProvider().get_tracer("test")
+
+    with tracer.start_as_current_span("unit-test-span"):
+        fields = current_trace_context("adis-workshop")
+
+    sampled = fields["logging.googleapis.com/trace_sampled"]
+    assert isinstance(sampled, bool), f"expected bool, got {type(sampled).__name__}"
+
+
+def test_a_span_under_an_unsampled_upstream_parent_is_still_recorded() -> None:
+    """Reproduces the production failure, at the level it actually occurred.
+
+    Google's front end sets `traceparent` with its own sampling decision, and
+    that decision is "no" for most requests. Under OpenTelemetry's default
+    ParentBased sampler that decision is inherited: the span exists, so the
+    audit record gets a valid trace id, and the span is then never exported -
+    leaving a compliance record pointing at a trace Cloud Trace has never
+    heard of. Measured live before the fix: three of five requests.
+
+    So the assertion is not "the sampler is ALWAYS_ON" - that just restates the
+    source. It is that an unsampled upstream parent no longer silences us.
+    """
+    from opentelemetry.trace import (
+        NonRecordingSpan,
+        SpanContext,
+        TraceFlags,
+        set_span_in_context,
+    )
+
+    from src.observability.tracer import _build_tracer_provider
+
+    provider = _build_tracer_provider(
+        Settings(offline_mode=True, gcp_project_id="a-real-project")
+    )
+
+    # Exactly what arrives on the wire as `...-00`: a valid remote context
+    # carrying a negative sampling decision.
+    parent_trace_id = 0x1234_5678_9ABC_DEF0_1234_5678_9ABC_DEF0
+    unsampled_parent = set_span_in_context(
+        NonRecordingSpan(
+            SpanContext(
+                trace_id=parent_trace_id,
+                span_id=0x0FED_CBA9_8765_4321,
+                is_remote=True,
+                trace_flags=TraceFlags(TraceFlags.DEFAULT),  # not sampled
+            )
+        )
+    )
+
+    span = provider.get_tracer("test").start_span("child", context=unsampled_parent)
+    try:
+        assert span.get_span_context().trace_flags.sampled, (
+            "the upstream sampling decision was inherited; this span would "
+            "never reach Cloud Trace and its audit record would link nowhere"
+        )
+        # The parent's trace id must still be honoured, or the span is exported
+        # but detached from the request it belongs to.
+        assert span.get_span_context().trace_id == parent_trace_id
+    finally:
+        span.end()
+
+
 def test_get_tracer_is_safe_without_a_provider() -> None:
     """
     Instrumented code must not need to know whether tracing is on.

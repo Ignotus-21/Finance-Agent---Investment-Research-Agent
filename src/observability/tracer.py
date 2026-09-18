@@ -42,7 +42,7 @@ if TYPE_CHECKING:  # pragma: no cover - import only for type checking
 _CONFIGURED = False
 
 
-def current_trace_context(project_id: str) -> dict[str, str]:
+def current_trace_context(project_id: str) -> dict[str, str | bool]:
     """Cloud Logging fields that link a log entry to its trace.
 
     Returns an empty dict when there is no active span, rather than inventing
@@ -63,10 +63,58 @@ def current_trace_context(project_id: str) -> dict[str, str]:
             f"projects/{project_id}/traces/{span_context.trace_id:032x}"
         ),
         "logging.googleapis.com/spanId": f"{span_context.span_id:016x}",
-        "logging.googleapis.com/trace_sampled": str(
-            bool(span_context.trace_flags.sampled)
-        ).lower(),
+        # A real JSON boolean, not "true"/"false". Cloud Logging only promotes
+        # this special field when it is typed correctly; given a string it
+        # leaves it sitting in jsonPayload and the entry's `traceSampled` stays
+        # unset. Verified against the live deployment, where the string form
+        # appeared verbatim in the payload and promoted nothing.
+        "logging.googleapis.com/trace_sampled": bool(span_context.trace_flags.sampled),
     }
+
+
+def _build_tracer_provider(settings: Settings) -> Any:
+    """Construct the provider - resource and sampler only, no exporter.
+
+    Split out because the global provider can only be set once per process,
+    which makes the sampling decision - the part that was actually wrong in
+    production - untestable while it is welded to `set_tracer_provider`.
+
+    The exporter deliberately stays in `configure_tracing`: building a
+    `CloudTraceSpanExporter` constructs a real gRPC client that resolves
+    credentials and calls out on flush. A unit test that reached for one would
+    need either credentials or a mock, and the first attempt at this test
+    produced `404 projects/a-real-project does not exist` from a background
+    export thread. Sampling is decided here; talking to Google is decided
+    there.
+    """
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.sampling import ALWAYS_ON
+
+    resource = Resource.create({
+        "service.name": settings.app_name,
+        "service.namespace": settings.environment,
+    })
+    return TracerProvider(
+        resource=resource,
+        # Explicitly ALWAYS_ON, not the default ParentBased(ALWAYS_ON).
+        #
+        # Every request here arrives through Google's front end, which sets
+        # `traceparent` with its own sampling decision - and that decision is
+        # "no" for the overwhelming majority of requests. ParentBased honours
+        # it, so the span is created (the audit record gets a valid, correctly
+        # formatted trace id) and then never exported. Measured on the live
+        # deployment: of five research requests, two were sampled upstream and
+        # resolved in Cloud Trace; three did not exist there at all, while
+        # their audit records still advertised a trace link.
+        #
+        # That is the original defect wearing a better disguise - a compliance
+        # record whose trace link resolves to nothing. An audit trail that is
+        # only navigable for a random ~40% of requests is not an audit trail.
+        # Volume is low and Cloud Trace's free tier is 2.5M spans/month, so
+        # sampling buys nothing worth this.
+        sampler=ALWAYS_ON,
+    )
 
 
 def configure_tracing(app: FastAPI, settings: Settings | None = None) -> bool:
@@ -92,15 +140,12 @@ def configure_tracing(app: FastAPI, settings: Settings | None = None) -> bool:
     from opentelemetry import trace
     from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    resource = Resource.create({
-        "service.name": settings.app_name,
-        "service.namespace": settings.environment,
-    })
-    provider = TracerProvider(resource=resource)
+    provider = _build_tracer_provider(settings)
+    # Batched, not simple: a synchronous export would put a Cloud Trace round
+    # trip on the request path, and a tracing outage must never become a
+    # latency incident.
     provider.add_span_processor(
         BatchSpanProcessor(CloudTraceSpanExporter(project_id=settings.gcp_project_id))
     )
