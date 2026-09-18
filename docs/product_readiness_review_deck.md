@@ -69,7 +69,7 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
 ---
 
 ### Category 3: Security, Privacy & Compliance (Score: 3/3 Across All 5)
-13. **Authentication & Authorization (Score: 3):** OAuth2 / Bearer token validation, Cloud IAM least-privilege service accounts, fine-grained API key scoping.
+13. **Authentication & Authorization (Score: 3):** Google OIDC ID tokens verified in-process (signature, issuer, expiry, audience) on top of Cloud Run IAM, with the audit identity taken from the verified `email` claim; Cloud IAM least-privilege service accounts.
     - *Proof Artifact:* [`src/api/dependencies.py`](file:///src/api/dependencies.py), [`terraform/modules/iam/main.tf`](file:///terraform/modules/iam/main.tf).
 14. **Infrastructure & Network Security (Score: 3):** Terraform-managed VPC, Serverless VPC Access Connectors, Private Google Access, private subnets, Cloud Armor WAF policy definitions.
     - *Proof Artifact:* [`terraform/modules/vpc/main.tf`](file:///terraform/modules/vpc/main.tf).

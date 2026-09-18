@@ -72,6 +72,16 @@ resource "google_cloud_run_v2_service" "ira_service" {
         value = tostring(var.offline_mode)
       }
 
+      # The audience incoming ID tokens must be minted for. Cloud Run forwards
+      # the Authorization header it authenticated with, so this has to be the
+      # service's own URL - which is why it cannot be derived here without a
+      # dependency cycle, and why it arrives as a variable set after the first
+      # apply. Empty in production makes the container refuse to start.
+      env {
+        name  = "AUTH_EXPECTED_AUDIENCE"
+        value = var.auth_expected_audience
+      }
+
       # Not a credential, and deliberately not in Secret Manager: this string is
       # transmitted in cleartext in the header of every single sec.gov request.
       # Keeping it as a plain env var means it is visible on the revision, which

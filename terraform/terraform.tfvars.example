@@ -22,6 +22,11 @@ sec_edgar_user_agent = "IRA Research admin@example.com"
 # recorded FY2024 corpus, e.g. for a demo with no external dependency.
 offline_mode = false
 
+# Set after the bootstrap apply, from `terraform output cloud_run_service_url`.
+# Until it is set, a production container refuses to start rather than accept
+# bearer credentials it cannot verify.
+auth_expected_audience = "https://ira-service-production-000000000000.us-central1.run.app"
+
 # Who may invoke the service. Empty means nobody but project admins, which is
 # the correct starting point: the in-process bearer-token check is not an
 # authentication boundary, so this list is.

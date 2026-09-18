@@ -105,7 +105,7 @@ flowchart TB
 
 | Crossing | From → To | Control enforced |
 |:---:|---|---|
-| **X1** | TB-0 → TB-1 | Bearer token authentication; TLS; Cloud Run ingress restriction |
+| **X1** | TB-0 → TB-1 | Two independent checks on the same credential: Cloud Run IAM (`roles/run.invoker`, no `allUsers` binding exists) and, in the application, RS256 signature + issuer + expiry + audience verification of the Google ID token — `src/api/dependencies.py`. TLS throughout |
 | **X2** | TB-1 → TB-2 | **All** prompts traverse the guardrail chain — no bypass path exists |
 | **X3** | TB-2 → TB-3 | Only sanitised, in-domain prompts reach any model or tool |
 | **X4** | TB-3 → TB-4 | Egress via Serverless VPC Connector; Token Bucket rate limiting; Circuit Breaker |
@@ -127,10 +127,10 @@ flowchart TB
 |---|---|---|:---:|
 | **S**poofing | Forged or replayed bearer token impersonating an authorised analyst | Token verification in `src/api/dependencies.py`; Cloud Run IAM ingress control; identity recorded per request in the audit log | Low |
 | **T**ampering | Request body mutated in transit | TLS enforced end-to-end; Pydantic v2 strict schema validation rejects malformed payloads | Low |
-| **R**epudiation | Analyst denies having submitted a query | `AuditLogEntry` records `user_id`, `prompt_hash` (SHA-256), and `timestamp` for every request | Low |
+| **R**epudiation | Analyst denies having submitted a query | `AuditLogEntry` records `user_id`, `prompt_hash` (SHA-256), and `timestamp` for every request. `user_id` is the `email` claim of a **verified** ID token, so it is attributable; the development path that cannot verify returns an `unverified-` prefix, and a production revision refuses to start on that path at all | Low |
 | **I**nfo disclosure | Stack traces or internal paths leaked via error responses | Exceptions mapped to sanitised `HTTPException` messages in `src/api/routes.py` | Low |
 | **D**oS | Request flood exhausting Cloud Run instances and model budget (**denial-of-wallet**) | Cloud Run max-instances 50 + concurrency 80 caps blast radius; upstream Token Bucket limits SEC calls | **Medium** |
-| **E**levation | Unauthenticated caller reaching a research endpoint | `Depends(verify_auth_token)` on every non-health route | Low |
+| **E**levation | Unauthenticated caller reaching a research endpoint | `Depends(verify_auth_token)` on every non-health route, verifying the ID token against Google's published certificates and a configured audience. A token minted for a different service is signed by Google and fails on audience alone | Low |
 
 ### 3.2 Guardrail Chain (TB-2)
 

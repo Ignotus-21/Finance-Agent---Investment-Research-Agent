@@ -54,6 +54,12 @@ variable "sec_edgar_user_agent" {
   type        = string
 }
 
+variable "auth_expected_audience" {
+  description = "Audience claim required on incoming Google ID tokens; the service URL."
+  type        = string
+  default     = ""
+}
+
 variable "ingress" {
   description = "Cloud Run ingress setting."
   type        = string

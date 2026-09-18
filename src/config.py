@@ -66,6 +66,16 @@ class Settings(BaseSettings):
     max_brief_cost_usd: float = Field(default=0.25, description="Target max inference cost per research brief")
 
     # Security, Privacy & DLP
+    auth_expected_audience: str = Field(
+        default="",
+        description=(
+            "Audience the caller's Google-signed ID token must carry. Cloud Run forwards the "
+            "Authorization header it authenticated with, so this is the Cloud Run service URL - "
+            "read it from `terraform output cloud_run_service_url` after the first apply. "
+            "Empty means bearer credentials are accepted without verification, which the "
+            "validator below refuses to allow in production."
+        ),
+    )
     enable_dlp_masking: bool = Field(default=True, description="Enable Cloud DLP redaction middleware")
     enforce_guardrails: bool = Field(default=True, description="Enforce pre-execution prompt injection filter")
 
@@ -77,6 +87,26 @@ class Settings(BaseSettings):
     # Circuit Breaker Configuration
     circuit_breaker_failure_threshold: int = Field(default=5)
     circuit_breaker_recovery_timeout_seconds: int = Field(default=60)
+
+    @model_validator(mode="after")
+    def _require_token_audience_in_production(self) -> "Settings":
+        """
+        Refuse to start a production revision that cannot verify its callers.
+
+        Without an expected audience the API's bearer check degenerates into
+        "the header parses", and the identity written to the audit log is
+        whatever the caller typed. Cloud Run IAM still stands in front, but a
+        single `allUsers` binding - one click, or one line of Terraform - would
+        then be the whole story. Failing at startup makes that impossible to do
+        by accident.
+        """
+        if self.environment == "production" and not self.auth_expected_audience.strip():
+            raise ValueError(
+                "ENVIRONMENT=production requires AUTH_EXPECTED_AUDIENCE, the Cloud Run "
+                "service URL that incoming ID tokens are minted for. Get it from "
+                "`terraform output cloud_run_service_url`."
+            )
+        return self
 
     @model_validator(mode="after")
     def _reject_placeholder_contact_when_live(self) -> "Settings":

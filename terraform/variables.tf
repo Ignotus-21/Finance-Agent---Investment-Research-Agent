@@ -68,6 +68,12 @@ variable "sec_edgar_user_agent" {
   type        = string
 }
 
+variable "auth_expected_audience" {
+  description = "Audience claim required on every incoming Google-signed ID token. Cloud Run forwards the Authorization header it authenticated with, so this must be the service's own URL - which does not exist until the first apply, and cannot be referenced from inside the resource that defines it without a cycle. Leave empty for the bootstrap apply, then set it from `terraform output cloud_run_service_url` and apply again. A production container started with this empty exits rather than accept unverified callers."
+  type        = string
+  default     = ""
+}
+
 variable "ingress" {
   description = "Cloud Run ingress setting. INGRESS_TRAFFIC_ALL because Cloud Build smoke-tests the tagged green revision from outside the VPC; the authorization boundary is IAM, not the network."
   type        = string
