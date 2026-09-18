@@ -377,13 +377,30 @@ components:
               example: 42150
             total_tokens_consumed:
               type: integer
-              example: 32400
+              description: >-
+                LLM tokens consumed. Always 0 on this endpoint, which runs the
+                deterministic pipeline and calls no model.
+              example: 0
             context_cache_hit:
               type: boolean
-              example: true
+              description: >-
+                Whether a Gemini context cache was reused. Always false here:
+                no model call, nothing to cache.
+              example: false
             estimated_cost_usd:
               type: number
-              example: 0.165
+              description: >-
+                Inference cost. Always 0.0 on this endpoint. Compute cost is
+                Cloud Run's and is not attributed per brief.
+              example: 0.0
+            model_routing:
+              type: object
+              additionalProperties:
+                type: string
+              description: >-
+                Model used per agent. Empty on this endpoint; populated only
+                where a model was actually invoked.
+              example: {}
 
     FilingExtractionResponse:
       type: object

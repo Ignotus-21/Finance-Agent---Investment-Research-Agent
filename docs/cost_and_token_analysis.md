@@ -3,8 +3,34 @@
 
 ---
 
+> [!IMPORTANT]
+> **Everything in this document is a cost *model*, not a measurement.** Every
+> token count and dollar figure below was derived from published Vertex AI list
+> prices and an assumed 150,000-token 10-K. None of it was observed.
+>
+> It had been written, and quoted elsewhere, as though it were telemetry.
+>
+> Two facts change how it should be read:
+>
+> 1. **`POST /v1/research/equity` calls no language model at all.** It reads
+>    XBRL facts, computes ratios in Python, and fills a template. Its measured
+>    inference cost is **$0.00** and its measured token consumption is **0** —
+>    which is also why its faithfulness is 1.0 and its P95 is 0.25s. The API
+>    used to report `estimated_cost_usd: 0.165` on every response; it now
+>    reports `0.0`, because that is the true number.
+> 2. **The LLM path is the ADK agent** (`adk run src/agents`). Since #17 it
+>    genuinely routes between Pro and Flash and genuinely uses ADK's context
+>    caching against Vertex's `CachedContent` API. Its per-brief cost has still
+>    never been measured, and will not be until it is run against live Vertex
+>    with billing attached.
+>
+> Treat the tables below as a pre-deployment estimate of what the ADK path
+> *should* cost. Tracked as DEV-17 in `refrence/plan_deviation.md`.
+
+---
+
 ### Document Control
-- **Document Version:** 1.0.0
+- **Document Version:** 1.1.0 — corrected; figures relabelled as modelled
 - **Cost Target:** $\le$ $0.25 USD per Synthesized Brief
 - **Model Tiers Evaluated:** Google Vertex AI Gemini 2.5 Pro & Gemini 2.5 Flash
 
@@ -18,10 +44,10 @@ The IRA architecture overcomes this hurdle through two key mechanisms:
 1. **Gemini Context Caching:** Form 10-Ks are cached on Vertex AI, reducing input token read pricing by **75%** ($0.3125 / 1M cached tokens vs $1.25 standard).
 2. **Asymmetric Model Routing:** High-volume tabular extraction is delegated to **Gemini 2.5 Flash** ($0.075 / 1M input tokens), reserving **Gemini 2.5 Pro** solely for root coordination and final multi-source synthesis.
 
-**Result:** The average cost per research brief is **$0.165 USD**, well below the **$0.25 cap**.
+**Modelled result:** the projected cost per research brief is **$0.165 USD**, below the **$0.25 cap**. Projected, from list prices and an assumed filing size — not measured. See the banner at the top.
 
 ```mermaid
-pie title Inference Cost Breakdown per Synthesized Brief ($0.165 Total)
+pie title Modelled Inference Cost per Brief, ADK path ($0.165 projected)
     "Gemini Context Caching Reads (10-K Input)" : 0.047
     "Gemini 2.5 Pro Synthesis & Planning" : 0.078
     "Gemini 2.5 Flash Sub-Agent Extraction" : 0.022

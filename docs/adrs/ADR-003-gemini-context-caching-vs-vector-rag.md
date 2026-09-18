@@ -115,7 +115,7 @@ The capabilities the vector store would have provided are met by other means:
 
 | Capability | Delivered by |
 |---|---|
-| Large-document retrieval | Gemini Context Caching — `src/cache/context_caching.py` |
+| Large-document retrieval | Gemini Context Caching — ADK `ContextCacheConfig` on the App, `src/agents/adk_agent.py`. Superseded `src/cache/context_caching.py`, which simulated it. |
 | Table-aware structured extraction | `src/tools/sec_edgar_mcp.py` (XBRL statement parsing) |
 | Analytical querying over historical metrics | BigQuery datasets — `terraform/modules/bigquery/` |
 | Real-time external grounding | Vertex AI Search grounding — `src/tools/search_grounding.py` |

@@ -14,7 +14,6 @@ from pydantic import BaseModel
 from src.agents.macro_agent import MacroSubAgent
 from src.agents.sec_agent import SECSubAgent
 from src.agents.transcript_agent import TranscriptSubAgent
-from src.cache.context_caching import ContextCachingManager
 from src.config import Settings
 from src.core.interfaces import BaseAgent
 from src.engine.synthesis_engine import SynthesisEngine
@@ -53,7 +52,7 @@ class RootCoordinatorAgent(BaseAgent):
         macro_agent: MacroSubAgent,
         calculator: FinancialCalculator,
         synthesis_engine: SynthesisEngine,
-        context_cache_manager: ContextCachingManager | None = None,
+
         settings: Settings | None = None
     ) -> None:
         self.sec_agent = sec_agent
@@ -61,7 +60,6 @@ class RootCoordinatorAgent(BaseAgent):
         self.macro_agent = macro_agent
         self.calculator = calculator
         self.synthesis_engine = synthesis_engine
-        self.cache_manager = context_cache_manager or ContextCachingManager(settings=settings)
         self.settings = settings or Settings()
 
     @property
@@ -82,14 +80,14 @@ class RootCoordinatorAgent(BaseAgent):
         # Step 1: Formulate Decomposed Execution Plan (Gemini 2.5 Pro reasoning with Thinking Budget)
         _ = self._formulate_execution_plan(request)
 
-        # Step 2: Context Cache Check (Gemini Context Caching on 10-K document)
-        cache_status = self.cache_manager.get_or_create_cache(
-            ticker=request.ticker,
-            fiscal_year=request.fiscal_year,
-            document_text_length=600000 # ~150k tokens
-        )
-
-        # Step 3: Concurrent Multi-Agent Dispatch (asyncio.gather)
+        # Step 2: Concurrent Multi-Agent Dispatch (asyncio.gather)
+        #
+        # There used to be a context-cache check here. It consulted an
+        # in-process dict, reported a `cache_id` naming a Vertex resource that
+        # was never created, and passed a `cache_hit` boolean into the synthesis
+        # engine that selected between two hardcoded cost figures. None of the
+        # three sub-agents below calls a model, so there was no context to
+        # cache. Real caching lives in the ADK path, configured on the App.
         sec_coro = self.sec_agent.extract_filing_data(
             ticker=request.ticker,
             fiscal_year=request.fiscal_year,
@@ -125,7 +123,6 @@ class RootCoordinatorAgent(BaseAgent):
             transcript_data=transcript_data,
             macro_data=macro_data,
             verified_metrics=verified_metrics,
-            cache_hit=cache_status["cache_hit"],
             latency_ms=elapsed_ms
         )
 
