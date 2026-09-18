@@ -14,7 +14,7 @@ Run it:
 Authentication follows whatever the target needs:
 
 * **localhost** - the service accepts an unverified bearer credential, because
-  `AUTH_EXPECTED_AUDIENCE` is empty outside production. The identity it records
+  `AUTH_ALLOWED_AUDIENCES` is empty outside production. The identity it records
   is prefixed `unverified-`, which is the intended, visible behaviour.
 * **Cloud Run** - an ID token is required, and its audience must match. A user
   account cannot mint a token for an arbitrary audience (Google's own docs use

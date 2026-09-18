@@ -37,3 +37,13 @@ output "slo_ids" {
   description = "Cloud Monitoring SLOs enforcing the Definition of Done thresholds"
   value       = module.monitoring.slo_ids
 }
+
+output "caller_service_account" {
+  description = "Impersonate this to mint an ID token the service will accept: `gcloud auth print-identity-token --impersonate-service-account=<this> --audiences=<custom audience>`"
+  value       = module.iam.caller_service_account_email
+}
+
+output "accepted_token_audiences" {
+  description = "Values the service will accept in the aud claim, besides its own run.app URL"
+  value       = var.custom_audiences
+}

@@ -10,6 +10,15 @@ resource "google_cloud_run_v2_service" "ira_service" {
   # tagged revision URL from outside the VPC.
   ingress = var.ingress
 
+  # A second name the service will accept in the `aud` claim of an incoming ID
+  # token, alongside its own run.app URL. The URL is the obvious choice and the
+  # wrong one: it does not exist until this resource has been created, so using
+  # it as the audience forces a two-phase apply, and referring to it from inside
+  # the resource that defines it is a dependency cycle. A stable string chosen
+  # up front has neither problem, and callers can be configured before the
+  # service exists.
+  custom_audiences = var.custom_audiences
+
   template {
     service_account = var.service_account_email
 
@@ -72,14 +81,17 @@ resource "google_cloud_run_v2_service" "ira_service" {
         value = tostring(var.offline_mode)
       }
 
-      # The audience incoming ID tokens must be minted for. Cloud Run forwards
-      # the Authorization header it authenticated with, so this has to be the
-      # service's own URL - which is why it cannot be derived here without a
-      # dependency cycle, and why it arrives as a variable set after the first
-      # apply. Empty in production makes the container refuse to start.
+      # The same list the service itself accepts, handed to the application so
+      # the two layers cannot drift. Cloud Run forwards the Authorization header
+      # it authenticated with, so a token IAM allowed through arrives here
+      # unchanged; if this were a subset of custom_audiences the application
+      # would reject requests Cloud Run had already admitted, which presents as
+      # an intermittent 401 with a green IAM policy and is thoroughly
+      # unpleasant to diagnose. Empty in production makes the container refuse
+      # to start.
       env {
-        name  = "AUTH_EXPECTED_AUDIENCE"
-        value = var.auth_expected_audience
+        name  = "AUTH_ALLOWED_AUDIENCES"
+        value = join(",", var.custom_audiences)
       }
 
       # Not a credential, and deliberately not in Secret Manager: this string is

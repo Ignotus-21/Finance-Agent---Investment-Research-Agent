@@ -25,3 +25,32 @@ resource "google_project_iam_member" "ira_sa_roles" {
   role     = each.value
   member   = "serviceAccount:${google_service_account.ira_runtime_sa.email}"
 }
+
+# --- Caller identity -------------------------------------------------------
+# A second service account that exists only to be impersonated by the humans
+# and pipelines that need to *call* the service.
+#
+# Calling an IAM-protected Cloud Run service needs an ID token whose audience
+# the service accepts, and a Google user account cannot mint one: the token
+# `gcloud auth print-identity-token` issues for a user carries the gcloud OAuth
+# client as its audience, and --audiences is rejected unless the call also
+# impersonates a service account. Impersonation is the documented route.
+#
+# The runtime SA would work and must not be used for it. It holds
+# aiplatform.user, bigquery.dataEditor and secretmanager.secretAccessor; giving
+# an analyst token-creator on it to obtain one Authorization header would hand
+# them the entire blast radius of the service. This one holds run.invoker, from
+# the Cloud Run module, and nothing else.
+resource "google_service_account" "ira_caller_sa" {
+  account_id   = var.caller_service_account_name
+  display_name = "IRA Caller Service Account"
+  description  = "Impersonated to mint ID tokens for calling the research service. Holds run.invoker only."
+  project      = var.project_id
+}
+
+resource "google_service_account_iam_member" "ira_caller_token_creators" {
+  for_each           = toset(var.token_creator_members)
+  service_account_id = google_service_account.ira_caller_sa.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = each.value
+}

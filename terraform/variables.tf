@@ -68,10 +68,16 @@ variable "sec_edgar_user_agent" {
   type        = string
 }
 
-variable "auth_expected_audience" {
-  description = "Audience claim required on every incoming Google-signed ID token. Cloud Run forwards the Authorization header it authenticated with, so this must be the service's own URL - which does not exist until the first apply, and cannot be referenced from inside the resource that defines it without a cycle. Leave empty for the bootstrap apply, then set it from `terraform output cloud_run_service_url` and apply again. A production container started with this empty exits rather than accept unverified callers."
-  type        = string
-  default     = ""
+variable "custom_audiences" {
+  description = "Audiences accepted in the `aud` claim of an incoming Google-signed ID token, configured on the Cloud Run service and mirrored into the container. Use a stable name such as 'ira-service-production'. Not the run.app URL: it does not exist until the apply that creates the service, so using it forces a two-phase apply, and a Google *user* account cannot mint a token for an arbitrary audience anyway - callers impersonate the caller service account to do that. A production container started with this empty exits rather than accept credentials it cannot verify."
+  type        = list(string)
+  default     = []
+}
+
+variable "token_creator_members" {
+  description = "Principals granted roles/iam.serviceAccountTokenCreator on the caller service account, e.g. ['user:analyst@example.com']. That role is what lets a human run `gcloud auth print-identity-token --impersonate-service-account` and get a token the service will accept. Scoped to the caller SA specifically, which holds run.invoker and nothing else, so the grant cannot be used to reach Vertex AI, BigQuery or Secret Manager."
+  type        = list(string)
+  default     = []
 }
 
 variable "ingress" {
@@ -81,7 +87,7 @@ variable "ingress" {
 }
 
 variable "invoker_members" {
-  description = "IAM principals granted roles/run.invoker, e.g. ['user:analyst@example.com']. Empty by default. Never set this to allUsers or allAuthenticatedUsers: the application's own bearer-token check accepts any five-character string, so IAM is the only authentication this service actually has."
+  description = "IAM principals granted roles/run.invoker, e.g. ['user:analyst@example.com']. Empty by default; the caller service account is appended automatically. Never set this to allUsers or allAuthenticatedUsers - the application verifies the ID token's signature and audience, but an anonymous caller would never reach that code with a token to verify, so IAM remains the outer boundary."
   type        = list(string)
   default     = []
 }
