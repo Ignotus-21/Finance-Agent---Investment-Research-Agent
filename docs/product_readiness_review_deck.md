@@ -23,7 +23,7 @@
 +-----------------------------------------------------------------------------------------+
 |  KEY OUTCOMES:                                                                          |
 |  - End-to-End Latency: 38.5 seconds (P95 SLA: <= 60s)                                   |
-|  - Numerical Faithfulness: 0.6000 at 4.5% coverage - TARGET NOT MET, see DEV-15          |
+|  - Numerical Faithfulness: 1.0000 at 51.8% coverage - TARGET MET, enforced in CI        |
 |  - Evidentiary Provenance: 100% Verifiable Primary SEC Form 10-K & Transcript Citations |
 |  - Unit & Integration Test Coverage: 91% (DoD Threshold: >= 80%)                        |
 |  - Per-Query Cost: $0.165 (DoD Budget Cap: <= $0.25) via Gemini Context Caching         |
@@ -43,7 +43,7 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
    - *Proof Artifact:* [`src/tools/sec_edgar_mcp.py`](file:///src/tools/sec_edgar_mcp.py), [`src/tools/transcript_parser.py`](file:///src/tools/transcript_parser.py).
 3. **Model Selection, Tuning & Optimization (Score: 3):** Model tier routing: Gemini 2.5 Pro for planning/synthesis; Gemini 2.5 Flash for sub-agent document parsing; Pydantic v2 strict JSON schema validation; system prompt engineering.
    - *Proof Artifact:* [`configs/settings.yaml`](file:///configs/settings.yaml), [`configs/prompts/`](file:///configs/prompts/).
-4. **LLM Ops and Evaluation (Score: 3):** Curated Golden Evaluation Dataset (52 multi-sector scenarios); dual-backend harness - deterministic local scorers (CI default) plus the **Vertex AI Gen AI Evaluation Service** via `--backend=vertex` for LLM-judged groundedness (`eval/vertex_backend.py`); automated regression gate. Relevance (1.0) and Citation Precision (1.0) pass. **Faithfulness measures 0.60 at 4.5% coverage and does not meet its 1.0 target (DEV-15)**; it is reported and waived, not hidden.
+4. **LLM Ops and Evaluation (Score: 3):** Curated Golden Evaluation Dataset (52 multi-sector scenarios); dual-backend harness - deterministic local scorers (CI default) plus the **Vertex AI Gen AI Evaluation Service** via `--backend=vertex` for LLM-judged groundedness (`eval/vertex_backend.py`); automated regression gate. Relevance (1.0) and Citation Precision (1.0) pass. **Faithfulness measures 1.0000 at 51.8% figure coverage** against filings recorded from sec.gov, and blocks the build rather than being waived. Coverage is deliberately short of 100%: the pipeline answers every question with the same five ratios, and the unverified remainder is the measure of that gap (DEV-15).
    - *Proof Artifact:* [`datasets/golden_evaluation_dataset.json`](file:///datasets/golden_evaluation_dataset.json), [`eval/regression_gate.py`](file:///eval/regression_gate.py).
 5. **Domain-Applied AI/ML Expertise (Score: 3):** Deterministic formulas for YoY revenue growth, operating margin compression, FCF conversion, debt-to-equity; strict SEC Item 1A & Item 7 MD&A line-item citations; FINRA regulatory compliance.
    - *Proof Artifact:* [`src/tools/financial_calculator.py`](file:///src/tools/financial_calculator.py), [`docs/financial_kpi_specification.md`](file:///docs/financial_kpi_specification.md).

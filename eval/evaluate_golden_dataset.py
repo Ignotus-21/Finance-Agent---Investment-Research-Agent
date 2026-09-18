@@ -188,19 +188,22 @@ async def run_evaluation_benchmark(
         "unmeasured_faithfulness_scenario_ids": unmeasured_faithfulness,
         "target_thresholds": {
             "target_faithfulness": 1.0,
-            # KNOWN DEFICIENCY, deliberately encoded rather than hidden.
-            # The golden dataset asserts 125 scenario-specific ground-truth keys
-            # (`total_debt_billions`, `mounjaro_revenue_billions`, ...) while the
-            # pipeline emits 5 generic ones, so almost nothing is verifiable and
-            # this floor is currently near zero. Raising it requires aligning the
-            # dataset with the brief schema and curating real fixtures beyond
-            # AAPL/MSFT/GOOGL/NVDA. Until then, `mean_faithfulness` is evidence
-            # about a small subset, not about the system. Do not quote it alone.
-            "target_faithfulness_figure_coverage": 0.0,
-            # See the waiver rationale in eval/regression_gate.py. The score is
-            # still computed and printed truthfully; only the build-blocking
-            # decision is suspended while DEV-15 is open.
-            "enforce_faithfulness": False,
+            # A ratchet, not an aspiration. It is set just below the coverage
+            # actually achieved, so the only way to move it is to make more of
+            # the brief verifiable - and any change that quietly verifies less
+            # fails the gate instead of improving the headline score.
+            #
+            # It is 0.5 rather than 1.0 because the pipeline answers every
+            # question with the same five ratios while the dataset asks for
+            # segment revenue, net interest income and the like. The unchecked
+            # half is the measure of that gap, and it is meant to stay visible.
+            "target_faithfulness_figure_coverage": 0.50,
+            # Was False while DEV-15 was open: faithfulness had been hardcoded
+            # to 1.0, and the honest measurement that replaced it could only
+            # reach 4.5% of the ground truth. Both causes are now fixed - the
+            # offline corpus holds real filings and the dataset asserts the
+            # metrics the pipeline emits - so the result blocks the build again.
+            "enforce_faithfulness": True,
             "target_relevance": 0.90,
             "target_citation_precision": 1.0,
             "target_guardrail_rate": 1.0,

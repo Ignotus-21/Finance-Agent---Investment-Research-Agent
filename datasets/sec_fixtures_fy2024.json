@@ -1,0 +1,1261 @@
+{
+  "AAPL": {
+    "accession_number": "0000320193-24-000123",
+    "cik": "0000320193",
+    "company_name": "Apple Inc.",
+    "current": {
+      "capital_expenditures": 9447000000.0,
+      "cash_and_equivalents": 29943000000.0,
+      "cash_from_operations": 118254000000.0,
+      "net_income": 93736000000.0,
+      "operating_income": 123216000000.0,
+      "revenue": 391035000000.0,
+      "shareholders_equity": 56950000000.0,
+      "total_debt": 85750000000.0
+    },
+    "filing_date": "2024-11-01",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations The following discussion should be read in conjunction with the consolidated financial statements and accompanying notes included in Part II, Item 8 of this Form 10-K. This Item generally discusses 2024 and 2023 items and year-to-year comparisons between 2024 and 2023. Discussions of 2022 items and year-to-year comparisons between 2023 and 2022 are not included, and can be found in Management s Discussion and Analysis of Financial Condition and Results of Operations in Part II, Item 7 of the Company s Annual Report on Form 10-K for the fiscal year ended September 30, 2023. Product, Service and Software Announcements The Company announces new product, service and software offerings at various times during the year. Significant announcements during fiscal year 2024 included the following: First Quarter 2024: MacBook Pro 14-in.; MacBook Pro 16-in.; and iMac. Second Quarter 2024: MacBook Air 13-in.; and MacBook Air 15-in. Third Quarter 2024: iPad Air; iPad Pro; iOS 18, macOS Sequoia, iPadOS 18, watchOS 11, visionOS 2 and tvOS 18, updates to the Company s operating systems; and Apple Intelligence , a personal intelligence system that uses generative models. Fourth Quarter 2024: iPhone 16, iPhone 16 Plus, iPhone 16 Pro and iPhone 16 Pro Max; Apple Watch Series 10; and AirPods 4. Fiscal Period The Company s fiscal year is the 52- or 53-week period that ends on the last Saturday of September. An additional week is included in the first fiscal quarter every five or six years to realign the Company s fiscal quarters with calendar quarters, which occurred in the first quarter of 2023. The Company s fiscal years 2024 and 2022 spanned 52 weeks each, whereas fiscal year 2023 spanned 53 weeks. Macroeconomic Conditions Macroeconomic conditions, including inflation, interest rates and currency fluctuations, have directly and indirectly impacted, and could in the future materially impact, the Company s results of operation",
+    "period_end": "2024-09-28",
+    "primary_document": "aapl-20240928.htm",
+    "prior": {
+      "capital_expenditures": 10959000000.0,
+      "cash_and_equivalents": 29965000000.0,
+      "cash_from_operations": 110543000000.0,
+      "net_income": 96995000000.0,
+      "operating_income": 114301000000.0,
+      "revenue": 383285000000.0,
+      "shareholders_equity": 62146000000.0,
+      "total_debt": 95281000000.0
+    },
+    "ticker": "AAPL"
+  },
+  "ABBV": {
+    "accession_number": "0001551152-25-000020",
+    "cik": "0001551152",
+    "company_name": "AbbVie Inc.",
+    "current": {
+      "capital_expenditures": 974000000.0,
+      "cash_and_equivalents": 5524000000.0,
+      "cash_from_operations": 18806000000.0,
+      "net_income": 4278000000.0,
+      "operating_income": 9137000000.0,
+      "revenue": 56334000000.0,
+      "shareholders_equity": 3325000000.0,
+      "total_debt": 66841000000.0
+    },
+    "filing_date": "2025-02-14",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS The following is a discussion and analysis of the financial condition of AbbVie Inc. (AbbVie or the company). This commentary should be read in conjunction with the Consolidated Financial Statements and accompanying notes appearing in Item 8, \"Financial Statements and Supplementary Data.\" This section of Form 10-K generally discusses 2024 and 2023 items and year-to-year comparisons between 2024 and 2023. Discussions of 2022 items and year-to-year comparisons between 2023 and 2022 that are not included in this Form 10-K can be found in Management's Discussion and Analysis of Financial Condition and Results of Operations in Part II, Item 7 of the Company s Annual Report on Form 10-K for the fiscal year ended December 31, 2023. EXECUTIVE OVERVIEW Company Overview AbbVie is a global, diversified research-based biopharmaceutical company positioned for success with a comprehensive product portfolio that has leadership positions across immunology, oncology, aesthetics, neuroscience and eye care. AbbVie uses its expertise, dedicated people and unique approach to innovation to develop and market advanced therapies that address some of the world s most complex and serious diseases. On August 1, 2024, AbbVie completed the acquisition of Cerevel Therapeutics Holdings, Inc. (Cerevel Therapeutics). The acquisition complements AbbVie s neuroscience portfolio, adding a wide range of potentially best-in-class assets that may transform standards of care across psychiatric and neurological disorders where significant unmet needs remain for patients. See Note 5 to the Consolidated Financial Statements for additional information on the acquisition. Subsequent to the acquisition date, AbbVie's consolidated financial statements include the assets, liabilities, operating results and cash flows of Cerevel Therapeutics. On July 1, 2024, Robert A. Michael, AbbVie's then President and Chief Operating Officer, succeeded Richard A. Go",
+    "period_end": "2024-12-31",
+    "primary_document": "abbv-20241231.htm",
+    "prior": {
+      "capital_expenditures": 777000000.0,
+      "cash_and_equivalents": 12814000000.0,
+      "cash_from_operations": 22839000000.0,
+      "net_income": 4863000000.0,
+      "operating_income": 12757000000.0,
+      "revenue": 54318000000.0,
+      "shareholders_equity": 10360000000.0,
+      "total_debt": 59245000000.0
+    },
+    "ticker": "ABBV"
+  },
+  "ADBE": {
+    "accession_number": "0000796343-25-000004",
+    "cik": "0000796343",
+    "company_name": "ADOBE INC.",
+    "current": {
+      "capital_expenditures": 183000000.0,
+      "cash_and_equivalents": 7613000000.0,
+      "cash_from_operations": 8056000000.0,
+      "net_income": 5560000000.0,
+      "operating_income": 6741000000.0,
+      "revenue": 21505000000.0,
+      "shareholders_equity": 14105000000.0,
+      "total_debt": 4129000000.0
+    },
+    "filing_date": "2025-01-13",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS The following discussion should be read in conjunction with our Consolidated Financial Statements and Notes thereto. Discussion regarding our financial condition and results of operations for fiscal 2023 as compared to fiscal 2022 is included in Item 7 of our Annual Report on Form 10-K for the fiscal year ended December 1, 2023, filed with the SEC on January 17, 2024. CRITICAL ACCOUNTING POLICIES AND ESTIMATES In preparing our Consolidated Financial Statements in accordance with generally accepted accounting principles in the United States ( GAAP ) and pursuant to the rules and regulations of the SEC, we make assumptions, judgments and estimates that affect the reported amounts of assets, liabilities, revenue and expenses, and related disclosures of contingent assets and liabilities. We base our assumptions, judgments and estimates on historical experience and various other factors that we believe to be reasonable under the circumstances. Actual results could differ materially from these estimates under different assumptions or conditions. We evaluate our assumptions, judgments and estimates on a regular basis. We also discuss our critical accounting policies and estimates with the Audit Committee of the Board of Directors. We believe that the assumptions, judgments and estimates involved in the accounting for revenue recognition and income taxes have the greatest potential impact on our Consolidated Financial Statements. These areas are key components of our results of operations and are based on complex rules requiring us to make judgments and estimates, and consequently, we consider these to be our critical accounting policies. Historically, our assumptions, judgments and estimates relative to our critical accounting policies have not differed materially from actual results. Revenue Recognition Our contracts with customers may include multiple goods and services. For example, some of our offerings incl",
+    "period_end": "2024-11-29",
+    "primary_document": "adbe-20241129.htm",
+    "prior": {
+      "capital_expenditures": 360000000.0,
+      "cash_and_equivalents": 7141000000.0,
+      "cash_from_operations": 7302000000.0,
+      "net_income": 5428000000.0,
+      "operating_income": 6650000000.0,
+      "revenue": 19409000000.0,
+      "shareholders_equity": 16518000000.0,
+      "total_debt": 3634000000.0
+    },
+    "ticker": "ADBE"
+  },
+  "AMD": {
+    "accession_number": "0000002488-25-000012",
+    "cik": "0000002488",
+    "company_name": "ADVANCED MICRO DEVICES INC",
+    "current": {
+      "capital_expenditures": 636000000.0,
+      "cash_and_equivalents": 3787000000.0,
+      "cash_from_operations": 3041000000.0,
+      "net_income": 1641000000.0,
+      "operating_income": 1900000000.0,
+      "revenue": 25785000000.0,
+      "shareholders_equity": 57568000000.0,
+      "total_debt": 1721000000.0
+    },
+    "filing_date": "2025-02-05",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS The following discussion should be read in conjunction with the Consolidated Financial Statements as of December 28, 2024 and December 30, 2023 and for each of the three years in the period ended December 28, 2024 and related notes, which are included in this Annual Report on Form 10-K as well as with the other sections of this Annual Report on Form 10-K, Part II, Item 8: Financial Statements and Supplementary Data. Introduction In this section, we will describe the general financial condition and the results of operations of Advanced Micro Devices, Inc. and its wholly-owned subsidiaries (collectively, us, our or AMD ), including a discussion of our results of operations for 2024 compared to 2023, an analysis of changes in our financial condition and a discussion of our off-balance sheet arrangements. Discussions of 2022 items and year-to-year comparisons between 2023 and 2022 that are not included in this Form 10-K can be found in Management s Discussion and Analysis of Financial Condition and Results of Operations in Part II, Item 7 of our Annual Report on Form 10-K for the fiscal year ended December 30, 2023. Overview In 2024, we delivered strong annual revenue growth with net revenue increasing 14% to $25.8 billion, compared to $22.7 billion in 2023. This growth was driven by the performance of our Data Center and Client segments. Data Center net revenue of $12.6 billion increased by 94% compared to $6.5 billion in 2023, driven by higher sales of our AMD Instinct GPUs and AMD EPYC CPUs. Client segment net revenue of $7.1 billion in 2024 increased by 52% compared to $4.7 billion in 2023, primarily due to higher sales of our AMD Ryzen mobile and desktop processors. The increase in annual net revenue was partially offset by a decrease in net revenue in our Gaming and Embedded segments. Gaming net revenue of $2.6 billion decreased by 58% compared to $6.2 billion in 2023. The decrease in net revenue was pr",
+    "period_end": "2024-12-28",
+    "primary_document": "amd-20241228.htm",
+    "prior": {
+      "capital_expenditures": 546000000.0,
+      "cash_and_equivalents": 3933000000.0,
+      "cash_from_operations": 1667000000.0,
+      "net_income": 854000000.0,
+      "operating_income": 401000000.0,
+      "revenue": 22680000000.0,
+      "shareholders_equity": 55892000000.0,
+      "total_debt": 1717000000.0
+    },
+    "ticker": "AMD"
+  },
+  "AMGN": {
+    "accession_number": "0000318154-25-000010",
+    "cik": "0000318154",
+    "company_name": "AMGEN INC",
+    "current": {
+      "capital_expenditures": 1096000000.0,
+      "cash_and_equivalents": 11973000000.0,
+      "cash_from_operations": 11490000000.0,
+      "net_income": 4090000000.0,
+      "operating_income": 7258000000.0,
+      "revenue": 33424000000.0,
+      "shareholders_equity": 5877000000.0,
+      "total_debt": 56549000000.0
+    },
+    "filing_date": "2025-02-14",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Results of Operations, Income taxes; and Part IV Note 7, Income taxes, to the Consolidated Financial Statements for further discussion. Our operations are subject to the tax laws, regulations and administrative practices of the United States, the U.S. territory of Puerto Rico, U.S. state jurisdictions and other countries in which we do business. Significant changes in these rules could have a material adverse effect on our results of operations. See Part I, Item 1A. Risk Factors We could be subject to additional tax liabilities, including from an adverse outcome in our ongoing tax dispute with the IRS and other tax examinations, enactment of the OECD minimum corporate tax rate agreement and the adoption and interpretation of new tax legislation, and we anticipate additional tax liabilities from certain provisions of the 2017 Tax Act that will go into effect in 2026; such tax liabilities could adversely affect our profitability and results of operations. Contingencies In the ordinary course of business, we are involved in various legal proceedings, government investigations and other matters such as intellectual property disputes, contractual disputes and class action suits that are complex in nature and have outcomes that are difficult to predict. We describe our legal proceedings and other matters that are significant or that we believe could become significant in Part IV Note 20, Contingencies and commitments, to the Consolidated Financial Statements. We record accruals for loss contingencies to the extent that we conclude it is probable that a liability has been incurred and the amount of the related loss can be reasonably estimated. We evaluate, on a quarterly basis, developments in legal proceedings and other matters that could cause an increase or decrease in the amount of the liability that has been accrued previously. While it is not possible to accurately predict or determine the eventual outcome",
+    "period_end": "2024-12-31",
+    "primary_document": "amgn-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1112000000.0,
+      "cash_and_equivalents": 10944000000.0,
+      "cash_from_operations": 8471000000.0,
+      "net_income": 6717000000.0,
+      "operating_income": 7897000000.0,
+      "revenue": 28190000000.0,
+      "shareholders_equity": 6232000000.0,
+      "total_debt": 63170000000.0
+    },
+    "ticker": "AMGN"
+  },
+  "AMZN": {
+    "accession_number": "0001018724-25-000004",
+    "cik": "0001018724",
+    "company_name": "AMAZON COM INC",
+    "current": {
+      "capital_expenditures": 82999000000.0,
+      "cash_and_equivalents": 78779000000.0,
+      "cash_from_operations": 115877000000.0,
+      "net_income": 59248000000.0,
+      "operating_income": 68593000000.0,
+      "revenue": 637959000000.0,
+      "shareholders_equity": 285970000000.0,
+      "total_debt": 52623000000.0
+    },
+    "filing_date": "2025-02-07",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Forward-Looking Statements This Annual Report on Form 10-K includes forward-looking statements within the meaning of the Private Securities Litigation Reform Act of 1995. All statements other than statements of historical fact, including statements regarding guidance, industry prospects, or future results of operations or financial position, made in this Annual Report on Form 10-K are forward-looking. We use words such as anticipates, believes, expects, future, intends, and similar expressions to identify forward-looking statements. Forward-looking statements reflect management s current expectations and are inherently uncertain. Actual results and outcomes could differ materially for a variety of reasons, including, among others, fluctuations in foreign exchange rates, changes in global economic conditions and customer demand and spending, inflation, interest rates, regional labor market constraints, world events, the rate of growth of the internet, online commerce, cloud services, and new and emerging technologies, the amount that Amazon.com invests in new business opportunities and the timing of those investments, the mix of products and services sold to customers, the mix of net sales derived from products as compared with services, the extent to which we owe income or other taxes, competition, management of growth, potential fluctuations in operating results, international growth and expansion, the outcomes of claims, litigation, government investigations, and other proceedings, fulfillment, sortation, delivery, and data center optimization, risks of inventory management, variability in demand, the degree to which we enter into, maintain, and develop commercial agreements, proposed and completed acquisitions and strategic transactions, payments risks, and risks of fulfillment throughput and productivity. In addition, global economic and geopolitical conditions and additional or unforeseen circumstanc",
+    "period_end": "2024-12-31",
+    "primary_document": "amzn-20241231.htm",
+    "prior": {
+      "capital_expenditures": 52729000000.0,
+      "cash_and_equivalents": 73387000000.0,
+      "cash_from_operations": 84946000000.0,
+      "net_income": 30425000000.0,
+      "operating_income": 36852000000.0,
+      "revenue": 574785000000.0,
+      "shareholders_equity": 201875000000.0,
+      "total_debt": 58314000000.0
+    },
+    "ticker": "AMZN"
+  },
+  "AXP": {
+    "accession_number": "0000004962-25-000016",
+    "cik": "0000004962",
+    "company_name": "AMERICAN EXPRESS CO",
+    "current": {
+      "capital_expenditures": 1911000000.0,
+      "cash_and_equivalents": 40640000000.0,
+      "cash_from_operations": 14050000000.0,
+      "net_income": 10129000000.0,
+      "revenue": 38825000000.0,
+      "shareholders_equity": 30264000000.0,
+      "total_debt": 49715000000.0
+    },
+    "filing_date": "2025-02-07",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations in our Annual Report on Form 10-K for the year ended December 31, 2023, filed with the SEC on February 9, 2024. TABLE 2: TOTAL REVENUES NET OF INTEREST EXPENSE SUMMARY Years Ended December 31, Change Change (Millions, except percentages) 2024 2023 2022 2024 vs. 2023 2023 vs. 2022 Discount revenue $ 35,192 $ 33,416 $ 30,739 $ 1,776 5 % $ 2,677 9 % Net card fees 8,449 7,255 6,070 1,194 16 1,185 20 Service fees and other revenue 5,129 5,005 4,521 124 2 484 11 Processed revenue 1,636 1,705 1,637 (69) (4) 68 4 Total non-interest revenues 50,406 47,381 42,967 3,025 6 4,414 10 Total interest income 23,795 19,983 12,658 3,812 19 7,325 58 Total interest expense 8,252 6,849 2,763 1,403 20 4,086 # Net interest income 15,543 13,134 9,895 2,409 18 3,239 33 Total revenues net of interest expense $ 65,949 $ 60,515 $ 52,862 $ 5,434 9 % $ 7,653 14 % # Denotes a variance of 100 percent or more TOTAL REVENUES NET OF INTEREST EXPENSE Discount revenue increased, primarily driven by an increase in billed business of 6 percent. See Tables 5 and 6 for more details on billed business performance. Net card fees increased, primarily driven by growth in our premium card portfolios. See Table 5 for more details on proprietary new card acquisitions, proprietary cards-in-force and average fee per card. Service fees and other revenue increased, primarily driven by increases in foreign exchange related revenues associated with Card Member cross-currency spending, loyalty coalition-related fees and merchant service fees, partially offset by Accertify revenues included in the prior year. Processed revenue decreased, and was relatively flat on an FX-adjusted basis. 2 See Tables 5 and 6 for more details on processed volume performance. Interest income increased, primarily driven by growth in revolving loan balances and higher interest rates. Interest expense increased, primarily driven by higher interest rates paid on, and growth in, custome",
+    "period_end": "2024-12-31",
+    "primary_document": "axp-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1563000000.0,
+      "cash_and_equivalents": 46596000000.0,
+      "cash_from_operations": 18559000000.0,
+      "net_income": 8374000000.0,
+      "revenue": 37218000000.0,
+      "shareholders_equity": 28057000000.0,
+      "total_debt": 47866000000.0
+    },
+    "ticker": "AXP"
+  },
+  "BAC": {
+    "accession_number": "0000070858-25-000139",
+    "cik": "0000070858",
+    "company_name": "BANK OF AMERICA CORP /DE/",
+    "current": {
+      "cash_and_equivalents": 290114000000.0,
+      "cash_from_operations": -8805000000.0,
+      "net_income": 27132000000.0,
+      "revenue": 101887000000.0,
+      "shareholders_equity": 295559000000.0,
+      "total_debt": 283279000000.0
+    },
+    "filing_date": "2025-02-25",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations (MD&A) and Note 23 Business Segment Information to the Consolidated Financial Statements. Competition We operate in a highly competitive environment. Our competitors include banks, thrifts, credit unions, investment banking firms, investment advisory firms, brokerage firms, investment companies, insurance companies, mortgage banking companies, credit card issuers, mutual fund companies, hedge funds, private equity firms, and e-commerce and other internet-based companies, including merchant banks and companies providing nonbank financial services. We compete with some of these competitors globally and with others on a regional or product-specific basis. We are increasingly competing with firms offering products solely over the internet and with nonfinancial companies, including firms utilizing emerging technologies, such as digital assets, rather than, or in addition to, traditional banking products. Competition is based on a number of factors including, among others, customer service and convenience, the pricing, quality and range of products and services offered, lending limits, the quality and delivery of our technology and our reputation, experience and relationships in relevant markets. Our ability to continue to compete effectively also depends in large part on our ability to attract new employees and develop, retain and motivate our existing employees, while managing compensation and other costs. Human Capital Resources Bank of America has always been the bank of opportunity for our shareholders, our clients and customers, our communities and our teammates. We strive to make Bank of America a great place to work for our employees by providing access to a broad range of opportunities to achieve their professional goals and by maintaining a culture of caring for them and their families. We are a company of approximately 213,000 talented employees who represent a diverse range of experiences, skills, b",
+    "period_end": "2024-12-31",
+    "primary_document": "bac-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 333073000000.0,
+      "cash_from_operations": 44982000000.0,
+      "net_income": 26515000000.0,
+      "revenue": 98581000000.0,
+      "shareholders_equity": 291646000000.0,
+      "total_debt": 302204000000.0
+    },
+    "ticker": "BAC"
+  },
+  "BLK": {
+    "accession_number": "0000950170-25-026584",
+    "cik": "0002012383",
+    "company_name": "BlackRock, Inc.",
+    "current": {
+      "capital_expenditures": 255000000.0,
+      "cash_and_equivalents": 12762000000.0,
+      "cash_from_operations": 4956000000.0,
+      "net_income": 6369000000.0,
+      "operating_income": 7574000000.0,
+      "revenue": 20407000000.0,
+      "shareholders_equity": 47495000000.0,
+      "total_debt": 12314000000.0
+    },
+    "filing_date": "2025-02-25",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Forward-looking Statements This report, and other statements that BlackRock may make, may contain forward-looking statements within the meaning of the Private Securities Litigation Reform Act, with respect to BlackRock s future financial or business performance, strategies or expectations. Forward-looking statements are typically identified by words or phrases such as trend, potential, opportunity, pipeline, believe, comfortable, expect, anticipate, current, intention, estimate, position, assume, outlook, continue, remain, maintain, sustain, seek, achieve, and similar expressions, or future or conditional verbs such as will, would, should, could, may and similar expressions. BlackRock cautions that forward-looking statements are subject to numerous assumptions, risks and uncertainties, which change over time and may contain information that is not purely historical in nature. Such information may include, among other things, projections and forecasts. There is no guarantee that any forecasts made will come to pass. Forward-looking statements speak only as of the date they are made, and BlackRock assumes no duty to and does not undertake to update forward-looking statements. Actual results could differ materially from those anticipated in forward-looking statements and future results could differ materially from historical performance. BlackRock has previously disclosed risk factors in its Securities and Exchange Commission ( SEC ) reports. These risk factors and those identified elsewhere in this report, among others, could cause actual results to differ materially from forward-looking statements or historical performance and include: (1) the introduction, withdrawal, success and timing of business initiatives and strategies; (2) changes and volatility in political, economic or industry conditions, the interest rate environment, foreign exchange rates or financial and capital markets, which could result i",
+    "period_end": "2024-12-31",
+    "primary_document": "blk-20241231.htm",
+    "prior": {
+      "capital_expenditures": 344000000.0,
+      "cash_and_equivalents": 8736000000.0,
+      "cash_from_operations": 4165000000.0,
+      "net_income": 5502000000.0,
+      "operating_income": 6275000000.0,
+      "revenue": 17859000000.0,
+      "shareholders_equity": 39347000000.0,
+      "total_debt": 7918000000.0
+    },
+    "ticker": "BLK"
+  },
+  "BMY": {
+    "accession_number": "0000014272-25-000039",
+    "cik": "0000014272",
+    "company_name": "BRISTOL MYERS SQUIBB CO",
+    "current": {
+      "capital_expenditures": 1248000000.0,
+      "cash_and_equivalents": 10346000000.0,
+      "cash_from_operations": 15190000000.0,
+      "net_income": -8948000000.0,
+      "revenue": 48300000000.0,
+      "shareholders_equity": 16335000000.0,
+      "total_debt": 47603000000.0
+    },
+    "filing_date": "2025-02-12",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations filed on February 13, 2024. EXECUTIVE SUMMARY Bristol-Myers Squibb Company is a global biopharmaceutical company whose mission is to discover, develop and deliver innovative medicines that help patients prevail over serious diseases. Refer to the Summary of Abbreviated Terms at the end of this 2024 Form 10-K for definitions of capitalized terms used throughout the document. In 2024, we achieved multiple clinical and regulatory milestones across our portfolio including (i) approvals for Breyanzi in the U.S. and Japan for adults with relapsed or refractory FL and in the U.S. for adults with relapsed or refractory CLL/SLL and MCL; (ii) Reblozyl's expanded approval to include the first-line treatment of adult patients with transfusion-dependent anemia due to very low, low and intermediate-risk MDS in the EU and Japan; (iii) FDA approval of Opdivo Qvantig injection for subcutaneous use in most previously approved adult solid tumor Opdivo indications; (iv) FDA approval of Opdivo for the treatment of adult patients with resectable NSCLC, in combination with platinum-doublet chemotherapy, followed by single-agent Opdivo as adjuvant treatment after surgery; and (v) FDA approval and subsequent launch of Cobenfy for the treatment of schizophrenia in adults. In 2024, we completed the following acquisitions: (i) Karuna, a biopharmaceutical company in the area of developing and delivering medicines, including Cobenfy, for psychiatric and neurological conditions; (ii) RayzeBio, a clinical-stage radiopharmaceutical therapeutics company with a pipeline of potentially first-in-class and/or best-in-class drug development programs; and (iii) Mirati, a commercial stage targeted oncology company, with a commercialized medicine, Krazati , and clinical programs in development. We also entered into a strategic collaboration with SystImmune, to co-develop and co-commercialize izalontamab brengitecan (iza-bren or BL-B01D1), a bispe",
+    "period_end": "2024-12-31",
+    "primary_document": "bmy-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1209000000.0,
+      "cash_and_equivalents": 11464000000.0,
+      "cash_from_operations": 13860000000.0,
+      "net_income": 8025000000.0,
+      "revenue": 45006000000.0,
+      "shareholders_equity": 29430000000.0,
+      "total_debt": 36653000000.0
+    },
+    "ticker": "BMY"
+  },
+  "C": {
+    "accession_number": "0000831001-25-000067",
+    "cik": "0000831001",
+    "company_name": "CITIGROUP INC",
+    "current": {
+      "capital_expenditures": 6500000000.0,
+      "cash_and_equivalents": 276532000000.0,
+      "cash_from_operations": -19669000000.0,
+      "net_income": 12682000000.0,
+      "revenue": 81139000000.0,
+      "shareholders_equity": 208598000000.0,
+      "total_debt": 287300000000.0
+    },
+    "filing_date": "2025-02-21",
+    "fiscal_year": 2024,
+    "mda_item_7": "",
+    "period_end": "2024-12-31",
+    "primary_document": "c-20241231.htm",
+    "prior": {
+      "capital_expenditures": 6583000000.0,
+      "cash_and_equivalents": 260932000000.0,
+      "cash_from_operations": -73416000000.0,
+      "net_income": 9228000000.0,
+      "revenue": 78462000000.0,
+      "shareholders_equity": 205453000000.0,
+      "total_debt": 286619000000.0
+    },
+    "ticker": "C"
+  },
+  "COP": {
+    "accession_number": "0001163165-25-000012",
+    "cik": "0001163165",
+    "company_name": "CONOCOPHILLIPS",
+    "current": {
+      "cash_and_equivalents": 5607000000.0,
+      "cash_from_operations": 20124000000.0,
+      "net_income": 9245000000.0,
+      "revenue": 49418000000.0,
+      "shareholders_equity": 64796000000.0
+    },
+    "filing_date": "2025-02-18",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Management s Discussion and Analysis is the company s analysis of its financial performance and of significant trends and uncertainties that may affect future performance. It should be read in conjunction with the financial statements and notes, and supplemental oil and gas disclosures included elsewhere in this report. It contains forward-looking statements including, without limitation, statements relating to the company s plans, strategies, objectives, expectations and intentions that are made pursuant to the safe harbor provisions of the Private Securities Litigation Reform Act of 1995. The words ambition, anticipate, believe, budget, continue, could, effort, estimate, expect, forecast, goal, guidance, intend, may, objective, outlook, plan, potential, predict, projection, seek, should, target, will, would and similar expressions identify forward-looking statements. The company does not undertake to update, revise or correct any of the forward-looking information unless required to do so under the federal securities laws. Readers are cautioned that such forward-looking statements should be read in conjunction with the company s disclosures under the heading: CAUTIONARY STATEMENT FOR THE PURPOSES OF THE SAFE HARBOR PROVISIONS OF THE PRIVATE SECURITIES LITIGATION REFORM ACT OF 1995, beginning on page 65 . The terms earnings and loss as used in Management s Discussion and Analysis refer to net income (loss). Business Environment and Executive Overview ConocoPhillips is one of the world s leading E&P companies based on both production and reserves with operations and activities in 14 countries. Our diverse, low cost of supply portfolio includes resource-rich unconventional plays in North America; conventional assets in North America, Europe, Africa and Asia; global LNG developments; oil sands in Canada; and an inventory of global exploration prospects. Headquartered in Houston, Texas, at December 31, 2024,",
+    "period_end": "2024-12-31",
+    "primary_document": "cop-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 5635000000.0,
+      "cash_from_operations": 19965000000.0,
+      "net_income": 10957000000.0,
+      "revenue": 48522000000.0,
+      "shareholders_equity": 49279000000.0
+    },
+    "ticker": "COP"
+  },
+  "CRM": {
+    "accession_number": "0001108524-24-000005",
+    "cik": "0001108524",
+    "company_name": "Salesforce, Inc.",
+    "current": {
+      "capital_expenditures": 736000000.0,
+      "cash_and_equivalents": 8472000000.0,
+      "cash_from_operations": 10234000000.0,
+      "net_income": 4136000000.0,
+      "operating_income": 5011000000.0,
+      "revenue": 34857000000.0,
+      "shareholders_equity": 59646000000.0,
+      "total_debt": 8427000000.0
+    },
+    "filing_date": "2024-03-06",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS The following discussion contains forward-looking statements, including, without limitation, our expectations and statements regarding our outlook and future revenues, expenses, results of operations, liquidity, plans, strategies and management objectives and any assumptions underlying any of the foregoing. Our actual results may differ significantly from those projected in the forward-looking statements. Our forward-looking statements and factors that might cause future actual results to differ materially from our recent results or those projected in the forward-looking statements include, but are not limited to, those discussed in the section titled Forward-Looking Information and Risk Factors of this Annual Report on Form 10-K. Except as required by law, we assume no obligation to update the forward-looking statements or our risk factors for any reason. The following section generally discusses fiscal 2024 and 2023 items and year-to-year comparisons between fiscal 2024 and 2023, as well as certain fiscal 2022 items. Discussions of fiscal 2022 items and year-to-year comparisons between fiscal 2023 and 2022 that are not included in this Form 10-K can be found in Management s Discussion and Analysis of Financial Condition and Results of Operations in Part II, Item 7 of our Annual Report on Form 10-K for the fiscal year ended January 31, 2023. Overview Salesforce is a global leader in customer relationship management ( CRM ) technology that brings companies and customers together in the digital age. Founded in 1999, we enable companies of every size and industry to take advantage of powerful technologies to connect to their customers in a whole new way and help them transform their businesses around the customer in this digital-first world. Our Customer 360 platform unites sales, service, marketing, commerce and IT teams by connecting customer data across systems, apps and devices to create a complete view",
+    "period_end": "2024-01-31",
+    "primary_document": "crm-20240131.htm",
+    "prior": {
+      "capital_expenditures": 798000000.0,
+      "cash_and_equivalents": 7016000000.0,
+      "cash_from_operations": 7111000000.0,
+      "net_income": 208000000.0,
+      "operating_income": 1030000000.0,
+      "revenue": 31352000000.0,
+      "shareholders_equity": 58359000000.0,
+      "total_debt": 9419000000.0
+    },
+    "ticker": "CRM"
+  },
+  "CSCO": {
+    "accession_number": "0000858877-24-000017",
+    "cik": "0000858877",
+    "company_name": "CISCO SYSTEMS, INC.",
+    "current": {
+      "capital_expenditures": 670000000.0,
+      "cash_and_equivalents": 7508000000.0,
+      "cash_from_operations": 10880000000.0,
+      "net_income": 10320000000.0,
+      "operating_income": 12181000000.0,
+      "revenue": 53803000000.0,
+      "shareholders_equity": 45457000000.0,
+      "total_debt": 19621000000.0
+    },
+    "filing_date": "2024-09-05",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Forward-Looking Statements This Annual Report on Form 10-K, including this Management s Discussion and Analysis of Financial Condition and Results of Operations, contains forward-looking statements regarding future events and our future results that are subject to the safe harbors created under the Securities Act of 1933, as amended (the Securities Act ), and the Securities Exchange Act of 1934, as amended (the Exchange Act ). All statements other than statements of historical facts are statements that could be deemed forward-looking statements. These statements are based on current expectations, estimates, forecasts, and projections about the industries in which we operate and the beliefs and assumptions of our management. Words such as expects, anticipates, targets, goals, projects, intends, plans, believes, momentum, seeks, estimates, continues, endeavors, strives, may, variations of such words, and similar expressions are intended to identify such forward-looking statements. In addition, any statements that refer to projections of our future financial performance, our anticipated growth and trends in our businesses, and other characterizations of future events or circumstances are forward-looking statements. Readers are cautioned that these forward-looking statements are only predictions and are subject to risks, uncertainties, and assumptions that are difficult to predict, including those under Part I, Item 1A. Risk Factors, and elsewhere herein. Therefore, actual results may differ materially and adversely from those expressed in any forward-looking statements. We undertake no obligation to revise or update any forward-looking statements for any reason. OVERVIEW Cisco designs and sells a broad range of technologies that help to power, secure, and draw insights from the Internet. We are integrating artificial intelligence (AI) into our product portfolios across networking, security, collaboration and",
+    "period_end": "2024-07-27",
+    "primary_document": "csco-20240727.htm",
+    "prior": {
+      "capital_expenditures": 849000000.0,
+      "cash_and_equivalents": 10123000000.0,
+      "cash_from_operations": 19886000000.0,
+      "net_income": 12613000000.0,
+      "operating_income": 15031000000.0,
+      "revenue": 56998000000.0,
+      "shareholders_equity": 44353000000.0,
+      "total_debt": 6658000000.0
+    },
+    "ticker": "CSCO"
+  },
+  "CVX": {
+    "accession_number": "0000093410-25-000009",
+    "cik": "0000093410",
+    "company_name": "CHEVRON CORP",
+    "current": {
+      "capital_expenditures": 16448000000.0,
+      "cash_and_equivalents": 8262000000.0,
+      "cash_from_operations": 31492000000.0,
+      "net_income": 17661000000.0,
+      "revenue": 193414000000.0,
+      "shareholders_equity": 152318000000.0
+    },
+    "filing_date": "2025-02-21",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations The index to Management s Discussion and Analysis of Financial Condition and Results of Operations is presented in the Financial Table of Contents .",
+    "period_end": "2024-12-31",
+    "primary_document": "cvx-20241231.htm",
+    "prior": {
+      "capital_expenditures": 15829000000.0,
+      "cash_and_equivalents": 8178000000.0,
+      "cash_from_operations": 35609000000.0,
+      "net_income": 21369000000.0,
+      "revenue": 196913000000.0,
+      "shareholders_equity": 160957000000.0
+    },
+    "ticker": "CVX"
+  },
+  "EOG": {
+    "accession_number": "0000821189-25-000011",
+    "cik": "0000821189",
+    "company_name": "EOG RESOURCES INC",
+    "current": {
+      "cash_and_equivalents": 7092000000.0,
+      "cash_from_operations": 12143000000.0,
+      "net_income": 6403000000.0,
+      "operating_income": 8082000000.0,
+      "revenue": 23698000000.0,
+      "shareholders_equity": 29351000000.0,
+      "total_debt": 4220000000.0
+    },
+    "filing_date": "2025-02-27",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Overview EOG Resources, Inc., together with its subsidiaries (collectively, EOG), is one of the largest independent (non-integrated) crude oil and natural gas companies in the United States of America (United States) with proved reserves in the United States and the Republic of Trinidad and Tobago (Trinidad). EOG is focused on being among the highest return and lowest cost producers, committed to strong environmental performance and playing a significant role in the long-term future of energy. EOG operates under a consistent business and operational strategy that focuses on a comprehensive approach to developing acreage through industry cycles. EOG evaluates rate of return, net present value, margins, payback period and other key metrics. This strategy is intended to enhance the generation of cash flow and earnings from each unit of production on a cost-efficient basis, allowing EOG to maximize long-term growth in shareholder value and maintain a strong balance sheet. EOG implements its strategy primarily by emphasizing the drilling of internally generated prospects in order to find and develop low-cost reserves. Maintaining the lowest possible operating cost structure, coupled with efficient and safe operations and robust environmental stewardship practices and performance, is integral in the implementation of EOG's strategy. EOG realized net income of $6,403 million during 2024 as compared to net income of $7,594 million for 2023. At December 31, 2024, EOG's total estimated net proved reserves were 4,748 million barrels of oil equivalent (MMBoe), an increase of 250 MMBoe from December 31, 2023. During 2024, net proved crude oil and condensate and natural gas liquids (NGLs) reserves increased by 218 million barrels (MMBbl), and net proved natural gas reserves increased by 192 billion cubic feet, or 32 MMBoe, in each case from December 31, 2023. Recent Developments Commodity Prices. Prices for crude oil a",
+    "period_end": "2024-12-31",
+    "primary_document": "eog-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 5278000000.0,
+      "cash_from_operations": 11340000000.0,
+      "net_income": 7594000000.0,
+      "operating_income": 9603000000.0,
+      "revenue": 24186000000.0,
+      "shareholders_equity": 28090000000.0,
+      "total_debt": 3765000000.0
+    },
+    "ticker": "EOG"
+  },
+  "GILD": {
+    "accession_number": "0000882095-25-000006",
+    "cik": "0000882095",
+    "company_name": "GILEAD SCIENCES, INC.",
+    "current": {
+      "capital_expenditures": 523000000.0,
+      "cash_and_equivalents": 9991000000.0,
+      "cash_from_operations": 10828000000.0,
+      "net_income": 480000000.0,
+      "operating_income": 1662000000.0,
+      "revenue": 28754000000.0,
+      "shareholders_equity": 19330000000.0,
+      "total_debt": 24896000000.0
+    },
+    "filing_date": "2025-02-28",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations of our 2023 Form 10-K filed with U.S. Securities and Exchange Commission . Management Overview Gilead Sciences, Inc. (including its consolidated subsidiaries, referred to as Gilead, the company, we, our or us ) is a biopharmaceutical company that has pursued and achieved breakthroughs in medicine for more than three decades, with the goal of creating a healthier world for all people. We are committed to advancing innovative medicines to prevent and treat life-threatening diseases, including HIV, viral hepatitis, coronavirus disease 2019 ( COVID-19 ), cancer and inflammation. We operate in more than 35 countries worldwide, with headquarters in Foster City, California. Our strategic ambitions are to (i) bring 10+ transformative therapies to patients by 2030 (tracking since 2020); (ii) be a biotech employer and partner of choice; and (iii) deliver shareholder value in a sustainable and responsible manner. Our strategic priorities to deliver on these ambitions include: (i) maximize near-term revenue growth; (ii) maximize impact of long-acting HIV therapies; and (iii) expand and deliver on oncology programs. Year in Review During 2024, we delivered growth in our HIV, Oncology and Liver Disease product sales and continued to invest in our business and research and development ( R&D ) pipeline through advancement of our portfolio and broadening of available therapies, including through acquisitions and collaborations. Meanwhile, we maintained our financial position through repayment of senior notes coming due and the issuance of new senior notes, and provided shareholder returns through dividends and share repurchases. The following represents a summary of notable business updates and events during 2024, including certain items from our press releases, which readers are encouraged to review in full as available on our website at www.gilead.com. The content on the referenced website does not constitute a part of ",
+    "period_end": "2024-12-31",
+    "primary_document": "gild-20241231.htm",
+    "prior": {
+      "capital_expenditures": 585000000.0,
+      "cash_and_equivalents": 6085000000.0,
+      "cash_from_operations": 8006000000.0,
+      "net_income": 5665000000.0,
+      "operating_income": 7605000000.0,
+      "revenue": 27116000000.0,
+      "shareholders_equity": 22833000000.0,
+      "total_debt": 23189000000.0
+    },
+    "ticker": "GILD"
+  },
+  "GOOGL": {
+    "accession_number": "0001652044-25-000014",
+    "cik": "0001652044",
+    "company_name": "Alphabet Inc.",
+    "current": {
+      "capital_expenditures": 52535000000.0,
+      "cash_and_equivalents": 23466000000.0,
+      "cash_from_operations": 125299000000.0,
+      "net_income": 100118000000.0,
+      "operating_income": 112390000000.0,
+      "revenue": 350018000000.0,
+      "shareholders_equity": 325084000000.0,
+      "total_debt": 10883000000.0
+    },
+    "filing_date": "2025-02-05",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS Please read the following discussion and analysis of our financial condition and results of operations together with Note about Forward-Looking Statements, Part I, Item 1 \"Business,\" Part I, Item 1A \"Risk Factors,\" and our consolidated financial statements and related notes included under Item 8 of this Annual Report on Form 10-K. The following section generally discusses 2024 results compared to 2023 results. Discussion of 2023 results compared to 2022 results to the extent not included in this report can be found in Item 7 of our 2023 Annual Report on Form 10-K. Understanding Alphabet s Financial Results Alphabet is a collection of businesses the largest of which is Google. We report Google in two segments, Google Services and Google Cloud; we also report all non-Google businesses collectively as Other Bets. For further details on our segments, see Part I, Item 1 Business and Note 15 of the Notes to Consolidated Financial Statements included in Item 8 of this Annual Report on Form 10-K. Trends in Our Business and Financial Effect The following long-term trends have contributed to the results of our consolidated operations, and we anticipate that they will continue to affect our future results: Users' behaviors and advertising continue to shift online as the digital economy evolves. The continuing evolution of the online world has contributed to the growth of our business and our revenues since inception. We expect that this evolution will continue to benefit our business and our revenues, although at a slower pace than we have experienced historically. In addition, we face increasing competition for user engagement and advertisers, including from other developers and providers of AI products and services, which may affect our revenues. Users continue to access our products and services using diverse devices and modalities, which allows for new advertising formats that may benefit our revenues but advers",
+    "period_end": "2024-12-31",
+    "primary_document": "goog-20241231.htm",
+    "prior": {
+      "capital_expenditures": 32251000000.0,
+      "cash_and_equivalents": 24048000000.0,
+      "cash_from_operations": 101746000000.0,
+      "net_income": 73795000000.0,
+      "operating_income": 84293000000.0,
+      "revenue": 307394000000.0,
+      "shareholders_equity": 283379000000.0,
+      "total_debt": 11870000000.0
+    },
+    "ticker": "GOOGL"
+  },
+  "GS": {
+    "accession_number": "0000886982-25-000005",
+    "cik": "0000886982",
+    "company_name": "GOLDMAN SACHS GROUP INC",
+    "current": {
+      "capital_expenditures": 2091000000.0,
+      "cash_and_equivalents": 182092000000.0,
+      "cash_from_operations": -13212000000.0,
+      "net_income": 14276000000.0,
+      "revenue": 53512000000.0,
+      "shareholders_equity": 121996000000.0
+    },
+    "filing_date": "2025-02-27",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations in our Annual Report on Form 10-K for the year ended December 31, 2023. Goldman Sachs 2024 Form 10-K 105 THE GOLDMAN SACHS GROUP, INC. AND SUBSIDIARIES Management s Discussion and Analysis Market Risk Management Overview Market risk is the risk of an adverse impact to our earnings due to changes in market conditions. Our assets and liabilities that give rise to market risk primarily include positions held for market making for our clients and for our investing and financing activities, and these positions change based on client demands and our investment opportunities. We employ a variety of risk measures, each described in the respective sections below, to monitor market risk. Categories of market risk include the following: Interest rate risk: results from exposures to changes in the level, slope and curvature of yield curves, the volatilities of interest rates, prepayment speeds and credit spreads; Equity price risk: results from exposures to changes in prices and volatilities of individual equities, baskets of equities and equity indices; Currency rate risk: results from exposures to changes in spot prices, forward prices and volatilities of currency rates; and Commodity price risk: results from exposures to changes in spot prices, forward prices and volatilities of commodities, such as crude oil, petroleum products, natural gas, electricity, and precious and base metals. Market Risk, which is part of our second line of defense and reports to our chief risk officer, has primary responsibility for assessing, monitoring and managing our market risk by providing independent firmwide oversight and challenge across our global businesses. Managers in revenue-producing units, Corporate Treasury and Market Risk discuss market information, positions and estimated loss scenarios on an ongoing basis. Managers in revenue-producing units and Corporate Treasury are accountable for managing risk within prescribed li",
+    "period_end": "2024-12-31",
+    "primary_document": "gs-20241231.htm",
+    "prior": {
+      "capital_expenditures": 2316000000.0,
+      "cash_and_equivalents": 241577000000.0,
+      "cash_from_operations": -12587000000.0,
+      "net_income": 8516000000.0,
+      "revenue": 46254000000.0,
+      "shareholders_equity": 116905000000.0
+    },
+    "ticker": "GS"
+  },
+  "HAL": {
+    "accession_number": "0000045012-25-000010",
+    "cik": "0000045012",
+    "company_name": "HALLIBURTON CO",
+    "current": {
+      "capital_expenditures": 1442000000.0,
+      "cash_and_equivalents": 2618000000.0,
+      "cash_from_operations": 3865000000.0,
+      "net_income": 2501000000.0,
+      "operating_income": 3822000000.0,
+      "revenue": 22944000000.0,
+      "shareholders_equity": 10506000000.0,
+      "total_debt": 7541000000.0
+    },
+    "filing_date": "2025-02-12",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Financial Instrument Market Risk and Notes to Consolidated Financial Statements, Note 16. HAL 2024 FORM 10-K | 38 Item 8. Financial Statements and Supplementary Data. PAGE Financial Statements Management s Report on Internal Control Over Financial Reporting 40 Reports of Independent Registered Public Accounting Firm 41 Consolidated Statements of Operations for the years ended December 31, 2024, 2023 and 2022 44 Consolidated Statements of Comprehensive Income for the years ended December 31, 2024, 2023 and 2022 45 Consolidated Balance Sheets at December 31, 2024 and 2023 46 Consolidated Statements of Cash Flows for the years ended December 31, 2024, 2023 and 2022 47 Consolidated Statements of Shareholders Equity for the years ended December 31, 2024, 2023 and 2022 48 Notes to Consolidated Financial Statements Note 1. Description of Company and Significant Accounting Policies 49 Note 2. Impairments and Other Charges 52 Note 3. Business Segment and Geographic Information 52 Note 4. Revenue 55 Note 5. Receivables 56 Note 6. Leases 57 Note 7. Inventories 59 Note 8. Accounts Payable 59 Note 9. Property, Plant and Equipment 59 Note 10. Debt 60 Note 11. Commitments and Contingencies 61 Note 12. Income Taxes 62 Note 13. Shareholders Equity 65 Note 14. Stock-based Compensation 66 Note 15. Income per Share 68 Note 16. Financial Instruments and Risk Management 68 Note 17. Retirement Plans 70 Note 18. New Accounting Pronouncements 73 HAL 2024 FORM 10-K | 39 Table of Contents MANAGEMENT S REPORT ON INTERNAL CONTROL OVER FINANCIAL REPORTING The management of Halliburton Company is responsible for establishing and maintaining adequate internal control over financial reporting as defined in the Securities Exchange Act Rule 13a-15(f). Internal control over financial reporting, no matter how well designed, has inherent limitations. Therefore, even those systems determined to be effective can provide only reasonable assuran",
+    "period_end": "2024-12-31",
+    "primary_document": "hal-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1379000000.0,
+      "cash_and_equivalents": 2264000000.0,
+      "cash_from_operations": 3458000000.0,
+      "net_income": 2638000000.0,
+      "operating_income": 4083000000.0,
+      "revenue": 23018000000.0,
+      "shareholders_equity": 9391000000.0,
+      "total_debt": 7636000000.0
+    },
+    "ticker": "HAL"
+  },
+  "INTC": {
+    "accession_number": "0000050863-25-000009",
+    "cik": "0000050863",
+    "company_name": "INTEL CORP",
+    "current": {
+      "capital_expenditures": 23944000000.0,
+      "cash_and_equivalents": 8249000000.0,
+      "cash_from_operations": 8288000000.0,
+      "net_income": -18756000000.0,
+      "operating_income": -11678000000.0,
+      "revenue": 53101000000.0,
+      "shareholders_equity": 99270000000.0,
+      "total_debt": 46282000000.0
+    },
+    "filing_date": "2025-01-31",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations: Liquidity and capital resources Pages 28 - 30 , 30 Results of operations Pages 13 - 27 Critical accounting estimates Pages 30 , 62 - 68",
+    "period_end": "2024-12-28",
+    "primary_document": "intc-20241228.htm",
+    "prior": {
+      "capital_expenditures": 25750000000.0,
+      "cash_and_equivalents": 7079000000.0,
+      "cash_from_operations": 11471000000.0,
+      "net_income": 1689000000.0,
+      "operating_income": 93000000.0,
+      "revenue": 54228000000.0,
+      "shareholders_equity": 105590000000.0,
+      "total_debt": 46978000000.0
+    },
+    "ticker": "INTC"
+  },
+  "JNJ": {
+    "accession_number": "0000200406-25-000038",
+    "cik": "0000200406",
+    "company_name": "JOHNSON & JOHNSON",
+    "current": {
+      "capital_expenditures": 4424000000.0,
+      "cash_and_equivalents": 24105000000.0,
+      "cash_from_operations": 24266000000.0,
+      "net_income": 14066000000.0,
+      "revenue": 88821000000.0,
+      "shareholders_equity": 71490000000.0,
+      "total_debt": 30651000000.0
+    },
+    "filing_date": "2025-02-13",
+    "fiscal_year": 2024,
+    "mda_item_7": "and analysis of results of operations and financial condition - Liquidity and capital resources - Financing and market risk of this Report; and Note 1 Summary of significant accounting policies - Financial instruments of the Notes to Consolidated Financial Statements included in Item 8 of this Report. 42 Item 8. Financial statements and supplementary data Index to audited Consolidated Financial Statements Consolidated balance sheets 44 Consolidated statements of earnings 45 Consolidated statements of comprehensive income 46 Consolidated statements of equity 47 Consolidated statements of cash flows 48 Notes to consolidated financial statements 50 Report of independent registered public accounting firm (PCAOB ID 238 ) 107 Management s report on internal control over financial reporting 110 2024 Annual Report 43 Johnson & Johnson and subsidiaries consolidated balance sheets At December 29, 2024 and December 31, 2023 (Dollars in Millions Except Share and Per Share Amounts) (Note 1) 2024 2023 Assets Current assets Cash and cash equivalents (Notes 1 and 2) $ 24,105 21,859 Marketable securities (Notes 1 and 2) 417 1,068 Accounts receivable trade, less allowances $ 167 (2023, $ 166 ) 14,842 14,873 Inventories (Notes 1 and 3) 12,444 11,181 Prepaid expenses and other receivables 4,085 4,514 Total current assets 55,893 53,495 Property, plant and equipment, net (Notes 1 and 4) 20,518 19,898 Intangible assets, net (Notes 1 and 5) 37,618 34,175 Goodwill (Notes 1 and 5) 44,200 36,558 Deferred taxes on income (Note 8) 10,461 9,279 Other assets 11,414 14,153 Total assets $ 180,104 167,558 Liabilities and Shareholders Equity Current liabilities Loans and notes payable (Note 7) $ 5,983 3,451 Accounts payable 10,311 9,632 Accrued liabilities 8,549 10,212 Accrued rebates, returns and promotions 17,580 16,001 Accrued compensation and employee related obligations 4,126 3,993 Accrued taxes on income (Note 8) 3,772 2,993 Total current liabilities 50,321 46,282 Long-term debt (Note 7) 30,65",
+    "period_end": "2024-12-29",
+    "primary_document": "jnj-20241229.htm",
+    "prior": {
+      "capital_expenditures": 4543000000.0,
+      "cash_and_equivalents": 21859000000.0,
+      "cash_from_operations": 22791000000.0,
+      "net_income": 35153000000.0,
+      "revenue": 85159000000.0,
+      "shareholders_equity": 68774000000.0,
+      "total_debt": 25881000000.0
+    },
+    "ticker": "JNJ"
+  },
+  "JPM": {
+    "accession_number": "0000019617-25-000270",
+    "cik": "0000019617",
+    "company_name": "JPMORGAN CHASE & CO",
+    "current": {
+      "cash_and_equivalents": 469317000000.0,
+      "cash_from_operations": -42012000000.0,
+      "net_income": 58471000000.0,
+      "revenue": 177556000000.0,
+      "shareholders_equity": 344758000000.0
+    },
+    "filing_date": "2025-02-14",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations. Management s discussion and analysis of financial condition and results of operations, entitled Management s discussion and analysis, appears on pages 52 167. Such information should be read in conjunction with the Consolidated Financial Statements and Notes thereto, which appear on pages 172 321.",
+    "period_end": "2024-12-31",
+    "primary_document": "jpm-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 624151000000.0,
+      "cash_from_operations": 12974000000.0,
+      "net_income": 49552000000.0,
+      "revenue": 158104000000.0,
+      "shareholders_equity": 327878000000.0
+    },
+    "ticker": "JPM"
+  },
+  "LLY": {
+    "accession_number": "0000059478-25-000067",
+    "cik": "0000059478",
+    "company_name": "ELI LILLY & Co",
+    "current": {
+      "cash_and_equivalents": 3268400000.0,
+      "cash_from_operations": 8817900000.0,
+      "net_income": 10590000000.0,
+      "revenue": 45042700000.0,
+      "shareholders_equity": 14192100000.0,
+      "total_debt": 28527100000.0
+    },
+    "filing_date": "2025-02-19",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Results of Operations and Financial Condition (Tables present dollars in millions, except per-share data) General Management's discussion and analysis of results of operations and financial condition is intended to assist the reader in understanding and assessing significant changes and trends related to our results of operations and financial position. This discussion and analysis should be read in conjunction with Item 8, \"Financial Statements and Supplementary Data.\" Certain statements in this Item 7 constitute forward-looking statements. Various risks and uncertainties, including those discussed in \"Forward-Looking Statements\" and Item 1A, \"Risk Factors,\" may cause our actual results, financial position, and cash generated from operations to differ from these forward-looking statements. EXECUTIVE OVERVIEW This section provides an overview of our financial results, our clinical development pipeline, and other matters affecting our company and industry. Financial Results The following table summarizes certain financial information: Year Ended December 31, Percent Change 2024 2023 Revenue $ 45,042.7 $ 34,124.1 32 Net income 10,590.0 5,240.4 102 Earnings per share - diluted 11.71 5.80 102 Revenue increased in 2024 driven by increased volume and, to a lesser extent, higher realized prices. The increase in revenue in 2024 was primarily driven by Mounjaro, Zepbound, and Verzenio, partially offset by Trulicity. Net income and earnings per share increased in 2024, primarily due to higher gross margin, partially offset by increased research and development expenses, marketing, selling, and administrative expenses, and asset impairment, restructuring, and other special charges. See \"Results of Operations\" for additional information. 41 Clinical Development Pipeline Our long-term success depends on our ability to continually discover or acquire, develop, and commercialize innovative medicines. We currently have approximately 55 new medicine candidates in cli",
+    "period_end": "2024-12-31",
+    "primary_document": "lly-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 2818600000.0,
+      "cash_from_operations": 4240100000.0,
+      "net_income": 5240400000.0,
+      "revenue": 34124100000.0,
+      "shareholders_equity": 10771900000.0,
+      "total_debt": 18320800000.0
+    },
+    "ticker": "LLY"
+  },
+  "META": {
+    "accession_number": "0001326801-25-000017",
+    "cik": "0001326801",
+    "company_name": "Meta Platforms, Inc.",
+    "current": {
+      "capital_expenditures": 37256000000.0,
+      "cash_and_equivalents": 43889000000.0,
+      "cash_from_operations": 91328000000.0,
+      "net_income": 62360000000.0,
+      "operating_income": 69380000000.0,
+      "revenue": 164501000000.0,
+      "shareholders_equity": 182637000000.0,
+      "total_debt": 28826000000.0
+    },
+    "filing_date": "2025-01-30",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations You should read the following discussion of our financial condition and results of operations in conjunction with our consolidated financial statements and the related notes included in Part II, Item 8, \"Financial Statements and Supplementary Data\" of this Annual Report on Form 10-K. In addition to our historical consolidated financial information, the following discussion contains forward-looking statements that reflect our plans, estimates, and beliefs. Our actual results could differ materially from those discussed in the forward-looking statements. Factors that could cause or contribute to these differences include those discussed below and elsewhere in this Annual Report on Form 10-K, particularly in Part I, Item 1A, \"Risk Factors.\" For a discussion of limitations in the measurement of our Family metrics, see the section entitled \"Limitations of Key Metrics and Other Data\" in this Annual Report on Form 10-K. To supplement our consolidated financial statements, which are prepared and presented in accordance with generally accepted accounting principles in the United States (GAAP), we present revenue on a constant currency basis and free cash flow, which are non-GAAP financial measures. Revenue on a constant currency basis is presented in the section entitled \" Revenue Foreign Exchange Impact on Revenue.\" To calculate revenue on a constant currency basis, we translated revenue for the full year 2024 using 2023 monthly exchange rates for our settlement or billing currencies other than the U.S. dollar. For a full description of our free cash flow non-GAAP measure, see the section entitled \" Liquidity and Capital Resources Free Cash Flow.\" These non-GAAP financial measures are not intended to be considered in isolation or as a substitute for, or superior to, financial information prepared and presented in accordance with GAAP. These measures may be different from non GAAP financial measures used by other ",
+    "period_end": "2024-12-31",
+    "primary_document": "meta-20241231.htm",
+    "prior": {
+      "capital_expenditures": 27266000000.0,
+      "cash_and_equivalents": 41862000000.0,
+      "cash_from_operations": 71113000000.0,
+      "net_income": 39098000000.0,
+      "operating_income": 46751000000.0,
+      "revenue": 134902000000.0,
+      "shareholders_equity": 153168000000.0,
+      "total_debt": 18385000000.0
+    },
+    "ticker": "META"
+  },
+  "MRK": {
+    "accession_number": "0001628280-25-007732",
+    "cik": "0000310158",
+    "company_name": "Merck & Co., Inc.",
+    "current": {
+      "capital_expenditures": 3372000000.0,
+      "cash_and_equivalents": 13242000000.0,
+      "cash_from_operations": 21468000000.0,
+      "net_income": 17117000000.0,
+      "revenue": 64168000000.0,
+      "shareholders_equity": 46313000000.0,
+      "total_debt": 34462000000.0
+    },
+    "filing_date": "2025-02-25",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations. 74 Table of Content s Item 8. Financial Statements and Supplementary Data. (a) Financial Statements The consolidated balance sheet of Merck & Co., Inc. and subsidiaries as of December 31, 2024 and 2023, and the related consolidated statements of income, of comprehensive income (loss), of equity and of cash flows for each of the three years in the period ended December 31, 2024, the notes to consolidated financial statements, and the report dated February 25, 2025 of PricewaterhouseCoopers LLP, independent registered public accounting firm, are as follows: Consolidated Statement of Income Merck & Co., Inc. and Subsidiaries Years Ended December 31 ($ in millions except per share amounts) 2024 2023 2022 Sales $ 64,168 $ 60,115 $ 59,283 Costs, Expenses and Other Cost of sales 15,193 16,126 17,411 Selling, general and administrative 10,816 10,504 10,042 Research and development 17,938 30,531 13,548 Restructuring costs 309 599 337 Other (income) expense, net ( 24 ) 466 1,501 44,232 58,226 42,839 Income Before Taxes 19,936 1,889 16,444 Taxes on Income 2,803 1,512 1,918 Net Income 17,133 377 14,526 Less: Net Income Attributable to Noncontrolling Interests 16 12 7 Net Income Attributable to Merck & Co., Inc. $ 17,117 $ 365 $ 14,519 Basic Earnings per Common Share Attributable to Merck & Co., Inc. Common Shareholders $ 6.76 $ 0.14 $ 5.73 Earnings per Common Share Assuming Dilution Attributable to Merck & Co., Inc. Common Shareholders $ 6.74 $ 0.14 $ 5.71 Consolidated Statement of Comprehensive Income (Loss) Merck & Co., Inc. and Subsidiaries Years Ended December 31 ($ in millions) 2024 2023 2022 Net Income Attributable to Merck & Co., Inc. $ 17,117 $ 365 $ 14,519 Other Comprehensive Income (Loss) Net of Taxes: Net unrealized income (loss) on derivatives, net of reclassifications 266 ( 97 ) ( 71 ) Benefit plan net gain (loss) and prior service credit (cost), net of amortization 466 ( 385 ) 335 Cumulative translati",
+    "period_end": "2024-12-31",
+    "primary_document": "mrk-20241231.htm",
+    "prior": {
+      "capital_expenditures": 3863000000.0,
+      "cash_and_equivalents": 6841000000.0,
+      "cash_from_operations": 13006000000.0,
+      "net_income": 365000000.0,
+      "revenue": 60115000000.0,
+      "shareholders_equity": 37581000000.0,
+      "total_debt": 33683000000.0
+    },
+    "ticker": "MRK"
+  },
+  "MS": {
+    "accession_number": "0000895421-25-000304",
+    "cik": "0000895421",
+    "company_name": "MORGAN STANLEY",
+    "current": {
+      "cash_and_equivalents": 105386000000.0,
+      "cash_from_operations": 1362000000.0,
+      "net_income": 13390000000.0,
+      "revenue": 61761000000.0,
+      "shareholders_equity": 104511000000.0,
+      "total_debt": 284307000000.0
+    },
+    "filing_date": "2025-02-21",
+    "fiscal_year": 2024,
+    "mda_item_7": "",
+    "period_end": "2024-12-31",
+    "primary_document": "ms-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 89232000000.0,
+      "cash_from_operations": -33536000000.0,
+      "net_income": 9087000000.0,
+      "revenue": 54143000000.0,
+      "shareholders_equity": 99038000000.0,
+      "total_debt": 260544000000.0
+    },
+    "ticker": "MS"
+  },
+  "MSFT": {
+    "accession_number": "0000950170-24-087843",
+    "cik": "0000789019",
+    "company_name": "MICROSOFT CORP",
+    "current": {
+      "capital_expenditures": 44477000000.0,
+      "cash_and_equivalents": 18315000000.0,
+      "cash_from_operations": 118548000000.0,
+      "net_income": 88136000000.0,
+      "operating_income": 109433000000.0,
+      "revenue": 245122000000.0,
+      "shareholders_equity": 268477000000.0,
+      "total_debt": 42688000000.0
+    },
+    "filing_date": "2024-07-30",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS The following Management s Discussion and Analysis of Financial Condition and Results of Operations ( MD&A ) is intended to help the reader understand the results of operations and financial condition of Microsoft Corporation. MD&A is provided as a supplement to, and should be read in conjunction with, our consolidated financial statements and the accompanying Notes to Financial Statements (Part II, Item 8 of this Form 10-K). This section generally discusses the results of our operations for the year ended June 30, 2024 compared to the year ended June 30, 2023. For a discussion of the year ended June 30, 2023 compared to the year ended June 30, 2022, please refer to Part II, Item 7, Management s Discussion and Analysis of Financial Condition and Results of Operations in our Annual Report on Form 10-K for the year ended June 30, 2023. OVERVIEW Microsoft is a technology company committed to making digital technology and artificial intelligence ( AI ) available broadly and doing so responsibly, with a mission to empower every person and every organization on the planet to achieve more. We create platforms and tools, powered by AI, that deliver innovative solutions that meet the evolving needs of our customers. We generate revenue by offering a wide range of cloud-based solutions, content, and other services to people and businesses; licensing and supporting an array of software products; delivering relevant online advertising to a global audience; and designing and selling devices. Our most significant expenses are related to compensating employees; supporting and investing in our cloud-based services, including datacenter operations; designing, manufacturing, marketing, and selling our other products and services; and income taxes. Highlights from fiscal year 2024 compared with fiscal year 2023 included: Microsoft Cloud revenue increased 23% to $137.4 billion. Office Commercial products and cloud services r",
+    "period_end": "2024-06-30",
+    "primary_document": "msft-20240630.htm",
+    "prior": {
+      "capital_expenditures": 28107000000.0,
+      "cash_and_equivalents": 34704000000.0,
+      "cash_from_operations": 87582000000.0,
+      "net_income": 72361000000.0,
+      "operating_income": 88523000000.0,
+      "revenue": 211915000000.0,
+      "shareholders_equity": 206223000000.0,
+      "total_debt": 41990000000.0
+    },
+    "ticker": "MSFT"
+  },
+  "NOW": {
+    "accession_number": "0001373715-25-000010",
+    "cik": "0001373715",
+    "company_name": "ServiceNow, Inc.",
+    "current": {
+      "capital_expenditures": 852000000.0,
+      "cash_and_equivalents": 2304000000.0,
+      "cash_from_operations": 4267000000.0,
+      "net_income": 1425000000.0,
+      "operating_income": 1364000000.0,
+      "revenue": 10984000000.0,
+      "shareholders_equity": 9609000000.0
+    },
+    "filing_date": "2025-01-30",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS This section of our Annual Report on Form 10-K discusses our financial condition and results of operations for the fiscal years ended December 31, 2024 and 2023, and year-to-year comparisons between fiscal 2024 and fiscal 2023 in accordance with U.S. Generally Accepted Accounting Principles ( GAAP ). A discussion of our financial condition and results of operations for the fiscal year ended December 31, 2022 and year-to-year comparisons between fiscal 2023 and fiscal 2022 that is not included in this Annual Report on Form 10-K can be found in Management s Discussion and Analysis of Financial Condition and Results of Operations in Part II, Item 7 of our Annual Report on Form 10-K for the fiscal year ended December 31, 2023, filed on January 25, 2024. Our free cash flow and non-GAAP consolidated income from operations measures included in the section entitled Key Business Metrics Free Cash Flow and Key Business Metrics Non-GAAP Consolidated Income from Operations are not in accordance with GAAP. These non-GAAP financial measures are not intended to be considered in isolation or as a substitute for, or superior to, financial information prepared and presented in accordance with GAAP. These measures may be different from non-GAAP financial measures used by other companies, limiting their usefulness for comparison purposes. We encourage investors to carefully consider our results under GAAP, as well as our supplemental non-GAAP results, to more fully understand our business. Overview ServiceNow was founded on a simple premise: to make work flow better. Our intelligent platform, the Now Platform, is a cloud-based solution that helps enterprises and organizations across public and private sectors digitize workflows, in line with our purpose of making the world work better for everyone. Our workflow applications built on the Now Platform are organized along four primary areas: Technology, Customer and Industry,",
+    "period_end": "2024-12-31",
+    "primary_document": "now-20241231.htm",
+    "prior": {
+      "capital_expenditures": 694000000.0,
+      "cash_and_equivalents": 1897000000.0,
+      "cash_from_operations": 3398000000.0,
+      "net_income": 1731000000.0,
+      "operating_income": 762000000.0,
+      "revenue": 8971000000.0,
+      "shareholders_equity": 7628000000.0
+    },
+    "ticker": "NOW"
+  },
+  "NVDA": {
+    "accession_number": "0001045810-24-000029",
+    "cik": "0001045810",
+    "company_name": "NVIDIA CORP",
+    "current": {
+      "capital_expenditures": 1069000000.0,
+      "cash_and_equivalents": 7280000000.0,
+      "cash_from_operations": 28090000000.0,
+      "net_income": 29760000000.0,
+      "operating_income": 32972000000.0,
+      "revenue": 60922000000.0,
+      "shareholders_equity": 42978000000.0,
+      "total_debt": 8459000000.0
+    },
+    "filing_date": "2024-02-21",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations The following discussion and analysis of our financial condition and results of operations should be read in conjunction with Item 1A. Risk Factors , our Consolidated Financial Statements and related Notes thereto, as well as other cautionary statements and risks described elsewhere in this Annual Report on Form 10-K, before deciding to purchase, hold or sell shares of our common stock. Overview Our Company and Our Businesses NVIDIA pioneered accelerated computing to help solve the most challenging computational problems. Since our original focus on PC graphics, we have expanded to several other large and important computationally intensive fields. NVIDIA has leveraged its GPU architecture to create platforms for accelerated computing, AI solutions, scientific computing, data science, AV, robotics, metaverse and 3D internet applications. Our two operating segments are \"Compute & Networking\" and \"Graphics.\" Refer to Note 17 of the Notes to the Consolidated Financial Statements in Part IV, Item 15 of this Annual Report on Form 10-K for additional information. Headquartered in Santa Clara, California, NVIDIA was incorporated in California in April 1993 and reincorporated in Delaware in April 1998. Recent Developments, Future Objectives and Challenges Demand and Supply, Product Transitions, and New Products and Business Models Demand for our data center systems and products surged in fiscal year 2024. Entering fiscal year 2025, we are gathering customer demand indications across several product transitions. We have demand visibility for our new data center products ramping later in fiscal year 2025. We have increased our supply and capacity purchases with existing suppliers, added new vendors and entered into prepaid manufacturing and capacity agreements. These increased purchase volumes, the number of suppliers, and the integration of new vendors into our supply chain may create more complexity and execution",
+    "period_end": "2024-01-28",
+    "primary_document": "nvda-20240128.htm",
+    "prior": {
+      "capital_expenditures": 1833000000.0,
+      "cash_and_equivalents": 3389000000.0,
+      "cash_from_operations": 5641000000.0,
+      "net_income": 4368000000.0,
+      "operating_income": 4224000000.0,
+      "revenue": 26974000000.0,
+      "shareholders_equity": 22101000000.0,
+      "total_debt": 9703000000.0
+    },
+    "ticker": "NVDA"
+  },
+  "ORCL": {
+    "accession_number": "0000950170-24-075605",
+    "cik": "0001341439",
+    "company_name": "ORACLE CORP",
+    "current": {
+      "capital_expenditures": 6866000000.0,
+      "cash_and_equivalents": 10454000000.0,
+      "cash_from_operations": 18673000000.0,
+      "net_income": 10467000000.0,
+      "operating_income": 15353000000.0,
+      "revenue": 52961000000.0,
+      "shareholders_equity": 8704000000.0
+    },
+    "filing_date": "2024-06-20",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations and the information contained within Item 1 Business and Note 14 of Notes to Consolidated Financial Statements included elsewhere in this Annual Report provide additional information related to our businesses and operating segments and align to how our chief operating decision makers (CODMs), which are our Chief Executive Officer and Chief Technology Officer, view our operating results and allocate resources. Cloud and License Business Our cloud and license business, which represented 84% and 83% of our total revenues in fiscal 2024 and 2023, respectively, markets, sells and delivers a broad spectrum of enterprise applications and infrastructure technologies through our cloud and license offerings. Revenue streams included in our cloud and license business are: Cloud services and license support revenues, which include: o cloud services revenues, which are earned by providing customers access to Oracle Cloud applications and infrastructure technologies via cloud-based deployment models that Oracle develops, provides unspecified updates and enhancements for, deploys, hosts, manages and supports and that customers access by entering into a subscription agreement with us for a stated period. Oracle Cloud Services arrangements generally: are billed in advance of the cloud services being delivered; have durations of one to four years; are renewed at the customer s option; and are recognized as revenues ratably over the contractual period of the cloud contract or, in the case of usage model contracts, as the cloud services are consumed over time; and o license support revenues, which are earned by providing Oracle license support services to customers that have elected to purchase support services in connection with the purchase of Oracle applications and infrastructure software licenses for use in cloud, on-premise and other IT environments. Substantially all license support customers renew their support contr",
+    "period_end": "2024-05-31",
+    "primary_document": "orcl-20240531.htm",
+    "prior": {
+      "capital_expenditures": 8695000000.0,
+      "cash_and_equivalents": 9765000000.0,
+      "cash_from_operations": 17165000000.0,
+      "net_income": 8503000000.0,
+      "operating_income": 13093000000.0,
+      "revenue": 49954000000.0,
+      "shareholders_equity": 1073000000.0
+    },
+    "ticker": "ORCL"
+  },
+  "OXY": {
+    "accession_number": "0000797468-25-000029",
+    "cik": "0000797468",
+    "company_name": "OCCIDENTAL PETROLEUM CORP /DE/",
+    "current": {
+      "capital_expenditures": 7018000000.0,
+      "cash_and_equivalents": 2132000000.0,
+      "cash_from_operations": 11439000000.0,
+      "revenue": 27413000000.0,
+      "shareholders_equity": 34159000000.0,
+      "total_debt": 25323000000.0
+    },
+    "filing_date": "2025-02-18",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations of the Company s Annual Report on Form 10-K for the year ended December 31, 2023. INDEX PAGE Current Business Outlook and Strategy 28 Oil and Gas Segment 30 Chemical Segment 39 Midstream and Marketing Segment 40 Segment Results of Operations and Items Affecting Comparability 42 Income Taxes 47 Consolidated Results of Operations 48 Liquidity and Capital Resources 49 Lawsuits, Claims, Commitments and Contingencies 51 Environmental Expenditures 52 Global Investments 52 Critical Accounting Policies and Estimates 53 Safe Harbor Discussion Regarding Outlook and Other Forward-Looking Data 57 OXY 2024 FORM 10-K 27 table of contents MANAGEMENT S DISCUSSION AND ANALYSIS CURRENT BUSINESS OUTLOOK AND STRATEGY GENERAL Occidental s operations, financial condition, cash flows and levels of expenditures are highly dependent on oil prices and, to a lesser extent, NGL and natural gas prices, Midland-to-Gulf-Coast oil spreads, chemical product prices and inflationary pressures in the macro-economic environment. In 2024, compared to 2023, the average annual WTI price per barrel decreased to $75.72 from $77.64, and the average annual Brent price per barrel decreased to $79.79 from $82.25. It is expected that the price of oil will be volatile for the foreseeable future given the current geopolitical risks, impact of the evolving macro-economic environment on energy demand, future actions by OPEC and non-OPEC oil producing countries, geopolitical risks, and the U.S. Government's management of the U.S. Strategic Petroleum Reserve. Seasonality is not a primary driver of changes in Occidental's consolidated quarterly earnings. Occidental works to manage inflation impacts by capitalizing on operational efficiencies, locking in pricing on longer term contracts and working closely with vendors to secure the supply of critical materials. As of December 31, 2024, approximately 89% of Occidental's outstanding debt was fixed rate. STRATE",
+    "period_end": "2024-12-31",
+    "primary_document": "oxy-20241231.htm",
+    "prior": {
+      "capital_expenditures": 6270000000.0,
+      "cash_and_equivalents": 1426000000.0,
+      "cash_from_operations": 12308000000.0,
+      "net_income": 4696000000.0,
+      "revenue": 28325000000.0,
+      "shareholders_equity": 30250000000.0,
+      "total_debt": 19001000000.0
+    },
+    "ticker": "OXY"
+  },
+  "PFE": {
+    "accession_number": "0000078003-25-000054",
+    "cik": "0000078003",
+    "company_name": "PFIZER INC",
+    "current": {
+      "capital_expenditures": 2909000000.0,
+      "cash_and_equivalents": 1043000000.0,
+      "cash_from_operations": 12744000000.0,
+      "net_income": 8031000000.0,
+      "revenue": 63627000000.0,
+      "shareholders_equity": 88203000000.0,
+      "total_debt": 57405000000.0
+    },
+    "filing_date": "2025-02-27",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS GENERAL The following MD&A is intended to assist the reader in understanding our financial condition and results of operations, including an evaluation of the amounts and certainty of cash flows from operations and from outside sources, and is provided as a supplement to and should be read in conjunction with the consolidated financial statements and related notes in Item 8. Financial Statements and Supplementary Data in this Form 10-K. Discussions of 2022 items and year-to-year comparisons between 2023 and 2022 that are not included in this Form 10-K can be found within MD&A in our 2023 Form 10-K. References to operational variances pertain to period-over-period changes that exclude the impact of foreign exchange rates. Although foreign exchange rate changes are part of our business, they are not within our control and because they can mask positive or negative trends in the business, we believe presenting operational variances excluding these foreign exchange changes provides useful information to evaluate our results. In the first quarter of 2024, we reclassified royalty income (substantially all of which is related to our Biopharma segment) from Other (income)/deductions net and began presenting Royalty revenues as a separate line item within Total revenues in our consolidated statements of operations. Prior-period amounts have been recast to conform to the current presentation. OVERVIEW OF OUR PERFORMANCE, OPERATING ENVIRONMENT, STRATEGY AND OUTLOOK Financial Highlights The following is a summary of certain financial performance metrics (in billions, except per share data): 2024 Total Revenues $63.6 billion 2024 Net Cash Flow from Operations $12.7 billion An increase of 7% compared to 2023 An increase of 46% compared to 2023 2024 Reported Diluted EPS $1.41 2024 Adjusted Diluted EPS (Non-GAAP) $3.11** An increase of over 100% compared to 2023 An increase of 69% compared to 2023 ** For additional infor",
+    "period_end": "2024-12-31",
+    "primary_document": "pfe-20241231.htm",
+    "prior": {
+      "capital_expenditures": 3907000000.0,
+      "cash_and_equivalents": 2853000000.0,
+      "cash_from_operations": 8700000000.0,
+      "net_income": 2119000000.0,
+      "revenue": 50914000000.0,
+      "shareholders_equity": 89014000000.0,
+      "total_debt": 61538000000.0
+    },
+    "ticker": "PFE"
+  },
+  "PSX": {
+    "accession_number": "0001534701-25-000074",
+    "cik": "0001534701",
+    "company_name": "Phillips 66",
+    "current": {
+      "cash_and_equivalents": 1738000000.0,
+      "cash_from_operations": 4191000000.0,
+      "net_income": 2117000000.0,
+      "revenue": 143153000000.0,
+      "shareholders_equity": 27408000000.0
+    },
+    "filing_date": "2025-02-21",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS Management s Discussion and Analysis is the company s analysis of its financial performance, financial condition, and significant trends that may affect future performance. It should be read in conjunction with the consolidated financial statements and notes thereto included elsewhere in this Annual Report. The term earnings as used in Management s Discussion and Analysis refers to net income attributable to Phillips 66. The terms results, before-tax income or before-tax loss as used in Management s Discussion and Analysis refer to income (loss) before income taxes. EXECUTIVE OVERVIEW AND BUSINESS ENVIRONMENT Phillips 66 is uniquely positioned as a leading integrated downstream energy provider operating with Midstream, Chemicals, Refining, Marketing and Specialties (M&S), and Renewable Fuels segments. At December 31, 2024, we had total assets of $72.6 billion. Executive Overview During 2024, we reported earnings of $2.1 billion and generated $4.2 billion in cash from operating activities. We funded capital expenditures and investments of $1.9 billion, completed acquisitions for cash consideration of $625 million, purchased government obligations of $1.1 billion that were ultimately used to extinguish debt, and received proceeds from asset dispositions of $1.1 billion. Additionally, we received proceeds from debt issuances, net of debt repayments, of $2.1 billion. We paid $3.5 billion to repurchase common stock and $1.9 billion to fund dividends on our common stock. We ended 2024 with $1.7 billion of cash and cash equivalents and $4.6 billion of total committed capacity available under our credit facilities. Strategic Priorities In November 2022, we announced financial and operational targets toward achieving the company s strategic priorities, and in October 2023, we announced updates and enhancements to certain of those targets. The strategic priority targets were focused on achieving financial and opera",
+    "period_end": "2024-12-31",
+    "primary_document": "psx-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 3323000000.0,
+      "cash_from_operations": 7029000000.0,
+      "net_income": 7015000000.0,
+      "revenue": 147399000000.0,
+      "shareholders_equity": 30583000000.0
+    },
+    "ticker": "PSX"
+  },
+  "QCOM": {
+    "accession_number": "0000804328-24-000075",
+    "cik": "0000804328",
+    "company_name": "QUALCOMM INC/DE",
+    "current": {
+      "capital_expenditures": 1041000000.0,
+      "cash_and_equivalents": 7849000000.0,
+      "cash_from_operations": 12202000000.0,
+      "net_income": 10142000000.0,
+      "operating_income": 10071000000.0,
+      "revenue": 38962000000.0,
+      "shareholders_equity": 26274000000.0,
+      "total_debt": 13270000000.0
+    },
+    "filing_date": "2024-11-06",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations. 47 Revenue Recognition . We grant licenses or otherwise provide rights to use portions of our intellectual property portfolio, which, among other rights, includes certain patent rights essential to and/or useful in the manufacture, sale or use of certain wireless products. We estimate and recognize sales-based royalties on such licensed products in the period in which the licensees sales occur, which is based largely on preliminary royalty estimates provided by our licensees. For fiscal 2024 and 2023, actual amounts for sales-based royalties have been materially consistent with such estimates, and no significant reversals of revenues have been required as a result of adjustments to prior period royalty estimates. Impairment of Non-marketable Equity Investments. We monitor our investments for events or circumstances that could indicate impairment, including those that result from observable price adjustments. Key considerations in this assessment include the investee s financial and liquidity position and business forecasts (including their ability to respond to any significant deterioration), industry performance, development and/or market acceptance of the investee s products or technologies, as well as considering any appreciation in fair value that has not been recognized in the carrying values of such investments and other relevant events and factors. In fiscal 2024 and 2023, there were no significant impairment losses or adjustments to our previous judgments and estimates recorded. Inventories. We measure inventory at the lower of cost or net realizable value considering judgments and estimates related to future customer demand and other market conditions, such as the impact of the macroeconomic environment in fiscal 2023, which negatively impacted consumer demand for smartphones and other devices that incorporate our products and technologies. Although we believe these estimates are reasonable, any",
+    "period_end": "2024-09-29",
+    "primary_document": "qcom-20240929.htm",
+    "prior": {
+      "capital_expenditures": 1450000000.0,
+      "cash_and_equivalents": 8450000000.0,
+      "cash_from_operations": 11299000000.0,
+      "net_income": 7232000000.0,
+      "operating_income": 7788000000.0,
+      "revenue": 35820000000.0,
+      "shareholders_equity": 21581000000.0,
+      "total_debt": 14484000000.0
+    },
+    "ticker": "QCOM"
+  },
+  "SCHW": {
+    "accession_number": "0000316709-25-000010",
+    "cik": "0000316709",
+    "company_name": "SCHWAB CHARLES CORP",
+    "current": {
+      "capital_expenditures": 620000000.0,
+      "cash_and_equivalents": 42083000000.0,
+      "cash_from_operations": 2670000000.0,
+      "net_income": 5942000000.0,
+      "revenue": 19606000000.0,
+      "shareholders_equity": 48375000000.0
+    },
+    "filing_date": "2025-02-26",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations FORWARD-LOOKING STATEMENTS In addition to historical information, this Annual Report on Form 10-K contains forward-looking statements within the meaning of Section 27A of the Securities Act, and Section 21E of the Securities Exchange Act of 1934. Forward-looking statements are identified by words such as believe, anticipate, expect, intend, plan, will, may, estimate, appear, could, would, expand, aim, maintain, continue, seek, and other similar expressions. In addition, any statements that refer to expectations, projections, or other characterizations of future events or circumstances are forward-looking statements. These forward-looking statements, which reflect management s beliefs, objectives, and expectations as of the date hereof, are estimates based on the best judgment of Schwab s senior management. These statements relate to, among other things: Maximizing our market valuation and stockholder returns over time; our belief that developing trusted relationships will translate into more client assets which drives revenue and, along with expense discipline and thoughtful capital management, generates earnings growth and builds stockholder value (see Business Strategy and Competitive Environment, and Products and Services in Part I Item 1); Capital expenditures and expense management (see Results of Operations in Overview and Results of Operations Total Expenses Excluding Interest in Part II Item 7); Net interest revenue, the adjustment of rates paid on client-related liabilities, and client cash realignment activity (see Results of Operations Net Interest Revenue in Part II Item 7); Utilization of bank supplemental funding and expectations for repayment of outstanding balances (see Results of Operations in Part II Item 7, and Liquidity Risk in Part II Item 7); Management of interest rate risk; modeling and assumptions, the impact of changes in interest rates on net interest margin and revenue, bank de",
+    "period_end": "2024-12-31",
+    "primary_document": "schw-20241231.htm",
+    "prior": {
+      "capital_expenditures": 700000000.0,
+      "cash_and_equivalents": 43337000000.0,
+      "cash_from_operations": 19587000000.0,
+      "net_income": 5067000000.0,
+      "revenue": 18837000000.0,
+      "shareholders_equity": 40958000000.0
+    },
+    "ticker": "SCHW"
+  },
+  "SLB": {
+    "accession_number": "0000950170-25-007638",
+    "cik": "0000087347",
+    "company_name": "SLB LIMITED/NV",
+    "current": {
+      "capital_expenditures": 1931000000.0,
+      "cash_from_operations": 6602000000.0,
+      "net_income": 4461000000.0,
+      "revenue": 36289000000.0,
+      "shareholders_equity": 21130000000.0,
+      "total_debt": 11023000000.0
+    },
+    "filing_date": "2025-01-22",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations. The following discussion and analysis contains forward-looking statements, including, without limitation, statements relating to our plans, strategies, objectives, expectations, intentions, and resources. Such forward-looking statements should be read in conjunction with our disclosures under Item 1A. Risk Factors of this Annual Report on Form 10-K. This section of the Form 10-K generally discusses 2024 and 2023 items and year-to-year comparisons between 2024 and 2023. Discussions of 2022 items and year-to-year comparison between 2023 and 2022 that are not included in this Form 10-K can be found in Management s Discussion and Analysis of Financial Condition and Results of Operations in Part II, Item 7 of SLB s Annual Report on Form 10-K for the fiscal year ended December 31, 2023. 2024 Executive Overview 2024 was a strong year for SLB as we successfully navigated evolving market conditions to deliver revenue growth, margin expansion, and solid free cash flow. Year on year, revenue increased by 10% and pretax segment operating income grew by 12%, while we generated $6.6 billion in cash flow from operations and $4.0 billion in free cash flow, enabling us to return $3.3 billion to shareholders and reduce net debt by $571 million. These results demonstrate SLB s ability to deliver consistent financial performance despite moderating upstream investment growth, driven by our global scale, unmatched digital offerings and ongoing focus on cost optimization. Our full-year results were highlighted by 12% international revenue growth. This performance was led by the Middle East & Asia and Europe & Africa, which grew 18% and 13%, respectively. The Middle East & Asia achieved record revenues, while growth in Europe & Africa was bolstered by the Aker subsea business, which was acquired in the fourth quarter of 2023. Excluding this acquired business, international revenue increased 7% year over year, outperforming the ",
+    "period_end": "2024-12-31",
+    "primary_document": "slb-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1939000000.0,
+      "cash_from_operations": 6637000000.0,
+      "net_income": 4203000000.0,
+      "operating_income": 6523000000.0,
+      "revenue": 33135000000.0,
+      "shareholders_equity": 20189000000.0,
+      "total_debt": 10842000000.0
+    },
+    "ticker": "SLB"
+  },
+  "TMO": {
+    "accession_number": "0000097745-25-000010",
+    "cik": "0000097745",
+    "company_name": "THERMO FISHER SCIENTIFIC INC.",
+    "current": {
+      "capital_expenditures": 1400000000.0,
+      "cash_and_equivalents": 4009000000.0,
+      "cash_from_operations": 8667000000.0,
+      "net_income": 6335000000.0,
+      "operating_income": 7337000000.0,
+      "revenue": 42879000000.0,
+      "shareholders_equity": 49584000000.0,
+      "total_debt": 31072000000.0
+    },
+    "filing_date": "2025-02-20",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations Reference is made throughout this Management s Discussion and Analysis of Financial Condition and Results of Operations to Notes to the Consolidated Financial Statements , which begin on page 29 of this report. Management s Discussion and Analysis of Financial Condition and Results of Operations for 2022 is included in Item 7 of the company s 2023 Annual Report on Form 10-K filed with the Securities and Exchange Commission. The company refers to various amounts or measures not prepared in accordance with generally accepted accounting principles (non-GAAP measures). These non-GAAP measures are further described and reconciled to their most directly comparable amount or measure under the section Non-GAAP Measures later in this Management s Discussion and Analysis of Financial Condition and Results of Operations. Amounts and percentages reported within this Annual Report on Form 10-K are presented and calculated based on underlying unrounded amounts. As a result, the sum of components may not equal corresponding totals due to rounding. Overview Thermo Fisher Scientific Inc. enables customers to make the world healthier, cleaner and safer by helping them accelerate life sciences research, solve complex analytical challenges, increase laboratory productivity, and improve patient health through diagnostics and the development and manufacture of life-changing therapies. Markets served include pharmaceutical and biotech, academic and government, industrial and applied, as well as healthcare and diagnostics. The company s operations fall into four segments (Note 11): Life Sciences Solutions, Analytical Instruments, Specialty Diagnostics and Laboratory Products and Biopharma Services. Consolidated Results (Dollars in millions except per share amounts) 2024 2023 Change Revenues $ 42,879 $ 42,857 0 % GAAP operating income $ 7,337 $ 6,859 7 % GAAP operating income margin 17.1 % 16.0 % 1.1 pt Adjusted operating income ",
+    "period_end": "2024-12-31",
+    "primary_document": "tmo-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1479000000.0,
+      "cash_and_equivalents": 8077000000.0,
+      "cash_from_operations": 8406000000.0,
+      "net_income": 5995000000.0,
+      "operating_income": 6859000000.0,
+      "revenue": 42857000000.0,
+      "shareholders_equity": 46735000000.0,
+      "total_debt": 34727000000.0
+    },
+    "ticker": "TMO"
+  },
+  "TSLA": {
+    "accession_number": "0001628280-25-003063",
+    "cik": "0001318605",
+    "company_name": "Tesla, Inc.",
+    "current": {
+      "capital_expenditures": 11339000000.0,
+      "cash_and_equivalents": 16139000000.0,
+      "cash_from_operations": 14923000000.0,
+      "net_income": 7091000000.0,
+      "operating_income": 7076000000.0,
+      "revenue": 97690000000.0,
+      "shareholders_equity": 72913000000.0,
+      "total_debt": 5535000000.0
+    },
+    "filing_date": "2025-01-30",
+    "fiscal_year": 2024,
+    "mda_item_7": "and Analysis of Financial Condition and Results of Operations in our Annual Report on Form 10-K for fiscal year 2023, which was filed with the Securities and Exchange Commission on January 29, 2024. Overview and 2024 Highlights Our mission is to accelerate the world s transition to sustainable energy. We design, develop, manufacture, lease and sell high-performance fully electric vehicles, solar energy generation systems and energy storage products. We also offer maintenance, installation, operation, charging, insurance, financial and other services related to our products. Additionally, we are increasingly focused on products and services based on AI, robotics and automation. In 2024, we produced approximately 1,773,000 consumer vehicles and delivered approximately 1,789,000 consumer vehicles. We are focused on profitable growth, including by leveraging existing factories and production lines to introduce new and more affordable products, further improving and deploying our FSD (Supervised) capabilities, including future autonomous capabilities through our purpose-built Robotaxi product, Cybercab, reducing costs, increasing vehicle production, utilized capacity and delivery capabilities, improving and developing our vehicles and battery technologies, vertically integrating and localizing our supply chain, and expanding our global infrastructure, including our service and charging infrastructure. In 2024, we deployed 31.4 GWh of energy storage products. We are focused on ramping the production and increasing the market penetration of our energy storage products. In 2024, we recognized total revenues of $97.69 billion, representing an increase of $917 million compared to the prior year. In 2024, our net income attributable to common stockholders was $7.09 billion, representing a decrease of $7.91 billion compared to the prior year, primarily due to the impact of releasing $6.54 billion of our valuation allowance associated with U.S. federal and state deferred tax ass",
+    "period_end": "2024-12-31",
+    "primary_document": "tsla-20241231.htm",
+    "prior": {
+      "capital_expenditures": 8898000000.0,
+      "cash_and_equivalents": 16398000000.0,
+      "cash_from_operations": 13256000000.0,
+      "net_income": 14997000000.0,
+      "operating_income": 8891000000.0,
+      "revenue": 96773000000.0,
+      "shareholders_equity": 62634000000.0,
+      "total_debt": 2682000000.0
+    },
+    "ticker": "TSLA"
+  },
+  "UNH": {
+    "accession_number": "0000731766-25-000063",
+    "cik": "0000731766",
+    "company_name": "UNITEDHEALTH GROUP INC",
+    "current": {
+      "capital_expenditures": 3499000000.0,
+      "cash_and_equivalents": 25312000000.0,
+      "cash_from_operations": 24204000000.0,
+      "net_income": 14405000000.0,
+      "operating_income": 32287000000.0,
+      "revenue": 400278000000.0,
+      "shareholders_equity": 98268000000.0,
+      "total_debt": 72359000000.0
+    },
+    "filing_date": "2025-02-27",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS The following discussion should be read together with the accompanying Consolidated Financial Statements and Notes to the Consolidated Financial Statements thereto included in Part II Item 8, Financial Statements and Supplementary Data . Readers are cautioned the statements, estimates, projections or outlook contained in this report, including discussions regarding financial prospects, economic conditions, trends and uncertainties contained in this Item 7, may constitute forward-looking statements within the meaning of the PSLRA. These forward-looking statements involve risks and uncertainties which may cause our actual results to differ materially from the expectations expressed or implied in the forward-looking statements. A description of some of the risks and uncertainties can be found further below in this Item 7 and in Part I, Item 1A, Risk Factors. Discussions of year-over-year comparisons between 2023 and 2022 are not included in this Form 10-K and can be found in Part II, Item 7, Management s Discussion and Analysis of Financial Condition and Results of Operations of the Company s Form 10-K for the fiscal year ended December 31, 2023. EXECUTIVE OVERVIEW General UnitedHealth Group is a health care and well-being company with a mission to help people live healthier lives and help make the health system work better for everyone. Our two distinct, yet complementary businesses Optum and UnitedHealthcare are working to help build a modern, high-performing health system through improved access, affordability, outcomes and experiences for the individuals and organizations we are privileged to serve. We have four reportable segments across our two businesses: Optum Health; Optum Insight; Optum Rx; and UnitedHealthcare, which includes UnitedHealthcare Employer & Individual, UnitedHealthcare Medicare & Retirement and UnitedHealthcare Community & State. Further information on our business and reportable segm",
+    "period_end": "2024-12-31",
+    "primary_document": "unh-20241231.htm",
+    "prior": {
+      "capital_expenditures": 3386000000.0,
+      "cash_and_equivalents": 25427000000.0,
+      "cash_from_operations": 29068000000.0,
+      "net_income": 22381000000.0,
+      "operating_income": 32358000000.0,
+      "revenue": 371622000000.0,
+      "shareholders_equity": 94421000000.0,
+      "total_debt": 58263000000.0
+    },
+    "ticker": "UNH"
+  },
+  "VLO": {
+    "accession_number": "0001035002-25-000005",
+    "cik": "0001035002",
+    "company_name": "VALERO ENERGY CORP/TX",
+    "current": {
+      "capital_expenditures": 2057000000.0,
+      "cash_and_equivalents": 4657000000.0,
+      "cash_from_operations": 6683000000.0,
+      "net_income": 2770000000.0,
+      "operating_income": 3755000000.0,
+      "revenue": 129881000000.0,
+      "shareholders_equity": 24512000000.0,
+      "total_debt": 8085000000.0
+    },
+    "filing_date": "2025-02-26",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS in our annual report on Form 10-K for the year ended December 31, 2023, which was filed on February 22, 2024. CAUTIONARY STATEMENT FOR THE PURPOSE OF SAFE HARBOR PROVISIONS OF THE PRIVATE SECURITIES LITIGATION REFORM ACT OF 1995 This report, including without limitation our disclosures below under OVERVIEW AND OUTLOOK, includes forward-looking statements within the meaning of Section 27A of the Securities Act of 1933 and Section 21E of the Securities Exchange Act of 1934. You can identify our forward-looking statements by the words anticipate, believe, expect, plan, intend, scheduled, estimate, project, projection, predict, budget, forecast, goal, guidance, target, ambition, could, would, should, may, strive, seek, pursue, potential, opportunity, aimed, considering, continue, evaluate, and similar expressions. These forward-looking statements include, among other things, statements regarding: the effect, impact, potential duration or timing, or other implications of global geopolitical and other conflicts and tensions, and government and other responses thereto; future Refining segment margins, including gasoline and distillate margins, and differentials; future Renewable Diesel segment margins; future Ethanol segment margins; expectations regarding feedstock costs, including crude oil differentials, product prices for each of our segments, transportation costs, and operating expenses; anticipated levels of crude oil and liquid transportation fuel inventories, storage capacity, and production; expectations with respect to third-party refining, logistics, and low-carbon fuels projects and operations, and the effect and implications thereof on industry and market dynamics; expectations regarding the levels of, and costs and timing with respect to, the production and operations at our existing refineries and plants, projects under evaluation, construction, or development, and former projects; our anticipated",
+    "period_end": "2024-12-31",
+    "primary_document": "vlo-20241231.htm",
+    "prior": {
+      "capital_expenditures": 1916000000.0,
+      "cash_and_equivalents": 5424000000.0,
+      "cash_from_operations": 9229000000.0,
+      "net_income": 8835000000.0,
+      "operating_income": 11858000000.0,
+      "revenue": 144766000000.0,
+      "shareholders_equity": 26346000000.0,
+      "total_debt": 9218000000.0
+    },
+    "ticker": "VLO"
+  },
+  "WFC": {
+    "accession_number": "0000072971-25-000066",
+    "cik": "0000072971",
+    "company_name": "WELLS FARGO & COMPANY/MN",
+    "current": {
+      "cash_and_equivalents": 201902000000.0,
+      "cash_from_operations": 3035000000.0,
+      "net_income": 19722000000.0,
+      "revenue": 82296000000.0,
+      "shareholders_equity": 179120000000.0,
+      "total_debt": 173078000000.0
+    },
+    "filing_date": "2025-02-25",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS Information in response to this Item 7 can be found in the 2024 Annual Report to Shareholders under Financial Review. That information is incorporated into this item by reference.",
+    "period_end": "2024-12-31",
+    "primary_document": "wfc-20241231.htm",
+    "prior": {
+      "cash_and_equivalents": 236052000000.0,
+      "cash_from_operations": 40358000000.0,
+      "net_income": 19142000000.0,
+      "revenue": 82597000000.0,
+      "shareholders_equity": 185735000000.0,
+      "total_debt": 207588000000.0
+    },
+    "ticker": "WFC"
+  },
+  "XOM": {
+    "accession_number": "0000034088-25-000010",
+    "cik": "0000034088",
+    "company_name": "EXXON MOBIL CORP",
+    "current": {
+      "capital_expenditures": 24306000000.0,
+      "cash_and_equivalents": 23029000000.0,
+      "cash_from_operations": 55022000000.0,
+      "net_income": 33680000000.0,
+      "revenue": 349585000000.0,
+      "shareholders_equity": 263705000000.0
+    },
+    "filing_date": "2025-02-19",
+    "fiscal_year": 2024,
+    "mda_item_7": "AND ANALYSIS OF FINANCIAL CONDITION AND RESULTS OF OPERATIONS Reference is made to the section entitled Management s Discussion and Analysis of Financial Condition and Results of Operations in the Financial Section of this report.",
+    "period_end": "2024-12-31",
+    "primary_document": "xom-20241231.htm",
+    "prior": {
+      "capital_expenditures": 21919000000.0,
+      "cash_and_equivalents": 31539000000.0,
+      "cash_from_operations": 55369000000.0,
+      "net_income": 36010000000.0,
+      "revenue": 344582000000.0,
+      "shareholders_equity": 204802000000.0
+    },
+    "ticker": "XOM"
+  }
+}

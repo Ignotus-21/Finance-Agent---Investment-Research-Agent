@@ -4,8 +4,10 @@ SEC EDGAR filing client.
 Provides one public entry point, :meth:`SECFilingClient.fetch_filing_section`,
 backed by two interchangeable retrieval paths:
 
-* **Offline** (``OFFLINE_MODE=true``, the default) - bundled fixtures. Keeps
-  tests, CI and the evaluation regression gate hermetic and deterministic.
+* **Offline** (``OFFLINE_MODE=true``, the default) - filings recorded from
+  sec.gov by ``scripts/build_offline_fixtures.py``. Keeps tests, CI and the
+  evaluation regression gate hermetic and deterministic without making them
+  fictional.
 * **Live** (``OFFLINE_MODE=false``) - real HTTP against sec.gov via
   :mod:`src.tools.sec_edgar_http`, reading financial figures from the
   registrant's own XBRL tags.
@@ -16,13 +18,64 @@ carries a ``data_source`` field identifying which path produced it.
 """
 
 import asyncio
+import json
 import time
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from src.config import Settings
 from src.core.exceptions import FilingNotFoundException
 from src.core.interfaces import BaseTool, FilingRetrievalInterface
 from src.tools.sec_edgar_http import SECEdgarHTTPClient
+
+# Written by scripts/build_offline_fixtures.py. Absent from the container image
+# unless datasets/ is copied in, which is why the loader degrades to an empty
+# corpus rather than failing to import.
+RECORDED_FILINGS_PATH = Path(__file__).resolve().parents[2] / "datasets" / "sec_fixtures_fy2024.json"
+
+
+@lru_cache(maxsize=1)
+def _load_recorded_filings() -> dict[str, dict[str, Any]]:
+    """Load the recorded SEC corpus, keyed as ``TICKER_YEAR_FORM``.
+
+    These figures were previously hand-typed into this module as a literal.
+    That is how offline mode came to report $961bn of Apple services revenue -
+    an order of magnitude out - alongside a shareholders' equity figure that
+    was $9.9bn wrong, both labelled as transcribed from a real filing. Reading
+    a recorded corpus removes the transcription step entirely: the offline
+    numbers are now, by construction, the same ones a live run would return.
+    """
+    if not RECORDED_FILINGS_PATH.exists():
+        return {}
+
+    corpus = json.loads(RECORDED_FILINGS_PATH.read_text(encoding="utf-8"))
+
+    filings: dict[str, dict[str, Any]] = {}
+    for record in corpus.values():
+        current, prior = record["current"], record["prior"]
+        statements = {
+            section: SECFilingClient._shape_statement(section, current, prior)
+            for section in ("INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW")
+        }
+        mda = record.get("mda_item_7", "")
+        statements["MDA_ITEM_7"] = {
+            "section_title": "Item 7. Management's Discussion and Analysis",
+            "text_summary": mda,
+            "extraction_status": "EXTRACTED" if mda else "SECTION_BOUNDARY_NOT_FOUND",
+        }
+
+        key = f"{record['ticker'].upper()}_{record['fiscal_year']}_10-K"
+        filings[key] = {
+            "accession_number": record["accession_number"],
+            "filing_date": record["filing_date"],
+            "company_name": record["company_name"],
+            "fiscal_year": record["fiscal_year"],
+            "statements": statements,
+        }
+
+    return filings
+
 
 
 class TokenBucketRateLimiter:
@@ -98,120 +151,10 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
         # constructor, and that must not be able to break offline startup.
         self._http: SECEdgarHTTPClient | None = None
 
-        # High-fidelity primary SEC financial repositories for benchmark tickers
-        self._mock_edgar_filings: dict[str, dict[str, Any]] = {
-            "AAPL_2024_10-K": {
-                "accession_number": "0000320193-24-000106",
-                "filing_date": "2024-10-31",
-                "company_name": "Apple Inc.",
-                "fiscal_year": 2024,
-                "statements": {
-                    "INCOME_STATEMENT": {
-                        "statement_name": "Consolidated Statements of Operations",
-                        "revenue_current": 391035000000.0,
-                        "revenue_prior": 383285000000.0,
-                        "products_revenue": 294890000000.0,
-                        "services_revenue": 961450000000.0,
-                        "cost_of_revenue": 210352000000.0,
-                        "operating_income_current": 123216000000.0,
-                        "operating_income_prior": 114301000000.0,
-                        "net_income": 93736000000.0,
-                        "xbrl_tags": {
-                            "revenue": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
-                            "operating_income": "us-gaap:OperatingIncomeLoss",
-                            "net_income": "us-gaap:NetIncomeLoss"
-                        }
-                    },
-                    "BALANCE_SHEET": {
-                        "statement_name": "Consolidated Balance Sheets",
-                        "cash_and_equivalents": 29943000000.0,
-                        "marketable_securities": 126744000000.0,
-                        "total_current_assets": 152988000000.0,
-                        "total_debt": 106629000000.0,
-                        "short_term_debt": 10912000000.0,
-                        "long_term_debt": 95717000000.0,
-                        "shareholders_equity": 66802000000.0,
-                        "total_liabilities": 308030000000.0
-                    },
-                    "CASH_FLOW": {
-                        "statement_name": "Consolidated Statements of Cash Flows",
-                        "cash_from_operations": 118260000000.0,
-                        "capital_expenditures": 9452000000.0,
-                        "free_cash_flow": 108808000000.0,
-                        "dividends_paid": 15025000000.0,
-                        "share_repurchases": 95000000000.0
-                    },
-                    "MDA_ITEM_7": {
-                        "section_title": "Item 7. Management's Discussion and Analysis of Financial Condition and Results of Operations",
-                        "text_summary": "Services revenue grew 12.9% year-over-year driven by advertising, cloud services, and App Store. Products net sales decreased 2.1% primarily due to lower Wearables, Home and Accessories and foreign exchange volatility in Greater China.",
-                        "focus_areas": {
-                            "Services_Margin": "Services gross margin expanded to 74.0% compared to 70.8% in the prior fiscal year.",
-                            "China_Headwinds": "Greater China segment net sales were $66.9 billion compared to $72.6 billion in FY2023, reflecting competitive pressures and macroeconomic conditions."
-                        }
-                    }
-                }
-            },
-            "MSFT_2024_10-K": {
-                "accession_number": "0000950170-24-087843",
-                "filing_date": "2024-07-30",
-                "company_name": "Microsoft Corporation",
-                "fiscal_year": 2024,
-                "statements": {
-                    "INCOME_STATEMENT": {
-                        "statement_name": "Income Statements",
-                        "revenue_current": 245122000000.0,
-                        "revenue_prior": 211915000000.0,
-                        "operating_income_current": 109433000000.0,
-                        "operating_income_prior": 88523000000.0,
-                        "net_income": 88136000000.0
-                    },
-                    "BALANCE_SHEET": {
-                        "statement_name": "Balance Sheets",
-                        "total_debt": 44900000000.0,
-                        "shareholders_equity": 268450000000.0
-                    },
-                    "CASH_FLOW": {
-                        "statement_name": "Cash Flows Statements",
-                        "cash_from_operations": 118548000000.0,
-                        "capital_expenditures": 44477000000.0
-                    },
-                    "MDA_ITEM_7": {
-                        "section_title": "Item 7 MD&A",
-                        "text_summary": "Intelligent Cloud segment revenue increased 19% to $105.4 billion driven by Azure and other cloud services revenue growth of 30%."
-                    }
-                }
-            },
-            "NVDA_2024_10-K": {
-                "accession_number": "0001045810-24-000029",
-                "filing_date": "2024-02-21",
-                "company_name": "NVIDIA Corporation",
-                "fiscal_year": 2024,
-                "statements": {
-                    "INCOME_STATEMENT": {
-                        "statement_name": "Consolidated Statements of Income",
-                        "revenue_current": 60922000000.0,
-                        "revenue_prior": 26974000000.0,
-                        "operating_income_current": 32972000000.0,
-                        "operating_income_prior": 4224000000.0,
-                        "net_income": 29760000000.0
-                    },
-                    "BALANCE_SHEET": {
-                        "statement_name": "Consolidated Balance Sheets",
-                        "total_debt": 9700000000.0,
-                        "shareholders_equity": 42980000000.0
-                    },
-                    "CASH_FLOW": {
-                        "statement_name": "Consolidated Statements of Cash Flows",
-                        "cash_from_operations": 28090000000.0,
-                        "capital_expenditures": 1056000000.0
-                    },
-                    "MDA_ITEM_7": {
-                        "section_title": "Item 7 MD&A",
-                        "text_summary": "Data Center revenue was $47.5 billion, up 217% from a year ago, driven by the NVIDIA HGX platform and Hopper architecture demand."
-                    }
-                }
-            }
-        }
+        # Filings recorded from sec.gov, not transcribed by hand. See
+        # _load_recorded_filings for why that distinction earned its own
+        # function.
+        self._mock_edgar_filings: dict[str, dict[str, Any]] = _load_recorded_filings()
 
     @property
     def http(self) -> SECEdgarHTTPClient:

@@ -177,5 +177,6 @@ The IRA repository enforces **Trunk-Based / GitFlow development** with strict Co
    - Zero linter or type-check warnings (`ruff`, `mypy`).
    - $\ge 80\%$ test coverage on new code.
    - Golden Dataset thresholds for Relevance ($\ge 0.90$), Citation Precision (= 1.0) and Guardrail Rate (= 1.0) satisfied.
-   - Faithfulness currently reports **0.60 at 4.5% coverage** and is *waived* from the exit code (DEV-15). Expect `PASSED WITH WAIVERS`, not `SUCCESS`.
+   - Faithfulness reports **1.0000 at 51.8% figure coverage** and blocks the build again (the DEV-15 waiver has been removed). Expect `SUCCESS`.
+   - Coverage is enforced by a floor as well as the score, so you cannot make the number look better by asserting less ground truth.
    - Completed checklist against the 32 CPSE-to-FDE competencies in `.github/pull_request_template.md`.
