@@ -3,8 +3,13 @@ Application Configuration Module using Pydantic Settings.
 Manages environment variables, model tiers, rate limits, and cloud endpoints.
 """
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# The placeholder shipped in .env.example and in this module's own default.
+# Named so the validator below can reject it by identity rather than by a
+# substring guess, and so there is exactly one place to change it.
+SAMPLE_SEC_USER_AGENT = "SampleInstitutionalResearch AdminContact@samplecompany.com"
 
 
 class Settings(BaseSettings):
@@ -41,7 +46,7 @@ class Settings(BaseSettings):
         ),
     )
     sec_edgar_user_agent: str = Field(
-        default="SampleInstitutionalResearch AdminContact@samplecompany.com",
+        default=SAMPLE_SEC_USER_AGENT,
         description=(
             "Mandatory compliant User-Agent for SEC.gov. Must include a real contact address: "
             "SEC throttles and then IP-bans requests that do not identify the caller. "
@@ -72,6 +77,33 @@ class Settings(BaseSettings):
     # Circuit Breaker Configuration
     circuit_breaker_failure_threshold: int = Field(default=5)
     circuit_breaker_recovery_timeout_seconds: int = Field(default=60)
+
+    @model_validator(mode="after")
+    def _reject_placeholder_contact_when_live(self) -> "Settings":
+        """
+        Refuse to start in live mode without a real SEC contact address.
+
+        SEC.gov throttles, then blocks, callers whose User-Agent does not
+        identify them. The block lands on the source IP, and every request this
+        service makes leaves through a single VPC connector - so one bad
+        deployment costs the whole service its access, and the failure arrives
+        later as 403s that look like an outage rather than a config error.
+
+        Offline mode makes no network call, so the value is irrelevant there and
+        the placeholder default stays usable for tests, CI and the eval gate.
+        """
+        if self.offline_mode:
+            return self
+
+        contact = self.sec_edgar_user_agent.strip()
+        if not contact or contact == SAMPLE_SEC_USER_AGENT or "@" not in contact:
+            raise ValueError(
+                "OFFLINE_MODE=false requires a real SEC_EDGAR_USER_AGENT containing an "
+                "organisation name and a monitored contact address, e.g. "
+                "'IRA Research admin@example.com'. Got: "
+                f"{self.sec_edgar_user_agent!r}"
+            )
+        return self
 
 
 settings = Settings()

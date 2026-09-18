@@ -61,13 +61,26 @@ gcloud kms keys set-primary-version ira-cmek-key \
 ```
 
 ### 2.2 Updating SEC EDGAR User-Agent Compliance Header
-Under SEC regulations, automated EDGAR requests must specify a custom User-Agent identifying the requesting firm and contact administrator.
-To update this credential in Google Secret Manager without service redeployment:
+Under SEC regulations, automated EDGAR requests must specify a custom User-Agent identifying the
+requesting firm and contact administrator.
+
+This is **not** a secret and is not stored in Secret Manager: the string is transmitted in cleartext
+in the header of every single request to sec.gov. It is a plain environment variable on the Cloud
+Run revision, where an operator debugging a 403 from SEC can read it without an IAM grant.
+
 ```bash
-# Add a new version of the SEC contact header
-echo -n "InstitutionalDesk admin.desk@firm.com" | \
-    gcloud secrets versions add ira-sec-edgar-contact --data-file=-
+gcloud run services update ira-service-production \
+    --region=us-central1 \
+    --update-env-vars=SEC_EDGAR_USER_AGENT="InstitutionalDesk admin.desk@firm.com"
 ```
+
+Terraform owns the durable value (`sec_edgar_user_agent` in `terraform.tfvars`); the command above
+is the break-glass path. Update both, or the next `terraform apply` reverts it.
+
+> [!IMPORTANT]
+> The service refuses to start in live mode if this value is empty, is the sample placeholder, or
+> contains no `@` — see `Settings._reject_placeholder_contact_when_live`. The failure is deliberate:
+> all egress leaves through a single VPC connector, so an SEC IP ban takes the whole service with it.
 
 ---
 
@@ -172,20 +185,20 @@ and can be inspected via its tagged URL.
 ```bash
 # 1. List revisions newest-first; identify the last known-good (previous) revision.
 gcloud run revisions list \
-    --service=ira-multiagent-service --region=us-central1 \
+    --service=ira-service-production --region=us-central1 \
     --format="table(metadata.name, status.conditions[0].lastTransitionTime, spec.containers[0].image)"
 
 # 2. Send all traffic back to it. Takes effect in seconds; no rebuild, no redeploy.
-gcloud run services update-traffic ira-multiagent-service \
+gcloud run services update-traffic ira-service-production \
     --region=us-central1 \
     --to-revisions=<LAST_KNOWN_GOOD_REVISION>=100
 
 # 3. Confirm the split.
-gcloud run services describe ira-multiagent-service \
+gcloud run services describe ira-service-production \
     --region=us-central1 --format="value(status.traffic)"
 ```
 
-> Revisions are named `ira-multiagent-service-green-<SHORT_SHA>`, so the offending revision maps
+> Revisions are named `ira-service-production-green-<SHORT_SHA>`, so the offending revision maps
 > directly back to its Git commit. Record that SHA in the incident ticket and revert it on `main`
 > so the next build does not redeploy the same defect.
 
@@ -208,8 +221,9 @@ The SEC ingestion path has two modes, selected by the `OFFLINE_MODE` environment
 ### 5.1 Before enabling live mode
 
 1. **Set a real `SEC_EDGAR_USER_AGENT`.** It must contain an organisation name and a working
-   contact address. SEC throttles anonymous callers and then blocks the source IP. The client
-   refuses to construct without an `@` in the value, but it cannot tell whether the mailbox is real.
+   contact address. SEC throttles anonymous callers and then blocks the source IP. `Settings`
+   refuses to construct with `OFFLINE_MODE=false` if the value is blank, is the sample placeholder,
+   or has no `@` in it — but it cannot tell whether the mailbox is real.
 2. **Confirm egress.** Cloud Run runs with `--vpc-egress all-traffic`, so the VPC must have a NAT
    route to the public internet or every SEC call will time out and trip the circuit breaker.
 3. **Expect the evaluation gate to drift.** Golden answers were recorded against fixtures. Run the
@@ -228,7 +242,8 @@ Every filing response carries a `data_source` field. Check it when a figure look
 
 > [!CAUTION]
 > If a production brief comes back with `OFFLINE_SYNTHETIC_PLACEHOLDER`, the service is running in
-> offline mode when it should not be. Check the `OFFLINE_MODE` env var on the serving revision.
+> offline mode when it should not be. `GET /readyz` reports `runtime.offline_mode` directly, so this
+> is one request rather than an inspection of the revision's environment.
 
 ### 5.3 Reverting to fixtures
 

@@ -3,6 +3,13 @@ resource "google_cloud_run_v2_service" "ira_service" {
   location = var.region
   project  = var.project_id
 
+  # Stated explicitly rather than inherited. The default is the same value, but
+  # "the service is reachable from the internet" is a property that should be
+  # written down next to the comment explaining why that is acceptable: the
+  # authorization boundary here is IAM, and Cloud Build's smoke test probes the
+  # tagged revision URL from outside the VPC.
+  ingress = var.ingress
+
   template {
     service_account = var.service_account_email
 
@@ -27,9 +34,11 @@ resource "google_cloud_run_v2_service" "ira_service" {
         cpu_idle = false
       }
 
+      # Was hard-coded to "production", which meant a staging deployment would
+      # have labelled its own audit records as production.
       env {
         name  = "ENVIRONMENT"
-        value = "production"
+        value = var.environment
       }
 
       env {
@@ -50,6 +59,26 @@ resource "google_cloud_run_v2_service" "ira_service" {
       env {
         name  = "EXTRACTION_MODEL"
         value = "gemini-2.5-flash"
+      }
+
+      # The application defaults OFFLINE_MODE to true so that tests, CI and the
+      # evaluation gate stay hermetic. A revision that inherits that default
+      # serves the recorded FY2024 corpus and stamps it OFFLINE_FIXTURE: the
+      # arithmetic is right, the freshness is a year stale, and the HTTP
+      # response looks identical to a live one unless you read provenance.
+      # Production has to opt in to live data, and this is where it does.
+      env {
+        name  = "OFFLINE_MODE"
+        value = tostring(var.offline_mode)
+      }
+
+      # Not a credential, and deliberately not in Secret Manager: this string is
+      # transmitted in cleartext in the header of every single sec.gov request.
+      # Keeping it as a plain env var means it is visible on the revision, which
+      # is exactly where an operator looks when sec.gov starts answering 403.
+      env {
+        name  = "SEC_EDGAR_USER_AGENT"
+        value = var.sec_edgar_user_agent
       }
 
       startup_probe {
@@ -80,4 +109,31 @@ resource "google_cloud_run_v2_service" "ira_service" {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent = 100
   }
+
+  # Cloud Build stages a green revision with --no-traffic, smoke-tests it on its
+  # tagged URL, and only then shifts traffic by tag. Terraform's recorded view of
+  # `traffic` is LATEST=100, so the next `apply` - for a change as unrelated as
+  # an alert threshold - would quietly undo that cutover and re-point production
+  # at whichever revision Terraform last created. Traffic belongs to the
+  # pipeline; Terraform owns the service, not which revision is serving.
+  lifecycle {
+    ignore_changes = [traffic]
+  }
+}
+
+# Explicit invoker bindings, empty by default.
+#
+# There is no allUsers or allAuthenticatedUsers binding anywhere in this config
+# and that omission is load-bearing. The in-process check in
+# src/api/dependencies.py accepts any bearer string of five characters or more,
+# so Cloud Run IAM is the only real authentication boundary in front of this
+# service. Adding allUsers here would remove it.
+resource "google_cloud_run_v2_service_iam_member" "invokers" {
+  for_each = toset(var.invoker_members)
+
+  project  = google_cloud_run_v2_service.ira_service.project
+  location = google_cloud_run_v2_service.ira_service.location
+  name     = google_cloud_run_v2_service.ira_service.name
+  role     = "roles/run.invoker"
+  member   = each.value
 }

@@ -185,7 +185,9 @@ stateDiagram-v2
 3. **Graceful Degradation:** When upstream APIs are unavailable, the system automatically falls back to cached 10-K filing extracts from Cloud Storage.
 4. **Health Check Probes:**
    - `/healthz`: Liveness probe verifying process responsiveness.
-   - `/readyz`: Readiness probe asserting database connectivity and API key validity.
+   - `/readyz`: Readiness probe reporting the SEC circuit-breaker state and the runtime data path
+     (`environment`, `offline_mode`). It deliberately makes no upstream calls — a probe that pings
+     Vertex AI and BigQuery on every check turns a dependency blip into a restart loop.
 
 ---
 

@@ -9,8 +9,9 @@ import json
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
-from src.config import Settings
+from src.config import SAMPLE_SEC_USER_AGENT, Settings
 from src.core.exceptions import FilingNotFoundException
 from src.tools.sec_edgar_http import SECEdgarHTTPClient
 from src.tools.sec_edgar_mcp import SECFilingClient
@@ -386,6 +387,27 @@ async def test_mda_returns_empty_when_boundary_missing() -> None:
 async def test_offline_mode_is_the_default() -> None:
     """CI, tests and the eval gate must never depend on sec.gov being up."""
     assert Settings().offline_mode is True
+
+
+async def test_live_mode_refuses_the_placeholder_contact() -> None:
+    """Going live with the sample User-Agent must fail at construction.
+
+    SEC blocks by source IP, and all egress from the deployed service leaves
+    through one VPC connector, so the cost of this mistake is the whole
+    service's access - collected later, as 403s that read like an outage.
+    """
+    with pytest.raises(ValidationError, match="SEC_EDGAR_USER_AGENT"):
+        Settings(offline_mode=False)
+
+
+async def test_live_mode_refuses_a_contact_without_an_address() -> None:
+    with pytest.raises(ValidationError, match="SEC_EDGAR_USER_AGENT"):
+        Settings(offline_mode=False, sec_edgar_user_agent="IRA Capstone Research")
+
+
+async def test_offline_mode_tolerates_the_placeholder_contact() -> None:
+    """The value is never sent in offline mode, so it must not block startup."""
+    assert Settings(offline_mode=True).sec_edgar_user_agent == SAMPLE_SEC_USER_AGENT
 
 
 async def test_offline_curated_fixture_is_labelled() -> None:

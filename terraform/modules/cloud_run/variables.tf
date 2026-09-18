@@ -6,6 +6,11 @@ variable "region" {
   type = string
 }
 
+variable "environment" {
+  type    = string
+  default = "production"
+}
+
 variable "service_name" {
   type    = string
   default = "ira-multiagent-service"
@@ -36,4 +41,27 @@ variable "max_instances" {
 variable "container_concurrency" {
   type    = number
   default = 80
+}
+
+variable "offline_mode" {
+  description = "Serve SEC data from the recorded corpus instead of sec.gov."
+  type        = bool
+  default     = false
+}
+
+variable "sec_edgar_user_agent" {
+  description = "Contact string sent in the User-Agent header on every sec.gov request."
+  type        = string
+}
+
+variable "ingress" {
+  description = "Cloud Run ingress setting."
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+}
+
+variable "invoker_members" {
+  description = "IAM principals granted roles/run.invoker on the service."
+  type        = list(string)
+  default     = []
 }
