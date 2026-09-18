@@ -66,6 +66,13 @@ dev = [
 eval = [
     "google-cloud-aiplatform[evaluation]>=1.60.0"
 ]
+# Opt-in extra for the local test console (`make ui`). Streamlit is a developer
+# tool, not part of the service: it must never enter the Cloud Run image, which
+# is why it is neither a core dependency nor in `dev`.
+#   pip install -e ".[dev,ui]"
+ui = [
+    "streamlit>=1.39.0"
+]
 
 [tool.ruff]
 line-length = 100

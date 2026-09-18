@@ -46,3 +46,5 @@ tests/
 docs/
 terraform/
 .github/
+# Developer test console. Streamlit must not reach the runtime image.
+ui/
