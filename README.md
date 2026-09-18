@@ -138,6 +138,21 @@ make run
 # ReDoc: http://localhost:8080/redoc
 ```
 
+### 6. Launch the Streamlit Test Console
+A rendered view of the brief — metrics with their formulas, citations with their
+accession numbers, and a banner stating whether the revision is reading sec.gov
+or the recorded corpus. `/docs` covers "can I call the endpoint"; this covers
+"is the answer right".
+
+```bash
+make install-ui            # streamlit is an opt-in extra, never in the image
+make run                   # in one terminal
+make ui                    # in another -> http://localhost:8502
+
+# against a deployed revision
+make ui URL=https://ira-service-production-<hash>.us-central1.run.app
+```
+
 ---
 
 ## 📑 Project Documentation Index

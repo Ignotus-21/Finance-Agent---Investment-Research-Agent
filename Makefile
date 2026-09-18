@@ -1,4 +1,4 @@
-.PHONY: help install hooks hooks-run test lint eval eval-vertex run adk-run adk-web docker-build docker-run clean
+.PHONY: help install install-ui hooks hooks-run test lint eval eval-vertex run ui adk-run adk-web docker-build docker-run clean
 
 help:
 	@echo "Available commands:"
@@ -10,6 +10,7 @@ help:
 	@echo "  make eval-vertex  Score with Vertex AI Gen AI Evaluation (billable, opt-in)"
 	@echo "  make lint         Run Ruff linter and static type checks"
 	@echo "  make run          Launch local FastAPI server on port 8080"
+	@echo "  make ui           Launch the Streamlit test console (needs make install-ui)"
 	@echo "  make adk-run      Run ADK agent in interactive terminal REPL"
 	@echo "  make adk-web      Launch ADK agent Web UI playground on port 8501"
 	@echo "  make docker-build Build production container image"
@@ -19,6 +20,11 @@ help:
 install:
 	pip install -e .[dev]
 	$(MAKE) hooks
+
+# Separate from `install` so Streamlit stays out of the default developer
+# environment and, more importantly, out of the container image.
+install-ui:
+	pip install -e ".[dev,ui]"
 
 # Chained onto `install` so a fresh clone gets the hooks without a second,
 # easily-forgotten step. Hooks that nobody installs never run.
@@ -40,11 +46,19 @@ eval-vertex:
 	python -m eval.evaluate_golden_dataset --backend=vertex --project=$${GCP_PROJECT_ID}
 
 lint:
-	ruff check src/ tests/
+	@# Same paths CI checks. When these drifted apart, a lint error in scripts/
+	@# passed locally and failed the workflow.
+	ruff check src/ tests/ scripts/ eval/ ui/
 	mypy src/ --ignore-missing-imports
 
 run:
 	uvicorn src.api.app:app --host 0.0.0.0 --port 8080 --reload
+
+# URL defaults to the local server started by `make run`. Point it at a
+# deployed revision with: make ui URL=https://ira-service-production-....run.app
+URL ?= http://localhost:8080
+ui:
+	IRA_SERVICE_URL="$(URL)" streamlit run ui/streamlit_app.py --server.port 8502
 
 adk-run:
 	adk run src/agents
@@ -53,10 +67,10 @@ adk-web:
 	adk web src/agents --port 8501
 
 docker-build:
-	docker build -t ira-multiagent-service:latest .
+	docker build -t ira-service:latest .
 
 docker-run:
-	docker run -p 8080:8080 --env-file .env ira-multiagent-service:latest
+	docker run -p 8080:8080 --env-file .env ira-service:latest
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov .ruff_cache .mypy_cache build dist *.egg-info
