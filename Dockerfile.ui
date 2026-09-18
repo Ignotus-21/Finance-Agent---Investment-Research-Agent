@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1
+# Container for the Streamlit test console.
+#
+# A separate image from the API's, deliberately. The console pulls in Streamlit,
+# pandas, pyarrow and altair - roughly 200MB of dependencies that exist purely
+# to render a page - and none of that belongs in the image serving the research
+# contract, where every extra package is cold-start latency and CVE surface.
+# The two share a repository and a build, not a layer.
+
+# --- Stage 1: Build & Dependencies ---
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml .
+# The `ui` extra, not the full package: the console talks to the API over HTTP
+# and imports nothing from `src/`, so it needs Streamlit and httpx, not ADK.
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir ".[ui]"
+
+# --- Stage 2: Runtime ---
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r irauser && useradd -r -g irauser -d /app -s /sbin/nologin irauser
+
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+COPY ui/ ./ui/
+
+RUN chown -R irauser:irauser /app
+USER irauser
+
+# STREAMLIT_BROWSER_GATHER_USAGE_STATS: Streamlit's usage telemetry phones home
+# on every session. Off, because this console is reached only by authenticated
+# internal callers and their traffic patterns are not ours to share.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8080 \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8080/_stcore/health || exit 1
+
+# `--server.address 0.0.0.0` because Streamlit binds localhost by default and
+# Cloud Run's health check would never connect. `enableCORS=false` and
+# `enableXsrfProtection=false` are required behind Cloud Run's proxy, which
+# terminates TLS and rewrites Host; with them on, every websocket upgrade is
+# rejected and the page renders once and then hangs.
+ENTRYPOINT ["sh", "-c", "streamlit run ui/streamlit_app.py \
+    --server.address=0.0.0.0 \
+    --server.port=${PORT} \
+    --server.headless=true \
+    --server.enableCORS=false \
+    --server.enableXsrfProtection=false"]

@@ -58,7 +58,15 @@ run:
 # deployed revision with: make ui URL=https://ira-service-production-....run.app
 URL ?= http://localhost:8080
 ui:
-	IRA_SERVICE_URL="$(URL)" streamlit run ui/streamlit_app.py --server.port 8502
+	@# SA and AUDIENCE prefill the sidebar. Against a deployed service both are
+	@# required: a user account cannot mint an ID token for a custom audience,
+	@# and a token whose aud is the run.app URL passes Cloud Run IAM and is then
+	@# rejected by the application. Neither is needed against localhost.
+	@#   make ui URL=https://... SA=ira-caller-test-sa@proj.iam.gserviceaccount.com AUDIENCE=ira-service-test
+	IRA_SERVICE_URL="$(URL)" \
+	IRA_IMPERSONATE_SA="$(SA)" \
+	IRA_AUDIENCE="$(AUDIENCE)" \
+	streamlit run ui/streamlit_app.py --server.port 8502
 
 adk-run:
 	adk run src/agents

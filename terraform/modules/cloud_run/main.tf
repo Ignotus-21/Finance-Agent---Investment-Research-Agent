@@ -112,6 +112,35 @@ resource "google_cloud_run_v2_service" "ira_service" {
         value = var.pubsub_topic_id
       }
 
+      # Mounts the ADK developer UI and agent REST surface at /adk. Off by
+      # default in the application; a deployment has to ask for it, because
+      # that surface takes free-text prompts straight to the model and so
+      # bypasses the /v1 guardrail chain.
+      env {
+        name  = "ENABLE_ADK_WEB"
+        value = tostring(var.enable_adk_web)
+      }
+
+      # How google-genai decides which backend to call. Unset, the SDK targets
+      # the Gemini Developer API and looks for GOOGLE_API_KEY - which does not
+      # exist here, on a revision whose service account already holds
+      # roles/aiplatform.user. The failure is a 401 from a host nobody expected
+      # the service to contact.
+      env {
+        name  = "GOOGLE_GENAI_USE_VERTEXAI"
+        value = "TRUE"
+      }
+
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = var.project_id
+      }
+
+      env {
+        name  = "GOOGLE_CLOUD_LOCATION"
+        value = var.region
+      }
+
       startup_probe {
         http_get {
           path = "/healthz"

@@ -1,0 +1,39 @@
+# Build pipeline for the Streamlit test console.
+#
+# Separate from cloudbuild.yaml, which is the API's blue/green release pipeline
+# and has no business gating on a console. This one only builds and pushes: the
+# console has no smoke test worth the name (its readiness depends entirely on
+# the API it points at) and no traffic to split.
+#
+#   gcloud builds submit --config cloudbuild.ui.yaml \
+#     --substitutions=_REGION=us-central1,_REPOSITORY=ira-test-repo,_TAG=test
+
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: ira-prod-repo
+  _IMAGE: ira-ui
+  _TAG: latest
+  # Not $SHORT_SHA: that built-in is empty for a manually submitted build, and
+  # an empty tag makes the image reference invalid - so the build succeeds and
+  # the push fails. The trigger passes the real value.
+  _COMMIT_SHA: manual
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_TAG}"
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=Dockerfile.ui
+      - --tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_TAG}
+      # Also tagged with the commit, so a revision can be traced back to source
+      # without reading build history. The floating tag is what deploys; this
+      # one is what you diff against when a revision misbehaves.
+      - --tag=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_COMMIT_SHA}
+      - .
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8

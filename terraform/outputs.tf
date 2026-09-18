@@ -67,3 +67,8 @@ output "audit_export_table" {
   description = "BigQuery table the audit sink writes to, inside bigquery_dataset_id"
   value       = module.bigquery.audit_table_id
 }
+
+output "ui_service_url" {
+  description = "Streamlit console URL. Private: reach it with `gcloud run services proxy ira-ui-<env> --region <region>`, not by opening this directly."
+  value       = var.enable_ui_service ? google_cloud_run_v2_service.ira_ui[0].uri : null
+}

@@ -117,3 +117,44 @@ variable "cloudbuild_trigger_branch" {
   type        = string
   default     = "^develop$"
 }
+
+variable "enable_ui_service" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+    Deploy the Streamlit test console as a second Cloud Run service.
+
+    Off by default. It is a testing surface: it renders the brief in a way that
+    makes provenance and the offline/live data path obvious at a glance, which
+    is exactly what you want while verifying a deployment and exactly what you
+    do not want as a permanent, separately-versioned front end to a compliance
+    system.
+  EOT
+}
+
+variable "ui_container_image" {
+  type        = string
+  default     = ""
+  description = "Image built from Dockerfile.ui. Required when enable_ui_service is true."
+}
+
+variable "ui_invoker_members" {
+  type        = list(string)
+  default     = []
+  description = <<-EOT
+    Principals allowed to open the console, as IAM members
+    (e.g. "user:analyst@example.com").
+
+    Empty by default, and no allUsers. The console holds an identity that can
+    invoke the research API, so anyone who can reach the console can reach the
+    API through it - making it public would hand that authority to the
+    internet. Access is via `gcloud run services proxy`, which authenticates
+    the tunnel.
+  EOT
+}
+
+variable "enable_adk_web" {
+  type        = bool
+  default     = false
+  description = "Mount the ADK developer UI at /adk on the research service. See the cloud_run module variable of the same name."
+}

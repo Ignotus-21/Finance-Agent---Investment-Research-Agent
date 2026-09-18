@@ -49,10 +49,11 @@ resource "google_project_iam_member" "ira_sa_roles" {
 # impersonates a service account. Impersonation is the documented route.
 #
 # The runtime SA would work and must not be used for it. It holds
-# aiplatform.user, bigquery.dataEditor and secretmanager.secretAccessor; giving
-# an analyst token-creator on it to obtain one Authorization header would hand
-# them the entire blast radius of the service. This one holds run.invoker, from
-# the Cloud Run module, and nothing else.
+# aiplatform.user, secretmanager.secretAccessor, dlp.user and publish rights on
+# the research topic; giving an analyst token-creator on it to obtain one
+# Authorization header would hand them the entire blast radius of the service.
+# This one holds run.invoker, from the Cloud Run module, and nothing else -
+# which is also why the Streamlit console runs as it.
 resource "google_service_account" "ira_caller_sa" {
   account_id   = var.caller_service_account_name
   display_name = "IRA Caller Service Account"
