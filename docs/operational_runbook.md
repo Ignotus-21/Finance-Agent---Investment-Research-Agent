@@ -84,6 +84,37 @@ is the break-glass path. Update both, or the next `terraform apply` reverts it.
 
 ---
 
+### 2.3 Calling the API, and what happens when the audience is wrong
+
+The service accepts a Google-signed OIDC identity token and verifies it twice: Cloud Run IAM checks
+it before the request reaches the container, and `verify_auth_token` checks signature, issuer,
+expiry and **audience** again in-process. The audience must be the service's own URL, because Cloud
+Run forwards the same `Authorization` header it authenticated with.
+
+```bash
+SERVICE_URL=$(gcloud run services describe ira-service-production \
+    --region=us-central1 --format="value(status.url)")
+
+curl -sS -X POST "${SERVICE_URL}/v1/research/equity" \
+    -H "Authorization: Bearer $(gcloud auth print-identity-token --audiences="${SERVICE_URL}")" \
+    -H "Content-Type: application/json" \
+    -d '{"ticker": "AAPL", "fiscal_year": 2024}'
+```
+
+| Symptom | Cause |
+|---|---|
+| `403` from Cloud Run, no application log line | IAM. The caller has no `roles/run.invoker`. Add them to `invoker_members` in `terraform.tfvars`. |
+| `401 Bearer token failed verification`, with a log line naming the claim | The token reached the app and failed. Almost always the audience: `gcloud auth print-identity-token` without `--audiences` mints one for the gcloud OAuth client, not for this service. |
+| Container exits at startup with `ENVIRONMENT=production requires AUTH_EXPECTED_AUDIENCE` | The revision has no audience configured, so it cannot verify anyone. Set `auth_expected_audience` in `terraform.tfvars` from `terraform output cloud_run_service_url` and apply. |
+| An audit record whose `user_id` starts with `unverified-` | The revision is running the development path. It should not be possible in production; if you see one, that revision was not built from this configuration. |
+
+> [!NOTE]
+> The in-process check duplicates work IAM has already done. That is deliberate. IAM decides whether
+> the request may enter; the application decides whose name goes in the audit record, and a claim is
+> only worth writing down if it was verified where it is written.
+
+---
+
 ## 3. Incident Triage & Emergency Response Playbooks
 
 ### Incident 3.1: Upstream SEC EDGAR HTTP 429 (Rate Limit Ban)

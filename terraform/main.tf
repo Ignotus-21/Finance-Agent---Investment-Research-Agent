@@ -119,10 +119,11 @@ module "cloud_run" {
   # Runtime configuration. The application's own defaults are tuned for
   # hermetic tests, not for production; leaving them unset here is what made
   # the deployed service answer from recorded fixtures.
-  offline_mode         = var.offline_mode
-  sec_edgar_user_agent = var.sec_edgar_user_agent
-  ingress              = var.ingress
-  invoker_members      = var.invoker_members
+  offline_mode           = var.offline_mode
+  sec_edgar_user_agent   = var.sec_edgar_user_agent
+  auth_expected_audience = var.auth_expected_audience
+  ingress                = var.ingress
+  invoker_members        = var.invoker_members
 
   depends_on = [google_project_service.required]
 }

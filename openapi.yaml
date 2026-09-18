@@ -167,7 +167,11 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Google Cloud IAM OIDC Identity Token or OAuth2 JWT
+      description: >-
+        Google-signed OIDC identity token. Verified twice: by Cloud Run IAM
+        before the request reaches the container, and again in-process against
+        Google's published certificates with the service URL as the required
+        audience. A token minted for any other service is rejected.
 
   schemas:
     EquityResearchRequest:
