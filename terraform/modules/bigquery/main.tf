@@ -13,35 +13,58 @@ resource "google_bigquery_dataset" "ira_dataset" {
   }
 }
 
-# Immutable Audit Log Table for Compliance & Provenance
-resource "google_bigquery_table" "audit_log_table" {
-  dataset_id = google_bigquery_dataset.ira_dataset.dataset_id
-  table_id   = "compliance_audit_log"
-  project    = var.project_id
+# Compliance audit export: Cloud Logging sink -> BigQuery.
+#
+# This replaces a hand-declared `compliance_audit_log` table that could never
+# have received a row. Nothing in the application ever opened a BigQuery
+# client; `AuditLogger` writes structured JSON to stdout, which Cloud Run
+# ingests into Cloud Logging. The export therefore belongs here, as a sink,
+# and that is strictly better than an in-process client would have been:
+#
+#   * The application cannot skip it, and a BigQuery outage cannot fail a
+#     research request. An audit record the request path can drop is not an
+#     audit record.
+#   * Cloud Logging still holds the record independently, so reconfiguring the
+#     sink loses nothing.
+#
+# The sink owns its destination table - `run_googleapis_com_stdout`, with the
+# standard LogEntry schema. The audit fields live under
+# `jsonPayload.compliance_metadata`; see `docs/operational_runbook.md` for the
+# query that projects them back into columns.
+resource "google_logging_project_sink" "compliance_audit_export" {
+  name        = "ira-compliance-audit-${var.environment}"
+  project     = var.project_id
+  description = "Exports IRA compliance audit records from Cloud Logging to BigQuery."
+  destination = "bigquery.googleapis.com/projects/${var.project_id}/datasets/${google_bigquery_dataset.ira_dataset.dataset_id}"
 
-  time_partitioning {
-    type  = "DAY"
-    field = "timestamp"
+  # Narrow on purpose. A sink filtered only by service would export every
+  # request log and access log into the compliance dataset, which inflates
+  # cost and buries the records that are actually subject to retention.
+  filter = <<-EOT
+    resource.type="cloud_run_revision"
+    resource.labels.service_name="${var.cloud_run_service_name}"
+    jsonPayload.compliance_metadata:*
+  EOT
+
+  # Day-partitioned so retention and cost controls are expressible in SQL.
+  bigquery_options {
+    use_partitioned_tables = true
   }
 
-  clustering = ["ticker", "user_id", "guardrail_verdict"]
-
-  schema = jsonencode([
-    { name = "audit_id", type = "STRING", mode = "REQUIRED", description = "Unique UUID of research query" },
-    { name = "timestamp", type = "TIMESTAMP", mode = "REQUIRED", description = "Execution UTC timestamp" },
-    { name = "user_id", type = "STRING", mode = "REQUIRED", description = "Masked identity of requesting analyst" },
-    { name = "ticker", type = "STRING", mode = "REQUIRED", description = "Equity ticker symbol" },
-    { name = "fiscal_year", type = "INTEGER", mode = "REQUIRED", description = "Fiscal year evaluated" },
-    { name = "prompt_hash", type = "STRING", mode = "REQUIRED", description = "SHA-256 hash of query" },
-    { name = "tools_called", type = "STRING", mode = "REPEATED", description = "List of tools invoked" },
-    { name = "model_id", type = "STRING", mode = "REQUIRED", description = "Coordinator model version" },
-    { name = "latency_ms", type = "INTEGER", mode = "REQUIRED", description = "Total latency in ms" },
-    { name = "total_tokens", type = "INTEGER", mode = "REQUIRED", description = "Token consumption count" },
-    { name = "cost_usd", type = "FLOAT", mode = "REQUIRED", description = "Incurred token cost in USD" },
-    { name = "guardrail_verdict", type = "STRING", mode = "REQUIRED", description = "Security classifier outcome" },
-    { name = "citations_count", type = "INTEGER", mode = "REQUIRED", description = "Number of verified citations" }
-  ])
+  # Gives the sink its own writer identity instead of the shared, broadly
+  # scoped logs-writer default. Required for the dataset-scoped grant below.
+  unique_writer_identity = true
 }
+
+# The sink's identity is created with the sink, so the grant is dataset-scoped
+# rather than project-scoped: this principal can write to exactly this dataset.
+resource "google_bigquery_dataset_iam_member" "audit_sink_writer" {
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.ira_dataset.dataset_id
+  role       = "roles/bigquery.dataEditor"
+  member     = google_logging_project_sink.compliance_audit_export.writer_identity
+}
+
 
 # Time-Series Verified Financial Metrics Table
 resource "google_bigquery_table" "metrics_table" {

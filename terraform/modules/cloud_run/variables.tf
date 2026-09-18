@@ -71,3 +71,8 @@ variable "invoker_members" {
   type        = list(string)
   default     = []
 }
+
+variable "pubsub_topic_id" {
+  type        = string
+  description = "Topic the broadcaster publishes research.brief.completed events to."
+}

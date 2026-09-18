@@ -103,6 +103,15 @@ resource "google_cloud_run_v2_service" "ira_service" {
         value = var.sec_edgar_user_agent
       }
 
+      # The topic is environment-suffixed but the application's default is not,
+      # so an unset value here means staging publishes into a topic that does
+      # not exist - and the broadcaster, which must never fail a brief, would
+      # swallow that as a logged warning nobody reads.
+      env {
+        name  = "PUBSUB_TOPIC_ID"
+        value = var.pubsub_topic_id
+      }
+
       startup_probe {
         http_get {
           path = "/healthz"

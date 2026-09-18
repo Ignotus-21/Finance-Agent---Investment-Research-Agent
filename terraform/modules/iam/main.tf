@@ -9,13 +9,25 @@ resource "google_service_account" "ira_runtime_sa" {
 locals {
   runtime_roles = [
     "roles/aiplatform.user",              # Vertex AI Gemini model invocation & context caching
-    "roles/bigquery.dataEditor",          # Streaming audit logs & metrics into BigQuery
     "roles/logging.logWriter",            # Tamper-evident structured Cloud Logging
     "roles/cloudtrace.agent",             # OpenTelemetry distributed trace export
     "roles/secretmanager.secretAccessor", # Access to encrypted API credentials
-    "roles/pubsub.publisher",             # Publishing research completion events
     "roles/dlp.user"                      # Data Loss Prevention inspection and redaction
   ]
+
+  # Deliberately absent: roles/bigquery.dataEditor. It was granted
+  # project-wide for "streaming audit logs & metrics into BigQuery", a write
+  # no code ever made - the runtime has no BigQuery client. Audit records now
+  # reach BigQuery through a Cloud Logging sink that writes as its own
+  # identity, scoped to the one dataset. Keeping the grant would have left the
+  # runtime with standing write access to every dataset in the project in
+  # exchange for nothing.
+  #
+  # Also absent: roles/pubsub.publisher. The runtime does publish now, but to
+  # exactly one topic, so the grant belongs on that topic - see
+  # google_pubsub_topic_iam_member.runtime_publisher in the root module. A
+  # project-wide role here would let a prompt-injected agent publish into any
+  # topic in the project, including ones driving other systems.
 }
 
 resource "google_project_iam_member" "ira_sa_roles" {

@@ -54,6 +54,12 @@ dmypy.json
 
 # Terraform
 **/.terraform/*
+
+# Generated locally by `tofu init`. Deliberately not committed: the lock
+# records provider hashes only for the platform that ran init, so a macOS
+# developer's lock file fails `terraform init` on Linux CI with "does not have
+# a package for linux_amd64". Pinning lives in the required_providers block.
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 crash.log

@@ -113,24 +113,59 @@ steps:
         # The service is private, so probes must carry an identity token.
         TOKEN=$$(gcloud auth print-identity-token)
 
-        for ENDPOINT in /healthz /readyz; do
-          echo "Probing $$ENDPOINT ..."
-          for ATTEMPT in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --max-time 20 \
-                 -H "Authorization: Bearer $$TOKEN" \
-                 "$$TAG_URL$$ENDPOINT" > /tmp/probe.json; then
-              cat /tmp/probe.json
-              echo ""
-              break
-            fi
-            if [ "$$ATTEMPT" = "5" ]; then
-              echo "SMOKE TEST FAILED on $$ENDPOINT after 5 attempts. Aborting before cutover; BLUE remains live."
-              exit 1
-            fi
-            echo "  attempt $$ATTEMPT failed, retrying in 10s (cold start)..."
-            sleep 10
-          done
+        # /readyz only, and the body is checked rather than the status code.
+        #
+        # /healthz used to be probed here too, and it was worse than useless.
+        # Google's Front End reserves that path on *.run.app and answers it
+        # itself - `x-google-service: _internal`, a 3-byte text/html "ok" - so
+        # the request never reached the container. That iteration passed
+        # unconditionally, including against a revision that crash-loops on
+        # startup. Confirmed against a live deployment on 2026-09-18.
+        #
+        # Checking the body matters for the same reason: a 200 proves something
+        # answered, not that the right thing answered.
+        echo "Probing /readyz ..."
+        for ATTEMPT in 1 2 3 4 5; do
+          if curl --fail --silent --show-error --max-time 20 \
+               -H "Authorization: Bearer $$TOKEN" \
+               "$$TAG_URL/readyz" > /tmp/probe.json; then
+            cat /tmp/probe.json
+            echo ""
+            break
+          fi
+          if [ "$$ATTEMPT" = "5" ]; then
+            echo "SMOKE TEST FAILED on /readyz after 5 attempts. Aborting before cutover; BLUE remains live."
+            exit 1
+          fi
+          echo "  attempt $$ATTEMPT failed, retrying in 10s (cold start)..."
+          sleep 10
         done
+
+        # Assert on what the revision actually said. `offline_mode: true` is
+        # the specific regression worth blocking: such a revision is healthy,
+        # fast, returns HTTP 200, and serves a year-old recorded corpus that is
+        # indistinguishable from live data unless provenance is read.
+        python3 - /tmp/probe.json <<'PYEOF'
+        import json, sys
+        r = json.load(open(sys.argv[1]))
+        problems = []
+        if r.get("status") != "READY":
+            problems.append(f"status is {r.get('status')!r}, expected 'READY'")
+        runtime = r.get("runtime", {})
+        if runtime.get("offline_mode") is not False:
+            problems.append(
+                f"offline_mode is {runtime.get('offline_mode')!r} - this revision would "
+                "serve the recorded corpus as if it were live SEC data"
+            )
+        if runtime.get("environment") != "production":
+            problems.append(f"environment is {runtime.get('environment')!r}, expected 'production'")
+        if problems:
+            print("SMOKE TEST FAILED. Aborting before cutover; BLUE remains live.")
+            for p in problems:
+                print(f"  - {p}")
+            sys.exit(1)
+        print("GREEN reports READY, production, live SEC.")
+        PYEOF
 
         echo "Smoke test passed. GREEN is healthy."
 

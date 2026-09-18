@@ -258,7 +258,9 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
         try:
             async with self.http.build_client() as client:
                 cik = await self.http.resolve_cik(ticker, client)
-                filing = await self.http.find_filing(cik, form, fiscal_year, client)
+                filing = await self.http.find_filing(
+                    cik, form, fiscal_year, client, ticker=ticker
+                )
 
                 section_upper = section.upper()
                 if section_upper == "MDA_ITEM_7":

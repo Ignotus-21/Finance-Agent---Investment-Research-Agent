@@ -39,10 +39,29 @@ from typing import Any
 
 import httpx
 
-from src.core.exceptions import FilingNotFoundException
+from src.core.exceptions import FilingNotFoundException, RegistrantMismatchException
 
 SEC_WWW = "https://www.sec.gov"
 SEC_DATA = "https://data.sec.gov"
+
+# Tickers whose current registrant of record did not file the historical report.
+#
+# `company_tickers.json` answers "who holds this ticker today". A request for
+# FY2024 asks "who filed a year ago". Those are the same entity right up until
+# a reorganisation, and then they are not.
+#
+# XOM is the live example. SEC maps the ticker to ExxonMobil Holdings Corp
+# (CIK 2115436), a holding company inserted above the operating business, which
+# has filed no 10-K at all. The FY2024 10-K (0000034088-25-000010) belongs to
+# EXXON MOBIL CORP, CIK 34088 - an entity whose `tickers` array is now empty.
+#
+# There is no public reverse index from a ticker to its former registrant, so
+# this cannot be resolved automatically. What *can* be automated is noticing:
+# see RegistrantMismatchException, raised when the resolved entity has never
+# filed the requested form, which is the signature of a successor shell.
+TICKER_CIK_OVERRIDES: dict[str, str] = {
+    "XOM": "0000034088",  # EXXON MOBIL CORP, not ExxonMobil Holdings Corp
+}
 
 # US-GAAP XBRL tags, in preference order. Registrants tag the same economic
 # concept differently - "Revenues" vs "RevenueFromContractWithCustomer..." - so
@@ -138,7 +157,15 @@ class SECEdgarHTTPClient:
         raise RuntimeError(f"SEC EDGAR unreachable after {self.max_retries} attempts: {last_error}")
 
     async def resolve_cik(self, ticker: str, client: httpx.AsyncClient) -> str:
-        """Map a ticker to its zero-padded 10-digit CIK."""
+        """Map a ticker to its zero-padded 10-digit CIK.
+
+        Overrides are consulted first, because SEC's own mapping is correct
+        about the present and wrong about the past - see TICKER_CIK_OVERRIDES.
+        """
+        override = TICKER_CIK_OVERRIDES.get(ticker.upper())
+        if override is not None:
+            return override
+
         if self._ticker_map is None:
             response = await self._get(f"{SEC_WWW}/files/company_tickers.json", client)
             payload = response.json()
@@ -159,6 +186,7 @@ class SECEdgarHTTPClient:
         form: str,
         fiscal_year: int,
         client: httpx.AsyncClient,
+        ticker: str | None = None,
     ) -> dict[str, Any]:
         """Locate the filing of `form` whose report period falls in `fiscal_year`.
 
@@ -185,7 +213,41 @@ class SECEdgarHTTPClient:
             if match:
                 return {"company_name": company_name, **match}
 
-        raise FilingNotFoundException(ticker=cik, form=form, fiscal_year=fiscal_year)
+        # Nothing matched. Before reporting a missing fiscal year, establish
+        # whether this entity files this form at all.
+        #
+        # An entity with no 10-K in its entire history is not a company having
+        # a quiet year - it is almost always a successor shell that has
+        # inherited the ticker, and the report being asked for was filed by its
+        # predecessor. Reporting that as "no FY2024 filing" sends the reader
+        # looking for a document that exists, under a CIK they were never told
+        # about. The previous message additionally printed the CIK in the
+        # ticker slot, which made it look like the caller had asked for
+        # something nonsensical.
+        if not self._files_form_at_all(payload, form):
+            raise RegistrantMismatchException(
+                ticker=ticker or cik,
+                cik=cik,
+                entity_name=company_name or "unknown entity",
+                form=form,
+                fiscal_year=fiscal_year,
+            )
+
+        raise FilingNotFoundException(
+            ticker=ticker or cik, form=form, fiscal_year=fiscal_year
+        )
+
+    @staticmethod
+    def _files_form_at_all(payload: dict[str, Any], form: str) -> bool:
+        """Has this registrant ever filed `form`, in any period?
+
+        Only the `recent` block is inspected. The overflow chunks hold older
+        filings, so an entity that files this form at all will show it here for
+        any realistic query - and the point of the check is to separate "never"
+        from "not that year", which does not need exhaustive history.
+        """
+        recent = payload.get("filings", {}).get("recent", {})
+        return any(f.upper() == form.upper() for f in recent.get("form", []))
 
     @staticmethod
     def _relevant_chunks(files: list[dict[str, Any]], fiscal_year: int) -> list[str]:
