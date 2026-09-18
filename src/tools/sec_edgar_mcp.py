@@ -331,7 +331,14 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
                         "extraction_status": "EXTRACTED" if text else "SECTION_BOUNDARY_NOT_FOUND",
                     }
                 else:
-                    facts = await self.http.fetch_xbrl_facts(cik, fiscal_year, client)
+                    # period_end pins the current year to this filing's exact
+                    # reporting period. The prior year is matched by end-date
+                    # year alone, which is unambiguous because only one annual
+                    # period can end in a given year.
+                    period_end = filing.get("report_date", "")
+                    facts = await self.http.fetch_xbrl_facts(
+                        cik, fiscal_year, client, period_end=period_end
+                    )
                     prior = await self.http.fetch_xbrl_facts(cik, fiscal_year - 1, client)
                     section_data = self._shape_statement(section_upper, facts, prior)
 

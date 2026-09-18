@@ -39,6 +39,10 @@ SUBMISSIONS = {
     },
 }
 
+# Mirrors the real companyfacts payload, including the detail that makes it
+# treacherous: a FY2024 10-K restates FY2023 and FY2022 for comparison, and
+# EDGAR tags all three rows `fy=2024, fp=FY, form=10-K`. Only the period dates
+# distinguish them, so the fixture carries them exactly as EDGAR does.
 COMPANY_FACTS = {
     "facts": {
         "us-gaap": {
@@ -46,26 +50,94 @@ COMPANY_FACTS = {
                 "units": {
                     "USD": [
                         # Quarterly figure - must be ignored.
-                        {"fy": 2024, "fp": "Q3", "form": "10-Q", "val": 85777000000},
-                        # Annual figure from the 10-K - the one we want.
-                        {"fy": 2024, "fp": "FY", "form": "10-K", "val": 391035000000},
-                        {"fy": 2023, "fp": "FY", "form": "10-K", "val": 383285000000},
+                        {
+                            "start": "2024-03-31",
+                            "end": "2024-06-29",
+                            "fy": 2024,
+                            "fp": "Q3",
+                            "form": "10-Q",
+                            "val": 85777000000,
+                        },
+                        # Restated FY2022, reported by the FY2024 10-K. Listed
+                        # first, as EDGAR does, so naive first-match selection
+                        # picks it.
+                        {
+                            "start": "2021-09-26",
+                            "end": "2022-09-24",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 394328000000,
+                        },
+                        {
+                            "start": "2022-09-25",
+                            "end": "2023-09-30",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 383285000000,
+                        },
+                        # Annual figure for the period we asked about.
+                        {
+                            "start": "2023-10-01",
+                            "end": "2024-09-28",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 391035000000,
+                        },
                     ]
                 }
             },
             "OperatingIncomeLoss": {
                 "units": {
                     "USD": [
-                        {"fy": 2024, "fp": "FY", "form": "10-K", "val": 123216000000},
-                        {"fy": 2023, "fp": "FY", "form": "10-K", "val": 114301000000},
+                        {
+                            "start": "2022-09-25",
+                            "end": "2023-09-30",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 114301000000,
+                        },
+                        {
+                            "start": "2023-10-01",
+                            "end": "2024-09-28",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 123216000000,
+                        },
                     ]
                 }
             },
             "NetIncomeLoss": {
-                "units": {"USD": [{"fy": 2024, "fp": "FY", "form": "10-K", "val": 93736000000}]}
+                "units": {
+                    "USD": [
+                        {
+                            "start": "2023-10-01",
+                            "end": "2024-09-28",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 93736000000,
+                        }
+                    ]
+                }
             },
+            # Balance-sheet item: an instant fact, so no `start`.
             "StockholdersEquity": {
-                "units": {"USD": [{"fy": 2024, "fp": "FY", "form": "10-K", "val": 56950000000}]}
+                "units": {
+                    "USD": [
+                        {
+                            "end": "2024-09-28",
+                            "fy": 2024,
+                            "fp": "FY",
+                            "form": "10-K",
+                            "val": 56950000000,
+                        }
+                    ]
+                }
             },
         }
     }
@@ -178,6 +250,62 @@ async def test_find_filing_ignores_other_form_types() -> None:
             await edgar.find_filing("0000320193", "10-K", 2019, client)
 
 
+async def test_find_filing_searches_paginated_overflow_chunks() -> None:
+    """Regression: `filings.recent` is capped, and for a prolific filer it fills
+    with routine paperwork. JPMorgan's recent block holds 26,144 filings and
+    exactly one 10-K; the FY2024 annual report sits in one of 70 overflow files.
+    Reading only `recent` reported "no filing" for a document that plainly exists.
+
+    The lookup must also stay cheap: chunks whose advertised date range cannot
+    contain the filing are skipped rather than downloaded.
+    """
+    paginated = {
+        "name": "JPMorgan Chase & Co",
+        "filings": {
+            "recent": {
+                "form": ["8-K"],
+                "reportDate": [""],
+                "filingDate": ["2025-06-02"],
+                "accessionNumber": ["0000019617-25-000999"],
+                "primaryDocument": ["jpm-8k.htm"],
+            },
+            "files": [
+                {"name": "old.json", "filingFrom": "1994-01-01", "filingTo": "1996-12-31"},
+                {
+                    "name": "recent-overflow.json",
+                    "filingFrom": "2025-01-01",
+                    "filingTo": "2025-03-31",
+                },
+            ],
+        },
+    }
+    overflow = {
+        "form": ["10-K"],
+        "reportDate": ["2024-12-31"],
+        "filingDate": ["2025-02-14"],
+        "accessionNumber": ["0000019617-25-000270"],
+        "primaryDocument": ["jpm-20241231.htm"],
+    }
+    fetched: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        fetched.append(url)
+        if url.endswith("recent-overflow.json"):
+            return httpx.Response(200, json=overflow)
+        if url.endswith("old.json"):
+            return httpx.Response(200, json={})
+        return httpx.Response(200, json=paginated)
+
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        filing = await edgar.find_filing("0000019617", "10-K", 2024, client)
+
+    assert filing["accession_number"] == "0000019617-25-000270"
+    assert filing["company_name"] == "JPMorgan Chase & Co"
+    assert not any("old.json" in url for url in fetched)
+
+
 async def test_xbrl_facts_select_annual_10k_values_only() -> None:
     """The Q3 datapoint must not leak into an annual comparison."""
     edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
@@ -189,6 +317,30 @@ async def test_xbrl_facts_select_annual_10k_values_only() -> None:
     assert facts["net_income"] == 93736000000.0
     # Never the 85.7bn quarterly value.
     assert facts["revenue"] != 85777000000.0
+
+
+async def test_xbrl_facts_reject_prior_years_restated_by_the_same_filing() -> None:
+    """Regression: a FY2024 10-K also reports FY2023 and FY2022, all tagged
+    `fy=2024`. Selecting on that tag returned $394.3bn - Apple's FY2022 revenue -
+    under a genuine FY2024 accession number. Only the period end disambiguates.
+    """
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with _mock_client() as client:
+        facts = await edgar.fetch_xbrl_facts("0000320193", 2024, client, period_end="2024-09-28")
+
+    assert facts["revenue"] == 391035000000.0
+    assert facts["revenue"] != 394328000000.0  # FY2022, restated
+    assert facts["revenue"] != 383285000000.0  # FY2023, restated
+
+
+async def test_xbrl_facts_keep_instant_balance_sheet_items() -> None:
+    """Balance-sheet facts carry no `start`, so the annual-duration filter that
+    excludes quarterly figures must not discard them."""
+    edgar = SECEdgarHTTPClient(user_agent=VALID_UA)
+    async with _mock_client() as client:
+        facts = await edgar.fetch_xbrl_facts("0000320193", 2024, client)
+
+    assert facts["shareholders_equity"] == 56950000000.0
 
 
 async def test_xbrl_facts_omit_untagged_concepts() -> None:
@@ -330,9 +482,7 @@ async def _noop_sleep(_seconds: float) -> None:
 
 
 def test_shape_statement_omits_missing_keys() -> None:
-    shaped = SECFilingClient._shape_statement(
-        "BALANCE_SHEET", {"shareholders_equity": 1.0}, {}
-    )
+    shaped = SECFilingClient._shape_statement("BALANCE_SHEET", {"shareholders_equity": 1.0}, {})
     assert shaped["shareholders_equity"] == 1.0
     assert "total_debt" not in shaped
     assert shaped["xbrl_source"] == "us-gaap"
