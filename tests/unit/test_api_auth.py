@@ -18,20 +18,25 @@ from src.config import Settings
 
 pytestmark = pytest.mark.asyncio
 
-AUDIENCE = "https://ira-service-production-000000000000.us-central1.run.app"
+# A custom audience and the service's own URL. Cloud Run accepts a token minted
+# for either, so the application has to as well - see the module docstring on
+# ``allowed_audiences``.
+AUDIENCE = "ira-service-production"
+RUN_URL = "https://ira-service-production-000000000000.us-central1.run.app"
+CONFIGURED = f"{AUDIENCE},{RUN_URL}"
 
 
 @pytest.fixture
 def verifying(monkeypatch: pytest.MonkeyPatch) -> None:
     """Put the dependency into its verifying mode."""
-    monkeypatch.setattr(dependencies.settings, "auth_expected_audience", AUDIENCE)
+    monkeypatch.setattr(dependencies.settings, "auth_allowed_audiences", CONFIGURED)
 
 
 def _stub_claims(monkeypatch: pytest.MonkeyPatch, claims: dict[str, object]) -> list[dict]:
     """Replace token verification with a stub, recording how it was called."""
     calls: list[dict] = []
 
-    def _fake(token: str, transport: object, audience: str | None = None) -> dict[str, object]:
+    def _fake(token: str, transport: object, audience: object = None) -> dict[str, object]:
         calls.append({"token": token, "audience": audience})
         return claims
 
@@ -79,10 +84,12 @@ async def test_identity_comes_from_the_verified_email_claim(
     identity = await dependencies.verify_auth_token("Bearer a.real.looking.jwt")
 
     assert identity == "analyst@example.com"
-    # The audience must be checked. A token minted for some other Cloud Run
-    # service in the same project is signed by Google and passes every other
-    # claim; the audience is the only thing that makes it not valid here.
-    assert calls == [{"token": "a.real.looking.jwt", "audience": AUDIENCE}]
+    # The audience must be checked, and both configured values must reach the
+    # verifier. A token minted for some other Cloud Run service in the same
+    # project is signed by Google and passes every other claim; the audience is
+    # the only thing that makes it not valid here. Equally, dropping one of the
+    # two would reject a token Cloud Run had already admitted.
+    assert calls == [{"token": "a.real.looking.jwt", "audience": [AUDIENCE, RUN_URL]}]
 
 
 async def test_identity_falls_back_to_sub_when_no_email_claim(
@@ -140,18 +147,67 @@ async def test_development_identity_is_labelled_unverified(
     The prefix is the point: it reaches the audit log, so a record written on
     this path cannot be mistaken later for an authenticated one.
     """
-    monkeypatch.setattr(dependencies.settings, "auth_expected_audience", "")
+    monkeypatch.setattr(dependencies.settings, "auth_allowed_audiences", "")
 
     identity = await dependencies.verify_auth_token("Bearer test-valid-analyst-token")
 
     assert identity.startswith("unverified-")
 
 
+@pytest.mark.parametrize("configured", ["", "   ", ",", " , "])
+async def test_blank_audience_configurations_do_not_enable_verification(
+    monkeypatch: pytest.MonkeyPatch, configured: str
+) -> None:
+    """A string of separators parses to nothing, and nothing means development.
+
+    Worth pinning because the failure mode is silent: if ``" , "`` parsed to
+    ``["", ""]`` the service would look configured, take the verifying branch,
+    and reject every token with an audience mismatch it never had.
+    """
+    monkeypatch.setattr(dependencies.settings, "auth_allowed_audiences", configured)
+
+    assert (await dependencies.verify_auth_token("Bearer anything")).startswith("unverified-")
+
+
+# ---------------------------------------------------------------------------
+# Parsing the comma-separated setting
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [
+        ("", ()),
+        ("one", ("one",)),
+        ("one,two", ("one", "two")),
+        (" one , two ", ("one", "two")),  # Cloud Run env vars pick up stray spaces
+        ("one,,two,", ("one", "two")),  # and stray separators
+    ],
+)
+def test_allowed_audiences_parsing(configured: str, expected: tuple[str, ...]) -> None:
+    settings = Settings(
+        environment="development",
+        auth_allowed_audiences=configured,
+        offline_mode=True,
+    )
+    assert settings.allowed_audiences == expected
+
+
 def test_production_refuses_to_start_without_an_audience() -> None:
-    with pytest.raises(ValidationError, match="AUTH_EXPECTED_AUDIENCE"):
+    with pytest.raises(ValidationError, match="AUTH_ALLOWED_AUDIENCES"):
         Settings(
             environment="production",
-            auth_expected_audience="",
+            auth_allowed_audiences="",
+            offline_mode=True,
+        )
+
+
+def test_production_refuses_to_start_on_a_whitespace_only_audience() -> None:
+    """`custom_audiences = [""]` in tfvars would otherwise look like configuration."""
+    with pytest.raises(ValidationError, match="AUTH_ALLOWED_AUDIENCES"):
+        Settings(
+            environment="production",
+            auth_allowed_audiences="  ,  ",
             offline_mode=True,
         )
 
@@ -159,7 +215,7 @@ def test_production_refuses_to_start_without_an_audience() -> None:
 def test_production_starts_with_an_audience() -> None:
     settings = Settings(
         environment="production",
-        auth_expected_audience=AUDIENCE,
+        auth_allowed_audiences=CONFIGURED,
         offline_mode=True,
     )
-    assert settings.auth_expected_audience == AUDIENCE
+    assert settings.allowed_audiences == (AUDIENCE, RUN_URL)

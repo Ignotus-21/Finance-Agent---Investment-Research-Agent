@@ -66,12 +66,16 @@ class Settings(BaseSettings):
     max_brief_cost_usd: float = Field(default=0.25, description="Target max inference cost per research brief")
 
     # Security, Privacy & DLP
-    auth_expected_audience: str = Field(
+    auth_allowed_audiences: str = Field(
         default="",
         description=(
-            "Audience the caller's Google-signed ID token must carry. Cloud Run forwards the "
-            "Authorization header it authenticated with, so this is the Cloud Run service URL - "
-            "read it from `terraform output cloud_run_service_url` after the first apply. "
+            "Comma-separated audiences accepted on an incoming Google-signed ID token. "
+            "Cloud Run accepts a token whose `aud` is either the service's run.app URL or any "
+            "configured custom audience, and it forwards the same Authorization header to the "
+            "container - so this must be a superset of what a legitimate caller would mint, or "
+            "the application rejects requests IAM already allowed. "
+            "Comma-separated rather than a list because this arrives as a Cloud Run environment "
+            "variable, and JSON-in-an-env-var is a worse thing to debug at 3am. "
             "Empty means bearer credentials are accepted without verification, which the "
             "validator below refuses to allow in production."
         ),
@@ -88,23 +92,28 @@ class Settings(BaseSettings):
     circuit_breaker_failure_threshold: int = Field(default=5)
     circuit_breaker_recovery_timeout_seconds: int = Field(default=60)
 
+    @property
+    def allowed_audiences(self) -> tuple[str, ...]:
+        """The configured audiences, parsed. Empty tuple means no verification."""
+        return tuple(a.strip() for a in self.auth_allowed_audiences.split(",") if a.strip())
+
     @model_validator(mode="after")
     def _require_token_audience_in_production(self) -> "Settings":
         """
         Refuse to start a production revision that cannot verify its callers.
 
-        Without an expected audience the API's bearer check degenerates into
-        "the header parses", and the identity written to the audit log is
-        whatever the caller typed. Cloud Run IAM still stands in front, but a
-        single `allUsers` binding - one click, or one line of Terraform - would
-        then be the whole story. Failing at startup makes that impossible to do
-        by accident.
+        With no audience configured the API's bearer check degenerates into "the
+        header parses", and the identity written to the audit log is whatever the
+        caller typed. Cloud Run IAM still stands in front, but a single `allUsers`
+        binding - one click, or one line of Terraform - would then be the whole
+        story. Failing at startup makes that impossible to do by accident.
         """
-        if self.environment == "production" and not self.auth_expected_audience.strip():
+        if self.environment == "production" and not self.allowed_audiences:
             raise ValueError(
-                "ENVIRONMENT=production requires AUTH_EXPECTED_AUDIENCE, the Cloud Run "
-                "service URL that incoming ID tokens are minted for. Get it from "
-                "`terraform output cloud_run_service_url`."
+                "ENVIRONMENT=production requires AUTH_ALLOWED_AUDIENCES: a comma-separated "
+                "list of the audiences an incoming ID token may carry. Use the Cloud Run "
+                "custom audience configured on the service (see terraform var "
+                "`custom_audiences`), and add the run.app URL if any caller mints for it."
             )
         return self
 

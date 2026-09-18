@@ -54,10 +54,10 @@ variable "sec_edgar_user_agent" {
   type        = string
 }
 
-variable "auth_expected_audience" {
-  description = "Audience claim required on incoming Google ID tokens; the service URL."
-  type        = string
-  default     = ""
+variable "custom_audiences" {
+  description = "Audiences this service accepts on an incoming ID token, set on the service itself and mirrored into AUTH_ALLOWED_AUDIENCES so IAM and the application agree. Stable names, not the run.app URL: a caller has to mint a token for one of these, and the URL is not known until after the apply that creates it."
+  type        = list(string)
+  default     = []
 }
 
 variable "ingress" {

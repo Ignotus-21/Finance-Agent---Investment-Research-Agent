@@ -170,8 +170,11 @@ components:
       description: >-
         Google-signed OIDC identity token. Verified twice: by Cloud Run IAM
         before the request reaches the container, and again in-process against
-        Google's published certificates with the service URL as the required
-        audience. A token minted for any other service is rejected.
+        Google's published certificates, with the `aud` claim required to be one
+        of the service's configured custom audiences. A token minted for any
+        other service is rejected. A user account cannot mint one of these:
+        impersonate the caller service account
+        (`gcloud auth print-identity-token --impersonate-service-account=... --audiences=...`).
 
   schemas:
     EquityResearchRequest:

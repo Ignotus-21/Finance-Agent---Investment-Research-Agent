@@ -52,22 +52,29 @@ def _read_bearer_token(authorization: str | None) -> str:
     return parts[1]
 
 
-def _verify_google_id_token(token: str) -> dict[str, Any]:
+def _verify_google_id_token(token: str, audiences: tuple[str, ...]) -> dict[str, Any]:
     """
-    Verify a Google-signed OIDC ID token.
+    Verify a Google-signed OIDC ID token against any of ``audiences``.
 
     Checks the RS256 signature against Google's published certificates, the
-    issuer, the expiry, and the audience. Cloud Run forwards the same
-    Authorization header it authenticated with, so the audience the caller
-    minted the token for is the service URL - which is what
-    ``auth_expected_audience`` has to be set to.
+    issuer, the expiry, and the audience.
+
+    Several audiences rather than one, because Cloud Run itself accepts more
+    than one. A caller may mint a token for the service's ``run.app`` URL *or*
+    for any custom audience configured on the service, and Cloud Run forwards
+    the same Authorization header it authenticated with. Pinning this to a
+    single value would reject requests IAM had already allowed - a 403/401 split
+    that is miserable to diagnose from the caller's side.
+
+    ``google.auth.jwt.decode`` takes a collection here and requires the ``aud``
+    claim to be one of its members, so this is one comparison, not a loop.
 
     This duplicates a check Cloud Run IAM has already made, deliberately. IAM
     decides whether the request may enter; this decides whose name goes in the
     audit record, and a claim is only worth writing down if it was verified.
     """
     claims: dict[str, Any] = id_token.verify_oauth2_token(
-        token, _TRANSPORT, audience=settings.auth_expected_audience
+        token, _TRANSPORT, audience=list(audiences)
     )
     return claims
 
@@ -80,10 +87,10 @@ async def verify_auth_token(
 
     Two paths, and only one of them is authentication:
 
-    * ``auth_expected_audience`` set - the bearer credential is verified as a
-      Google-signed ID token and the identity comes from the verified ``email``
-      claim.
-    * ``auth_expected_audience`` empty - local development. No verification is
+    * ``auth_allowed_audiences`` set - the bearer credential is verified as a
+      Google-signed ID token carrying one of those audiences, and the identity
+      comes from the verified ``email`` claim.
+    * ``auth_allowed_audiences`` empty - local development. No verification is
       possible, so the returned identity is prefixed ``unverified-`` and says so
       in every log line it reaches. ``Settings`` refuses to construct in this
       state when ``ENVIRONMENT=production``, so it cannot reach a deployment.
@@ -95,9 +102,10 @@ async def verify_auth_token(
     """
     token = _read_bearer_token(authorization)
 
-    if not settings.auth_expected_audience:
+    audiences = settings.allowed_audiences
+    if not audiences:
         logger.warning(
-            "auth_expected_audience is unset: bearer credential accepted without "
+            "auth_allowed_audiences is unset: bearer credential accepted without "
             "verification. This is a development-only path."
         )
         return f"unverified-dev-{token[:6]}"
@@ -106,7 +114,7 @@ async def verify_auth_token(
         # verify_oauth2_token does blocking I/O when its certificate cache is
         # cold. Off the event loop, or one expired cache stalls every request
         # the worker is currently serving.
-        claims = await run_in_threadpool(_verify_google_id_token, token)
+        claims = await run_in_threadpool(_verify_google_id_token, token, audiences)
     except (GoogleAuthError, ValueError) as exc:
         # The exception text names the failed claim - audience, expiry, issuer.
         # Useful in the log, not in the response: it tells an unauthenticated

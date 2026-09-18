@@ -76,9 +76,11 @@ module "vpc" {
 
 # 2. Least-Privilege IAM & Service Account Module
 module "iam" {
-  source               = "./modules/iam"
-  project_id           = var.project_id
-  service_account_name = "ira-runtime-${var.environment}-sa"
+  source                      = "./modules/iam"
+  project_id                  = var.project_id
+  service_account_name        = "ira-runtime-${var.environment}-sa"
+  caller_service_account_name = "ira-caller-${var.environment}-sa"
+  token_creator_members       = var.token_creator_members
 
   depends_on = [google_project_service.required]
 }
@@ -119,11 +121,18 @@ module "cloud_run" {
   # Runtime configuration. The application's own defaults are tuned for
   # hermetic tests, not for production; leaving them unset here is what made
   # the deployed service answer from recorded fixtures.
-  offline_mode           = var.offline_mode
-  sec_edgar_user_agent   = var.sec_edgar_user_agent
-  auth_expected_audience = var.auth_expected_audience
-  ingress                = var.ingress
-  invoker_members        = var.invoker_members
+  offline_mode         = var.offline_mode
+  sec_edgar_user_agent = var.sec_edgar_user_agent
+  custom_audiences     = var.custom_audiences
+  ingress              = var.ingress
+
+  # The caller SA is appended rather than left to the operator: it is the only
+  # identity that can actually mint an acceptable token, so a service deployed
+  # without it is a service nobody can call.
+  invoker_members = concat(
+    var.invoker_members,
+    ["serviceAccount:${module.iam.caller_service_account_email}"],
+  )
 
   depends_on = [google_project_service.required]
 }

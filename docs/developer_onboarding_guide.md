@@ -159,11 +159,13 @@ Streamlit is an opt-in extra (`.[ui]`) and is excluded from both the Docker and
 the Cloud Build context. A developer tool has no business in the runtime image.
 
 Against localhost the console sends an unverified bearer credential, because
-`AUTH_EXPECTED_AUDIENCE` is empty outside production and the service records the
+`AUTH_ALLOWED_AUDIENCES` is empty outside production and the service records the
 caller as `unverified-*`. Against a deployed revision it needs a service account
 to impersonate: a **user account cannot mint an ID token for a specific
 audience**, which is why the sidebar asks for one rather than calling
-`gcloud auth print-identity-token` directly.
+`gcloud auth print-identity-token` directly. Terraform creates
+`ira-caller-<env>-sa` for precisely this, and `terraform output
+caller_service_account` prints it.
 
 ---
 

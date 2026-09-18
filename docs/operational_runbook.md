@@ -88,24 +88,49 @@ is the break-glass path. Update both, or the next `terraform apply` reverts it.
 
 The service accepts a Google-signed OIDC identity token and verifies it twice: Cloud Run IAM checks
 it before the request reaches the container, and `verify_auth_token` checks signature, issuer,
-expiry and **audience** again in-process. The audience must be the service's own URL, because Cloud
-Run forwards the same `Authorization` header it authenticated with.
+expiry and **audience** again in-process. Cloud Run forwards the same `Authorization` header it
+authenticated with, so both layers see the same token and both are driven from the same Terraform
+variable, `custom_audiences`.
+
+Two things about minting the token are worth knowing before the first 401.
+
+**A user account cannot mint a token for an arbitrary audience.** `gcloud auth
+print-identity-token --audiences=...` fails for `you@example.com`; the token a user account gets
+without `--audiences` carries the gcloud OAuth client as its `aud`, which this service will reject.
+The supported route is impersonation, which is why Terraform creates a caller service account
+holding `roles/run.invoker` and nothing else.
+
+**The audience is a name, not the URL.** The service URL only exists after the apply that creates
+the service, so using it as the audience would mean callers cannot be configured until after
+deployment. `custom_audiences` is a stable string chosen up front — Cloud Run continues to accept
+the run.app URL as well, but nothing needs to use it.
 
 ```bash
+AUDIENCE=ira-service-production                     # terraform output accepted_token_audiences
+CALLER=$(terraform -chdir=terraform output -raw caller_service_account)
 SERVICE_URL=$(gcloud run services describe ira-service-production \
     --region=us-central1 --format="value(status.url)")
 
+TOKEN=$(gcloud auth print-identity-token \
+    --impersonate-service-account="${CALLER}" \
+    --audiences="${AUDIENCE}")
+
 curl -sS -X POST "${SERVICE_URL}/v1/research/equity" \
-    -H "Authorization: Bearer $(gcloud auth print-identity-token --audiences="${SERVICE_URL}")" \
+    -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
     -d '{"ticker": "AAPL", "fiscal_year": 2024}'
 ```
+
+Impersonation requires `roles/iam.serviceAccountTokenCreator` on the caller SA — add yourself to the
+`token_creator_members` variable. Without it gcloud returns a 403 naming `generateIdToken`.
 
 | Symptom | Cause |
 |---|---|
 | `403` from Cloud Run, no application log line | IAM. The caller has no `roles/run.invoker`. Add them to `invoker_members` in `terraform.tfvars`. |
 | `401 Bearer token failed verification`, with a log line naming the claim | The token reached the app and failed. Almost always the audience: `gcloud auth print-identity-token` without `--audiences` mints one for the gcloud OAuth client, not for this service. |
-| Container exits at startup with `ENVIRONMENT=production requires AUTH_EXPECTED_AUDIENCE` | The revision has no audience configured, so it cannot verify anyone. Set `auth_expected_audience` in `terraform.tfvars` from `terraform output cloud_run_service_url` and apply. |
+| Container exits at startup with `ENVIRONMENT=production requires AUTH_ALLOWED_AUDIENCES` | The revision has no audience configured, so it cannot verify anyone. Set `custom_audiences` in `terraform.tfvars` (e.g. `["ira-service-production"]`) and apply; the module sets it on the service and in the container from that one value. |
+| Caller gets 401 `Bearer token failed verification.` but IAM shows them as an invoker | Cloud Run admitted a token whose audience the application does not accept. The two lists come from the same `custom_audiences` variable, so this means the caller minted for something else - usually the run.app URL. Either mint for the custom audience, or add the URL to `custom_audiences` and apply. |
+| `gcloud auth print-identity-token --audiences=...` fails for a human account | Expected. A user account cannot mint a token for an arbitrary audience. Add `--impersonate-service-account=$(terraform output -raw caller_service_account)`, and make sure the user is in `token_creator_members`. |
 | An audit record whose `user_id` starts with `unverified-` | The revision is running the development path. It should not be possible in production; if you see one, that revision was not built from this configuration. |
 
 > [!NOTE]

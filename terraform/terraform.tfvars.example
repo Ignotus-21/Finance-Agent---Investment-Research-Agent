@@ -22,14 +22,22 @@ sec_edgar_user_agent = "IRA Research admin@example.com"
 # recorded FY2024 corpus, e.g. for a demo with no external dependency.
 offline_mode = false
 
-# Set after the bootstrap apply, from `terraform output cloud_run_service_url`.
-# Until it is set, a production container refuses to start rather than accept
-# bearer credentials it cannot verify.
-auth_expected_audience = "https://ira-service-production-000000000000.us-central1.run.app"
+# What an incoming ID token's `aud` claim must say. A name you choose, not the
+# service URL - the URL does not exist until the apply that creates the service,
+# and callers cannot be configured before it. Required: a production container
+# started with this empty exits rather than accept credentials it cannot verify.
+# Any string; a URL-shaped value such as "https://ira.internal.example.com"
+# works equally well and is what the provider docs show.
+custom_audiences = ["ira-service-production"]
 
-# Who may invoke the service. Empty means nobody but project admins, which is
-# the correct starting point: the in-process bearer-token check is not an
-# authentication boundary, so this list is.
+# Who may impersonate the caller service account to mint one of those tokens.
+# This is the list to put your own address in if you intend to curl the service.
+token_creator_members = [
+  # "user:analyst@example.com",
+]
+
+# Who may invoke the service. The caller service account is added automatically;
+# this is for anything else. Empty is the correct starting point.
 invoker_members = [
   # "user:analyst@example.com",
   # "serviceAccount:reporting@example.iam.gserviceaccount.com",
