@@ -1,3 +1,16 @@
+-- ┌───────────────────────────────────────────────────────────────────────────┐
+-- │ NOT PROVISIONED. Reference material only - this file is executed by       │
+-- │ nothing, and no Terraform resource creates this table.                    │
+-- │                                                                            │
+-- │ The table was declared in `terraform/modules/bigquery/main.tf` and no     │
+-- │ code ever wrote a row: no INSERT, no `bigquery.Client`, no load job.      │
+-- │ It was removed in #19 rather than left to imply that the metrics history  │
+-- │ was simply empty.                                                          │
+-- │                                                                            │
+-- │ Restore the resource in the same change that adds the writer - not        │
+-- │ before. `SynthesisEngine` is where the verified metrics exist.            │
+-- └───────────────────────────────────────────────────────────────────────────┘
+
 -- BigQuery DDL: Time-Series Verified Financial Metrics Table
 -- Stores deterministic financial ratios with complete line-item citation provenance.
 

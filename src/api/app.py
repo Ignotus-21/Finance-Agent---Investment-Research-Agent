@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from src.api.routes import router
 from src.config import settings
 from src.core.exceptions import FinancialAgentException
+from src.observability.logging_config import configure_logging
 from src.observability.tracer import configure_tracing
 
 # The ADK agent package, relative to the container's working directory. ADK
@@ -48,6 +49,11 @@ def _mount_adk_web(app: FastAPI) -> None:
 
 def create_app() -> FastAPI:
     """Creates and configures the FastAPI application."""
+    # First, before anything else can emit a line: until this runs, library and
+    # uvicorn logs reach Cloud Logging as undifferentiated `textPayload` with no
+    # real severity and no trace correlation.
+    configure_logging(settings)
+
     app = FastAPI(
         title="Autonomous Investment Research Intelligence Agent (IRA) API",
         version="1.0.0",

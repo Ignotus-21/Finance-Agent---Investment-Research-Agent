@@ -11,7 +11,3 @@ output "audit_sink_writer_identity" {
   description = "Principal the sink writes as; granted dataEditor on this dataset only"
   value       = google_logging_project_sink.compliance_audit_export.writer_identity
 }
-
-output "metrics_table_id" {
-  value = google_bigquery_table.metrics_table.table_id
-}

@@ -1,3 +1,16 @@
+-- ┌───────────────────────────────────────────────────────────────────────────┐
+-- │ NOT PROVISIONED. Reference material only - this file is executed by       │
+-- │ nothing, and no Terraform resource creates this table.                    │
+-- │                                                                            │
+-- │ Removed in #18. Audit records are written as structured JSON on stdout,   │
+-- │ ingested by the Cloud Run logging agent, and exported to BigQuery by      │
+-- │ `google_logging_project_sink.compliance_audit_export`. That sink creates  │
+-- │ and owns its own table (`run_googleapis_com_stdout`) with the LogEntry    │
+-- │ schema; the audit fields live under `jsonPayload.compliance_metadata`.    │
+-- │ A hand-declared table alongside it stayed permanently empty and implied   │
+-- │ the audit trail was empty too.                                            │
+-- └───────────────────────────────────────────────────────────────────────────┘
+
 -- BigQuery DDL: Compliance & Research Audit Trail Table
 -- Partitioned by DAY on timestamp; Clustered by ticker and user_id for fast audit query scans.
 

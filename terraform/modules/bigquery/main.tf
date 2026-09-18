@@ -66,25 +66,19 @@ resource "google_bigquery_dataset_iam_member" "audit_sink_writer" {
 }
 
 
-# Time-Series Verified Financial Metrics Table
-resource "google_bigquery_table" "metrics_table" {
-  dataset_id = google_bigquery_dataset.ira_dataset.dataset_id
-  table_id   = "financial_time_series_metrics"
-  project    = var.project_id
+# Deliberately absent: `financial_time_series_metrics`.
+#
+# The table was declared here with a detailed eleven-column schema and a
+# clustering strategy, and **nothing ever wrote a row to it**. Grep found no
+# INSERT, no `bigquery.Client`, no load job - the only references were this
+# resource and the DDL file beside it.
+#
+# That is the same defect as the `compliance_audit_log` table removed in #18
+# and the hand-rolled tracer removed in #19: infrastructure that exists to be
+# pointed at in a diagram. An empty table is worse than no table, because a
+# reviewer reasonably assumes an empty audit surface means "nothing happened"
+# rather than "nothing was ever recorded".
+#
+# Restore it in the same change that adds the writer, not before. The schema is
+# preserved in git history and in terraform/ddl/ if that day comes.
 
-  clustering = ["ticker", "metric_name"]
-
-  schema = jsonencode([
-    { name = "metric_id", type = "STRING", mode = "REQUIRED" },
-    { name = "ticker", type = "STRING", mode = "REQUIRED" },
-    { name = "fiscal_year", type = "INTEGER", mode = "REQUIRED" },
-    { name = "fiscal_period", type = "STRING", mode = "REQUIRED" },
-    { name = "metric_name", type = "STRING", mode = "REQUIRED" },
-    { name = "metric_value", type = "FLOAT", mode = "REQUIRED" },
-    { name = "unit", type = "STRING", mode = "REQUIRED" },
-    { name = "formula_applied", type = "STRING", mode = "REQUIRED" },
-    { name = "source_filing", type = "STRING", mode = "REQUIRED" },
-    { name = "accession_number", type = "STRING", mode = "NULLABLE" },
-    { name = "verified_at", type = "TIMESTAMP", mode = "REQUIRED" }
-  ])
-}

@@ -89,6 +89,14 @@ class Settings(BaseSettings):
     enforce_guardrails: bool = Field(default=True, description="Enforce pre-execution prompt injection filter")
 
     # Observability & Audit Logging
+    log_level: str = Field(
+        default="INFO",
+        description=(
+            "Root log level for the stdlib logging module. Applies to uvicorn "
+            "and third-party library output, not to the audit record, which is "
+            "written unconditionally."
+        ),
+    )
     enable_cloud_trace: bool = Field(default=True, description="Export OpenTelemetry traces to Cloud Trace")
     bigquery_dataset_id: str = Field(default="ira_financial_intelligence", description="BigQuery dataset")
     pubsub_topic_id: str = Field(default="ira-research-events", description="Cloud Pub/Sub broadcast topic")
