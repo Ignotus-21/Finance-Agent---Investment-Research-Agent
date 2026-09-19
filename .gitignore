@@ -54,12 +54,22 @@ dmypy.json
 
 # Terraform
 **/.terraform/*
+
+# Generated locally by `tofu init`. Deliberately not committed: the lock
+# records provider hashes only for the platform that ran init, so a macOS
+# developer's lock file fails `terraform init` on Linux CI with "does not have
+# a package for linux_amd64". Pinning lives in the required_providers block.
+.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 crash.log
 crash.*.log
 *.tfvars
 !*.tfvars.example
+
+# Partial backend configuration. Names the state bucket for a specific
+# project; backend.hcl.example is the committed template.
+backend.hcl
 override.tf
 override.tf.json
 *_override.tf
@@ -90,4 +100,3 @@ scratch/
 # Reference materials (do not commit)
 refrence/
 reference/
-refrence

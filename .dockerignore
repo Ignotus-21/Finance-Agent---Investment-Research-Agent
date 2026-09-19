@@ -1,0 +1,44 @@
+# Build context exclusions for `docker build` / `make docker-build`.
+#
+# The Dockerfile only COPYs pyproject.toml, src/, configs/, openapi.yaml and
+# datasets/sec_fixtures_fy2024.json, so nothing else here can reach the image.
+# It is still worth excluding: the daemon transfers the whole context before
+# reading the Dockerfile, and .venv/ alone is 870 MB. refrence/ is listed
+# because local reference material should not end up in a build context even
+# transiently.
+
+.git/
+refrence/
+
+.venv/
+venv/
+env/
+
+.env
+*.pem
+*.key
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.egg-info/
+dist/
+build/
+
+.vscode/
+.idea/
+.DS_Store
+
+tests/
+docs/
+terraform/
+.github/
+# `ui/` is deliberately NOT excluded. It used to be, on the grounds that
+# Streamlit must not reach the runtime image - which is true, and is enforced
+# where it belongs: the API Dockerfile simply does not COPY it. Excluding it
+# from the shared build context instead broke `Dockerfile.ui`, which needs it.
+# The directory is ~15KB; bounding context size was never the real motive.

@@ -71,7 +71,7 @@ from src.models.response import ResearchBriefResponse, FinancialMetric, Evidenti
 
 class BaseAgent(ABC):
     """Abstract base class for all autonomous agents in the multi-agent system."""
-    
+
     @abstractmethod
     async def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute agent reasoning loop or task extraction."""
@@ -79,7 +79,7 @@ class BaseAgent(ABC):
 
 class BaseTool(ABC):
     """Abstract base class for all deterministic and external tools."""
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -99,21 +99,21 @@ class BaseTool(ABC):
 
 class FilingRetrievalInterface(ABC):
     """Interface for SEC filing retrieval backends (MCP vs REST vs Mock)."""
-    
+
     @abstractmethod
     async def fetch_filing_section(self, ticker: str, form: str, fiscal_year: int, section: str) -> Dict[str, Any]:
         pass
 
 class MarketDataInterface(ABC):
     """Interface for macroeconomic and market news grounding backends."""
-    
+
     @abstractmethod
     async def query_market_context(self, ticker: str, focus_areas: List[str]) -> List[Dict[str, Any]]:
         pass
 
 class GuardrailInterface(ABC):
     """Interface for pre-execution security and safety classifiers."""
-    
+
     @abstractmethod
     def validate_input(self, prompt: str) -> bool:
         pass
@@ -142,27 +142,27 @@ from src.guardrails.input_guardrail import InputGuardrail
 
 class ApplicationContainer:
     """Dependency Injection container assembling application graph."""
-    
+
     def __init__(self, settings: Optional[Settings] = None):
         self.settings = settings or Settings()
-        
+
         # Tools & Adapters
         self.calculator = FinancialCalculator()
         self.sec_client = SECFilingClient(settings=self.settings)
         self.transcript_client = TranscriptClient(settings=self.settings)
         self.search_client = VertexSearchClient(settings=self.settings)
-        
+
         # Guardrails
         self.guardrail = InputGuardrail(settings=self.settings)
-        
+
         # Specialized Sub-Agents
         self.sec_agent = SECSubAgent(client=self.sec_client, settings=self.settings)
         self.transcript_agent = TranscriptSubAgent(client=self.transcript_client, settings=self.settings)
         self.macro_agent = MacroSubAgent(client=self.search_client, settings=self.settings)
-        
+
         # Synthesis Engine
         self.synthesis_engine = SynthesisEngine(calculator=self.calculator, settings=self.settings)
-        
+
         # Root Coordinator
         self.root_coordinator = RootCoordinatorAgent(
             sec_agent=self.sec_agent,

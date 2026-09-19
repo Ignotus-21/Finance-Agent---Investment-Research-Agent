@@ -25,11 +25,21 @@ dependencies = [
     "google-cloud-secret-manager>=2.20.0",
     "google-cloud-dlp>=3.18.0",
     "google-cloud-pubsub>=2.21.0",
+    # Imported directly by src/api/dependencies.py to verify incoming ID
+    # tokens. It arrives transitively via every google-cloud-* package above,
+    # but a direct import deserves a direct declaration - otherwise dropping an
+    # unrelated Google client breaks authentication.
+    "google-auth>=2.30.0",
     "opentelemetry-api>=1.26.0",
     "opentelemetry-sdk>=1.26.0",
     "opentelemetry-instrumentation-fastapi>=0.47b0",
     "opentelemetry-exporter-gcp-trace>=1.6.0",
     "httpx>=0.27.0",
+    # Imported directly by src/mcp_servers/sec_edgar_server.py and by the
+    # agent's StdioServerParameters, so it is declared rather than relied on
+    # as a transitive extra of google-adk. Pinned >=2 because the 2.x server
+    # API (mcp.server.mcpserver.MCPServer) replaced 1.x FastMCP.
+    "mcp>=2.2.0",
     "tenacity>=8.5.0",
     "pyyaml>=6.0.2",
     "jinja2>=3.1.4"
@@ -44,8 +54,24 @@ dev = [
     "ruff>=0.5.0",
     "black>=24.4.0",
     "mypy>=1.10.0",
+    "pre-commit>=3.7.0",
     "types-PyYAML>=6.0.12",
     "types-requests>=2.32.0"
+]
+# Opt-in extra for `--backend=vertex`. Kept out of the core dependency list and
+# out of `dev` on purpose: it drags in pandas, numpy, tqdm and the full
+# aiplatform evaluation stack, which would bloat the Cloud Run image and slow
+# every CI run for a backend that CI never uses.
+#   pip install -e ".[dev,eval]"
+eval = [
+    "google-cloud-aiplatform[evaluation]>=1.60.0"
+]
+# Opt-in extra for the local test console (`make ui`). Streamlit is a developer
+# tool, not part of the service: it must never enter the Cloud Run image, which
+# is why it is neither a core dependency nor in `dev`.
+#   pip install -e ".[dev,ui]"
+ui = [
+    "streamlit>=1.39.0"
 ]
 
 [tool.ruff]
@@ -66,6 +92,17 @@ strict = false
 ignore_missing_imports = true
 explicit_package_bases = true
 disallow_untyped_defs = false
+
+# numpy ships stubs that use PEP 695 `type` statements, which are 3.12+ syntax.
+# We target 3.11 (the Dockerfile runtime), so following those stubs aborts the
+# whole run with a syntax error before any of our own code is checked. These
+# are third-party libraries reached only through the optional Vertex evaluation
+# extra; we gain nothing from type-checking their internals.
+[[tool.mypy.overrides]]
+module = ["numpy.*", "pandas.*", "vertexai.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
 
 [tool.pytest.ini_options]
 minversion = "7.0"

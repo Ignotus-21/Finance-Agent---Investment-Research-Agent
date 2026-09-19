@@ -13,7 +13,27 @@
 
 ## 1. Executive Summary
 
-This report documents the baseline evaluation benchmarks for the IRA multi-agent system. Tested across **52 institutional-grade scenarios**, the system demonstrates zero numerical hallucination (**Faithfulness = 1.0**), perfect evidentiary source attribution (**Citation Precision = 100%**), complete pre-execution threat defense (**Guardrail Interception Rate = 100%**), and end-to-end synthesis completion in **under 45 seconds** (well within the $\le 60\text{s}$ P95 SLA).
+This report documents the baseline evaluation benchmarks for the IRA multi-agent system, measured across **52 institutional-grade scenarios**.
+
+> [!IMPORTANT]
+> **Faithfulness history, kept deliberately.** The original `1.0000` on this
+> page was not a measurement: the harness assigned the literal without ever
+> calling `compute_faithfulness`. PR #9 replaced it with an honest measurement,
+> which came out at **0.60 over 4.5% coverage** - the pipeline emitted almost
+> none of the figures the dataset asserted, and the few it did emit were drawn
+> from hand-typed fixtures containing transcription errors.
+>
+> Both causes are now fixed. The offline corpus holds filings recorded directly
+> from sec.gov, and the dataset asserts the metrics the pipeline actually
+> emits. The current score is **1.0000 over 51.8% coverage (162 of 313
+> ground-truth figures verified)**, and it blocks the build again rather than
+> being waived.
+>
+> Coverage is not 100% and is not expected to be: the pipeline answers every
+> question with the same five ratios, while the dataset asks for segment
+> revenue, net interest income and similar. The unverified half measures that
+> gap. See **DEV-15** in `refrence/plan_deviation.md`.
+
 
 ```mermaid
 pie title Scenario Distribution Across Evaluation Benchmark (52 Scenarios)
@@ -30,12 +50,40 @@ pie title Scenario Distribution Across Evaluation Benchmark (52 Scenarios)
 
 | Evaluation Metric | Baseline Manual Workflow | Legacy GenAI LLM | Target DoD Threshold | IRA System Result | Evaluation Status |
 |---|---|---|---|---|---|
-| **Faithfulness / Groundedness** | 1.0 (Manual checking) | 0.78 (Hallucinations) | **1.0000** | **1.0000** | **PASSED (Zero Hallucination)** |
+| **Faithfulness / Groundedness** | 1.0 (Manual checking) | 0.78 (Hallucinations) | **1.0000** | **1.0000** | **PASSED** — over 51.8% figure coverage; see note above |
 | **Citation Precision** | 0.90 (Manual footnotes) | 0.65 (Stale/Missing URLs) | **1.0000** | **1.0000** | **PASSED (100% Line-Item Provenance)** |
-| **Answer Relevance & Completeness** | 0.85 (Analyst variance) | 0.74 (Verbose digressions)| **$\ge$ 0.9000** | **0.9420** | **PASSED (Comprehensive Briefs)** |
+| **Answer Relevance & Completeness** | 0.85 (Analyst variance) | 0.74 (Verbose digressions)| **$\ge$ 0.9000** | **1.0000** | **PASSED** — but see the caveat on the relevance scorer below |
 | **Guardrail Interception Rate** | N/A | 0.40 (Jailbreak leaks) | **1.0000** | **1.0000** | **PASSED (100% Threats Intercepted)** |
-| **P95 Synthesis Latency** | 14,400s (4 hours) | 180s (Sequential) | **$\le$ 60.0s** | **38.5s** | **PASSED (Sub-Minute Completion)** |
-| **Average Cost per Brief** | $200.00 (Labor) | $2.10 (Token burn) | **$\le$ $0.25** | **$0.165** | **PASSED (Context Cache Discount)** |
+| **P95 Synthesis Latency** | 14,400s (4 hours) | 180s (Sequential) | **$\le$ 60.0s** | **0.25s** | **PASSED** — offline; no LLM call on this path (see below) |
+| **Average Cost per Brief** | $200.00 (Labor) | $2.10 (Token burn) | **$\le$ $0.25** | **$0.165 modelled** | **NOT MEASURED** — projected from list prices. The scored path calls no model, so its true inference cost is $0.00. DEV-17. |
+
+### What these numbers do and do not establish
+
+Three caveats belong next to the table rather than in a footnote, because
+without them two of the rows read as stronger claims than the run supports.
+
+- **Latency (0.25s).** The benchmark runs `OFFLINE_MODE=true` against the
+  recorded corpus, and the REST research path makes **no LLM call at all** -
+  the brief is assembled by `SynthesisEngine` from templates. This figure is
+  therefore a measure of the orchestration and arithmetic, not of a
+  production round trip. It replaces a previously reported **38.5s**, which
+  was not measured either: the code contained `max(elapsed_ms, 38500)`, a
+  floor that manufactured a plausible-looking duration. That line has been
+  deleted. A representative end-to-end figure requires the live path and is
+  tracked as **DEV-04**.
+
+- **Relevance (1.0000).** `compute_relevance` ignores its `expected_behavior`
+  argument and the harness passes a hardcoded focus area, so this scorer is
+  closer to a completeness check on the generated summary than a judgement of
+  whether the brief answered the question. It is reported because it is
+  genuinely computed, but 1.0000 here is weak evidence. The Vertex judge
+  (`--backend=vertex`) exists to give this a second, independent opinion.
+
+- **Faithfulness (1.0000 at 51.8% coverage).** Both the ground truth and the
+  brief derive from the same recorded corpus, so this verifies the extraction,
+  pairing and arithmetic path - not the corpus itself. The corpus is verified
+  separately: it is recorded from sec.gov by `scripts/build_offline_fixtures.py`
+  and every record carries the accession number it came from.
 
 ---
 
@@ -98,4 +146,4 @@ gantt
 | **SEC EDGAR 429 Rate Limit** | Upstream API drops requests | Token Bucket rate limiter (max 8 req/s) + Tenacity exponential backoff with full jitter. | Verified with chaos test harness. |
 | **Upstream 503 Outage** | External service temporarily unreachable | Circuit Breaker pattern trips to `OPEN` after 5 failures; falls back to cached 10-K filing extract. | Verified; graceful degradation without dropping user query. |
 | **Prompt Injection Attacks** | Potential leakage of system prompts / keys | Pre-execution classifier regex & scope filters reject before dispatch. | 100% blocked across all benchmark attack vectors. |
-| **Token Cost Overruns** | Excessive token burn on 150-page 10-Ks | Gemini Context Caching provides 75% token discount on repeated reads. | Brief cost capped at ~$0.165 vs $0.25 ceiling. |
+| **Token Cost Overruns** | Excessive token burn on 150-page 10-Ks | ADK `ContextCacheConfig` (Vertex `CachedContent`) plus routing retrieval to Flash. Neither applies to the first turn of a session or to prefixes under 2,048 tokens. | Projected ~$0.165 vs the $0.25 ceiling. Unverified until a live run. |

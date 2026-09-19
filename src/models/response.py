@@ -69,20 +69,46 @@ class QualitativeSynthesis(BaseModel):
 
 
 class ResearchMetadata(BaseModel):
-    """Operational telemetry and execution metadata for the research brief."""
+    """Operational telemetry and execution metadata for the research brief.
+
+    The inference fields below are zero on this endpoint, and that is the
+    correct value rather than a missing measurement.
+
+    ``POST /v1/research/equity`` runs the deterministic pipeline: XBRL facts are
+    read from the filing, ratios are computed in Python by
+    ``FinancialCalculator``, and the brief is assembled by template. No language
+    model is called anywhere in it. That is what makes the faithfulness score
+    1.0 and the P95 a quarter of a second, and it is also why there is nothing
+    to cache and nothing to route.
+
+    These fields previously carried ``total_tokens_consumed = 24500`` and
+    ``estimated_cost_usd = 0.165`` - a hardcoded pair selected by a boolean that
+    was itself always true - and a ``model_routing`` map naming two models the
+    request never invoked. Every report in ``docs/`` quoted the $0.165 as a
+    measurement.
+
+    The LLM path is the ADK agent (``adk run src/agents``), which does route
+    between Pro and Flash and does use ADK's context caching. It does not
+    produce a ``ResearchBriefResponse``, so it does not fill these in either.
+    """
 
     generation_timestamp: str
     latency_ms: int
-    total_tokens_consumed: int
-    context_cache_hit: bool
-    estimated_cost_usd: float
+    total_tokens_consumed: int = Field(
+        default=0,
+        description="LLM tokens consumed. Zero on the deterministic REST path, which calls no model.",
+    )
+    context_cache_hit: bool = Field(
+        default=False,
+        description="Whether a Gemini context cache was reused. Always false on the REST path: no model call, nothing to cache.",
+    )
+    estimated_cost_usd: float = Field(
+        default=0.0,
+        description="Inference cost. Zero on the REST path. Compute cost is Cloud Run's, and is not attributed per brief.",
+    )
     model_routing: dict[str, str] = Field(
-        default_factory=lambda: {
-            "root_coordinator": "gemini-2.5-pro",
-            "sec_agent": "gemini-2.5-flash",
-            "transcript_agent": "gemini-2.5-flash",
-            "macro_agent": "vertex-search"
-        }
+        default_factory=dict,
+        description="Model used per agent. Empty on the REST path. Populated only where a model was actually invoked.",
     )
 
 

@@ -7,7 +7,7 @@ steps:
       - '-c'
       - |
         pip install ruff mypy pydantic pydantic-settings
-        ruff check src/ tests/
+        ruff check src/ tests/ scripts/ eval/
         mypy src/ --ignore-missing-imports
 
   # 2. Automated Unit, Integration & Chaos Tests (Coverage >= 80%)
@@ -48,9 +48,12 @@ steps:
       - 'push'
       - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'
 
-  # 6. Zero-Downtime Blue/Green Rolling Deployment to Cloud Run
+  # 6. Blue/Green Deploy - Stage GREEN revision with ZERO production traffic.
+  #    The currently serving revision (BLUE) keeps 100% of traffic until the
+  #    smoke test in step 7 passes. The revision is reachable in isolation via
+  #    its tagged URL (https://green-<sha>---<service-url>).
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-to-cloud-run'
+    id: 'deploy-green-revision-no-traffic'
     entrypoint: 'gcloud'
     args:
       - 'run'
@@ -63,7 +66,7 @@ steps:
       - '--platform'
       - 'managed'
       - '--service-account'
-      - 'ira-runtime-sa@$PROJECT_ID.iam.gserviceaccount.com'
+      - '$_RUNTIME_SA@$PROJECT_ID.iam.gserviceaccount.com'
       - '--cpu'
       - '2'
       - '--memory'
@@ -78,11 +81,123 @@ steps:
       - 'ira-vpc-connector'
       - '--vpc-egress'
       - 'all-traffic'
+      - '--revision-suffix'
+      - 'green-$SHORT_SHA'
+      - '--tag'
+      - 'green-$SHORT_SHA'
+      - '--no-traffic'
 
+  # 7. Smoke test the GREEN revision on its tagged URL before any cutover.
+  #    A non-zero exit here aborts the build and leaves BLUE serving, which is
+  #    the entire point of staging with --no-traffic.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'smoke-test-green-revision'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        TAG="green-$SHORT_SHA"
+
+        # Resolve the tagged URL from the service's traffic block rather than
+        # string-building it, so a Cloud Run URL format change cannot silently
+        # point the smoke test at the wrong endpoint.
+        # NOTE: shell expansions are escaped as $$ so Cloud Build passes them
+        # through to bash instead of resolving them as build substitutions.
+        TAG_URL=$$(gcloud run services describe "$_SERVICE_NAME" \
+          --region "$_REGION" --platform managed --format=json \
+          | python3 -c "import json,sys; t=json.load(sys.stdin)['status']['traffic']; print(next(r['url'] for r in t if r.get('tag')=='$$TAG'))")
+
+        echo "GREEN revision staged at: $$TAG_URL"
+
+        # The service is private, so probes must carry an identity token.
+        TOKEN=$$(gcloud auth print-identity-token)
+
+        # /readyz only, and the body is checked rather than the status code.
+        #
+        # /healthz used to be probed here too, and it was worse than useless.
+        # Google's Front End reserves that path on *.run.app and answers it
+        # itself - `x-google-service: _internal`, a 3-byte text/html "ok" - so
+        # the request never reached the container. That iteration passed
+        # unconditionally, including against a revision that crash-loops on
+        # startup. Confirmed against a live deployment on 2026-09-18.
+        #
+        # Checking the body matters for the same reason: a 200 proves something
+        # answered, not that the right thing answered.
+        echo "Probing /readyz ..."
+        for ATTEMPT in 1 2 3 4 5; do
+          if curl --fail --silent --show-error --max-time 20 \
+               -H "Authorization: Bearer $$TOKEN" \
+               "$$TAG_URL/readyz" > /tmp/probe.json; then
+            cat /tmp/probe.json
+            echo ""
+            break
+          fi
+          if [ "$$ATTEMPT" = "5" ]; then
+            echo "SMOKE TEST FAILED on /readyz after 5 attempts. Aborting before cutover; BLUE remains live."
+            exit 1
+          fi
+          echo "  attempt $$ATTEMPT failed, retrying in 10s (cold start)..."
+          sleep 10
+        done
+
+        # Assert on what the revision actually said. `offline_mode: true` is
+        # the specific regression worth blocking: such a revision is healthy,
+        # fast, returns HTTP 200, and serves a year-old recorded corpus that is
+        # indistinguishable from live data unless provenance is read.
+        python3 - /tmp/probe.json <<'PYEOF'
+        import json, sys
+        r = json.load(open(sys.argv[1]))
+        problems = []
+        if r.get("status") != "READY":
+            problems.append(f"status is {r.get('status')!r}, expected 'READY'")
+        runtime = r.get("runtime", {})
+        if runtime.get("offline_mode") is not False:
+            problems.append(
+                f"offline_mode is {runtime.get('offline_mode')!r} - this revision would "
+                "serve the recorded corpus as if it were live SEC data"
+            )
+        if runtime.get("environment") != "production":
+            problems.append(f"environment is {runtime.get('environment')!r}, expected 'production'")
+        if problems:
+            print("SMOKE TEST FAILED. Aborting before cutover; BLUE remains live.")
+            for p in problems:
+                print(f"  - {p}")
+            sys.exit(1)
+        print("GREEN reports READY, production, live SEC.")
+        PYEOF
+
+        echo "Smoke test passed. GREEN is healthy."
+
+  # 8. Cutover - shift 100% of production traffic to the verified GREEN revision.
+  #    Rollback is a single command against the previous revision:
+  #      gcloud run services update-traffic $_SERVICE_NAME \
+  #        --region $_REGION --to-revisions <previous-revision>=100
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'cutover-traffic-to-green'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'update-traffic'
+      - '$_SERVICE_NAME'
+      - '--region'
+      - '$_REGION'
+      - '--platform'
+      - 'managed'
+      - '--to-tags'
+      - 'green-$SHORT_SHA=100'
+
+# These must agree with what Terraform creates, or the pipeline deploys a
+# second, unmanaged service next to the managed one and the smoke test proves
+# nothing about what production is serving. The names below are
+# `ira-service-${var.environment}` and `ira-runtime-${var.environment}-sa`
+# from terraform/main.tf with environment = "production". Change both together.
 substitutions:
   _REGION: 'us-central1'
   _ARTIFACT_REPO: 'ira-repo'
-  _SERVICE_NAME: 'ira-multiagent-service'
+  _SERVICE_NAME: 'ira-service-production'
+  _RUNTIME_SA: 'ira-runtime-production-sa'
 
 images:
   - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'

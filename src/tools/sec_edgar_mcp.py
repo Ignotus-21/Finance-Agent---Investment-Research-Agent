@@ -1,16 +1,85 @@
 """
-SEC EDGAR MCP Client Adapter.
-Enforces the Model Context Protocol (MCP) contract, token-bucket rate limiting (<= 8 req/s),
-mandatory User-Agent header compliance, exponential backoff with jitter, and circuit breaking.
+SEC EDGAR filing client.
+
+Provides one public entry point, :meth:`SECFilingClient.fetch_filing_section`,
+backed by two interchangeable retrieval paths:
+
+* **Offline** (``OFFLINE_MODE=true``, the default) - filings recorded from
+  sec.gov by ``scripts/build_offline_fixtures.py``. Keeps tests, CI and the
+  evaluation regression gate hermetic and deterministic without making them
+  fictional.
+* **Live** (``OFFLINE_MODE=false``) - real HTTP against sec.gov via
+  :mod:`src.tools.sec_edgar_http`, reading financial figures from the
+  registrant's own XBRL tags.
+
+Both paths run behind the same token-bucket rate limiter (<= 8 req/s, under
+SEC's 10 req/s ceiling) and the same circuit breaker, and every response
+carries a ``data_source`` field identifying which path produced it.
 """
 
 import asyncio
+import json
 import time
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from src.config import Settings
-from src.core.exceptions import FilingNotFoundException
+from src.core.exceptions import (
+    FilingNotFoundException,
+    RegistrantMismatchException,
+    UpstreamUnavailableException,
+)
 from src.core.interfaces import BaseTool, FilingRetrievalInterface
+from src.tools.sec_edgar_http import SECEdgarHTTPClient
+
+# Written by scripts/build_offline_fixtures.py. Absent from the container image
+# unless datasets/ is copied in, which is why the loader degrades to an empty
+# corpus rather than failing to import.
+RECORDED_FILINGS_PATH = Path(__file__).resolve().parents[2] / "datasets" / "sec_fixtures_fy2024.json"
+
+
+@lru_cache(maxsize=1)
+def _load_recorded_filings() -> dict[str, dict[str, Any]]:
+    """Load the recorded SEC corpus, keyed as ``TICKER_YEAR_FORM``.
+
+    These figures were previously hand-typed into this module as a literal.
+    That is how offline mode came to report $961bn of Apple services revenue -
+    an order of magnitude out - alongside a shareholders' equity figure that
+    was $9.9bn wrong, both labelled as transcribed from a real filing. Reading
+    a recorded corpus removes the transcription step entirely: the offline
+    numbers are now, by construction, the same ones a live run would return.
+    """
+    if not RECORDED_FILINGS_PATH.exists():
+        return {}
+
+    corpus = json.loads(RECORDED_FILINGS_PATH.read_text(encoding="utf-8"))
+
+    filings: dict[str, dict[str, Any]] = {}
+    for record in corpus.values():
+        current, prior = record["current"], record["prior"]
+        statements = {
+            section: SECFilingClient._shape_statement(section, current, prior)
+            for section in ("INCOME_STATEMENT", "BALANCE_SHEET", "CASH_FLOW")
+        }
+        mda = record.get("mda_item_7", "")
+        statements["MDA_ITEM_7"] = {
+            "section_title": "Item 7. Management's Discussion and Analysis",
+            "text_summary": mda,
+            "extraction_status": "EXTRACTED" if mda else "SECTION_BOUNDARY_NOT_FOUND",
+        }
+
+        key = f"{record['ticker'].upper()}_{record['fiscal_year']}_10-K"
+        filings[key] = {
+            "accession_number": record["accession_number"],
+            "filing_date": record["filing_date"],
+            "company_name": record["company_name"],
+            "fiscal_year": record["fiscal_year"],
+            "statements": statements,
+        }
+
+    return filings
+
 
 
 class TokenBucketRateLimiter:
@@ -82,121 +151,31 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             failure_threshold=self.settings.circuit_breaker_failure_threshold,
             recovery_timeout=float(self.settings.circuit_breaker_recovery_timeout_seconds)
         )
+        # Constructed lazily: SECEdgarHTTPClient validates the User-Agent in its
+        # constructor, and that must not be able to break offline startup.
+        self._http: SECEdgarHTTPClient | None = None
 
-        # High-fidelity primary SEC financial repositories for benchmark tickers
-        self._mock_edgar_filings: dict[str, dict[str, Any]] = {
-            "AAPL_2024_10-K": {
-                "accession_number": "0000320193-24-000106",
-                "filing_date": "2024-10-31",
-                "company_name": "Apple Inc.",
-                "fiscal_year": 2024,
-                "statements": {
-                    "INCOME_STATEMENT": {
-                        "statement_name": "Consolidated Statements of Operations",
-                        "revenue_current": 391035000000.0,
-                        "revenue_prior": 383285000000.0,
-                        "products_revenue": 294890000000.0,
-                        "services_revenue": 961450000000.0,
-                        "cost_of_revenue": 210352000000.0,
-                        "operating_income_current": 123216000000.0,
-                        "operating_income_prior": 114301000000.0,
-                        "net_income": 93736000000.0,
-                        "xbrl_tags": {
-                            "revenue": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
-                            "operating_income": "us-gaap:OperatingIncomeLoss",
-                            "net_income": "us-gaap:NetIncomeLoss"
-                        }
-                    },
-                    "BALANCE_SHEET": {
-                        "statement_name": "Consolidated Balance Sheets",
-                        "cash_and_equivalents": 29943000000.0,
-                        "marketable_securities": 126744000000.0,
-                        "total_current_assets": 152988000000.0,
-                        "total_debt": 106629000000.0,
-                        "short_term_debt": 10912000000.0,
-                        "long_term_debt": 95717000000.0,
-                        "shareholders_equity": 66802000000.0,
-                        "total_liabilities": 308030000000.0
-                    },
-                    "CASH_FLOW": {
-                        "statement_name": "Consolidated Statements of Cash Flows",
-                        "cash_from_operations": 118260000000.0,
-                        "capital_expenditures": 9452000000.0,
-                        "free_cash_flow": 108808000000.0,
-                        "dividends_paid": 15025000000.0,
-                        "share_repurchases": 95000000000.0
-                    },
-                    "MDA_ITEM_7": {
-                        "section_title": "Item 7. Management's Discussion and Analysis of Financial Condition and Results of Operations",
-                        "text_summary": "Services revenue grew 12.9% year-over-year driven by advertising, cloud services, and App Store. Products net sales decreased 2.1% primarily due to lower Wearables, Home and Accessories and foreign exchange volatility in Greater China.",
-                        "focus_areas": {
-                            "Services_Margin": "Services gross margin expanded to 74.0% compared to 70.8% in the prior fiscal year.",
-                            "China_Headwinds": "Greater China segment net sales were $66.9 billion compared to $72.6 billion in FY2023, reflecting competitive pressures and macroeconomic conditions."
-                        }
-                    }
-                }
-            },
-            "MSFT_2024_10-K": {
-                "accession_number": "0000950170-24-087843",
-                "filing_date": "2024-07-30",
-                "company_name": "Microsoft Corporation",
-                "fiscal_year": 2024,
-                "statements": {
-                    "INCOME_STATEMENT": {
-                        "statement_name": "Income Statements",
-                        "revenue_current": 245122000000.0,
-                        "revenue_prior": 211915000000.0,
-                        "operating_income_current": 109433000000.0,
-                        "operating_income_prior": 88523000000.0,
-                        "net_income": 88136000000.0
-                    },
-                    "BALANCE_SHEET": {
-                        "statement_name": "Balance Sheets",
-                        "total_debt": 44900000000.0,
-                        "shareholders_equity": 268450000000.0
-                    },
-                    "CASH_FLOW": {
-                        "statement_name": "Cash Flows Statements",
-                        "cash_from_operations": 118548000000.0,
-                        "capital_expenditures": 44477000000.0
-                    },
-                    "MDA_ITEM_7": {
-                        "section_title": "Item 7 MD&A",
-                        "text_summary": "Intelligent Cloud segment revenue increased 19% to $105.4 billion driven by Azure and other cloud services revenue growth of 30%."
-                    }
-                }
-            },
-            "NVDA_2024_10-K": {
-                "accession_number": "0001045810-24-000029",
-                "filing_date": "2024-02-21",
-                "company_name": "NVIDIA Corporation",
-                "fiscal_year": 2024,
-                "statements": {
-                    "INCOME_STATEMENT": {
-                        "statement_name": "Consolidated Statements of Income",
-                        "revenue_current": 60922000000.0,
-                        "revenue_prior": 26974000000.0,
-                        "operating_income_current": 32972000000.0,
-                        "operating_income_prior": 4224000000.0,
-                        "net_income": 29760000000.0
-                    },
-                    "BALANCE_SHEET": {
-                        "statement_name": "Consolidated Balance Sheets",
-                        "total_debt": 9700000000.0,
-                        "shareholders_equity": 42980000000.0
-                    },
-                    "CASH_FLOW": {
-                        "statement_name": "Consolidated Statements of Cash Flows",
-                        "cash_from_operations": 28090000000.0,
-                        "capital_expenditures": 1056000000.0
-                    },
-                    "MDA_ITEM_7": {
-                        "section_title": "Item 7 MD&A",
-                        "text_summary": "Data Center revenue was $47.5 billion, up 217% from a year ago, driven by the NVIDIA HGX platform and Hopper architecture demand."
-                    }
-                }
-            }
-        }
+        # Filings recorded from sec.gov, not transcribed by hand. See
+        # _load_recorded_filings for why that distinction earned its own
+        # function.
+        self._mock_edgar_filings: dict[str, dict[str, Any]] = _load_recorded_filings()
+
+    @property
+    def http(self) -> SECEdgarHTTPClient:
+        """The live EDGAR transport.
+
+        Built on first use rather than in ``__init__`` because
+        :class:`SECEdgarHTTPClient` rejects a non-compliant User-Agent at
+        construction time, and that must not be able to break startup for a
+        deployment running entirely offline.
+        """
+        if self._http is None:
+            self._http = SECEdgarHTTPClient(
+                user_agent=self.settings.sec_edgar_user_agent,
+                timeout_seconds=self.settings.sec_http_timeout_seconds,
+                max_retries=self.settings.sec_http_max_retries,
+            )
+        return self._http
 
     @property
     def name(self) -> str:
@@ -206,40 +185,49 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
     def description(self) -> str:
         return "Fetches parsed audited tables and XBRL line-item metadata from SEC Form 10-K/10-Q filings."
 
-    async def execute(self, **kwargs: Any) -> Any:
-        ticker = kwargs.get("ticker", "")
-        form = kwargs.get("form", "10-K")
-        fiscal_year = kwargs.get("fiscal_year", 2024)
-        section = kwargs.get("section", "INCOME_STATEMENT")
-        return await self.fetch_filing_section(ticker, form, fiscal_year, section)
-
     async def fetch_filing_section(
         self, ticker: str, form: str, fiscal_year: int, section: str
     ) -> dict[str, Any]:
-        """Fetches filing section under token bucket rate limit and circuit breaker protection."""
-        # 1. Check Circuit Breaker
+        """Fetch a filing section under rate-limit and circuit-breaker protection.
+
+        Two paths, selected by ``settings.offline_mode``:
+
+        * **Offline** (default) - served from the bundled fixtures. Every
+          response is stamped ``data_source: OFFLINE_FIXTURE`` so a caller can
+          never mistake it for filed data.
+        * **Live** - real HTTP against sec.gov, with financial figures read
+          from the registrant's own XBRL tags.
+        """
+        # 1. Circuit breaker. When open we serve the last-known-good fixture
+        #    rather than failing the whole brief.
         if not self.circuit_breaker.is_available():
-            # Return cached fallback
             return self._get_cached_fallback(ticker, form, fiscal_year, section)
 
-        # 2. Enforce Token Bucket Rate Limiting
+        # 2. Token bucket. Applies to both paths: it is what keeps us under
+        #    SEC's 10 req/s ceiling, and it makes offline timing realistic.
         await self.rate_limiter.acquire()
 
-        # 3. Simulate SEC API call with exponential backoff & jitter
+        if self.settings.offline_mode:
+            return self._fetch_from_fixtures(ticker, form, fiscal_year, section)
+
+        return await self._fetch_from_edgar(ticker, form, fiscal_year, section)
+
+    def _fetch_from_fixtures(
+        self, ticker: str, form: str, fiscal_year: int, section: str
+    ) -> dict[str, Any]:
+        """Offline path: bundled fixtures, explicitly labelled as such."""
         key = f"{ticker.upper()}_{fiscal_year}_{form.upper()}"
         filing = self._mock_edgar_filings.get(key)
+        is_curated = filing is not None
 
-        if not filing:
-            # Generate valid audited filing for requested ticker
-            if ticker and ticker.replace('.', '').isalnum() and len(ticker) <= 8:
-                filing = self._generate_generic_filing(ticker.upper(), fiscal_year, form)
-            else:
+        if filing is None:
+            if not (ticker and ticker.replace('.', '').isalnum() and len(ticker) <= 8):
                 self.circuit_breaker.record_failure()
                 raise FilingNotFoundException(ticker=ticker, form=form, fiscal_year=fiscal_year)
+            filing = self._generate_generic_filing(ticker.upper(), fiscal_year, form)
 
         self.circuit_breaker.record_success()
-        statements = filing.get("statements", {})
-        section_data = statements.get(section.upper(), {})
+        section_data = filing.get("statements", {}).get(section.upper(), {})
 
         return {
             "ticker": ticker.upper(),
@@ -250,13 +238,157 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             "company_name": filing["company_name"],
             "section_requested": section.upper(),
             "data": section_data,
-            "provenance_signature": f"SEC:{ticker}:{form}:{fiscal_year}:{filing['accession_number']}"
+            # Provenance is explicit about what this actually is. A curated
+            # fixture is transcribed from a real filing; a generated one is
+            # invented placeholder arithmetic and must never be presented as
+            # evidence.
+            "data_source": "OFFLINE_FIXTURE" if is_curated else "OFFLINE_SYNTHETIC_PLACEHOLDER",
+            "provenance_signature": (
+                f"FIXTURE:{ticker.upper()}:{form.upper()}:{fiscal_year}:{filing['accession_number']}"
+                if is_curated
+                else f"SYNTHETIC:{ticker.upper()}:{form.upper()}:{fiscal_year}"
+            ),
         }
 
+    async def _fetch_from_edgar(
+        self, ticker: str, form: str, fiscal_year: int, section: str
+    ) -> dict[str, Any]:
+        """Live path: real SEC EDGAR data, or an honest failure.
+
+        Never returns synthetic data. If EDGAR is unreachable the circuit
+        breaker records the failure and a previously recorded fixture for this
+        exact filing is returned, clearly labelled ``OFFLINE_FIXTURE`` with a
+        degraded ``source_status`` - which is a different thing from inventing
+        numbers. Where no such fixture exists the request fails with
+        :class:`UpstreamUnavailableException` (503).
+        """
+        try:
+            async with self.http.build_client() as client:
+                cik = await self.http.resolve_cik(ticker, client)
+                filing = await self.http.find_filing(
+                    cik, form, fiscal_year, client, ticker=ticker
+                )
+
+                section_upper = section.upper()
+                if section_upper == "MDA_ITEM_7":
+                    text = await self.http.fetch_mda_text(
+                        cik,
+                        filing["accession_number"],
+                        filing["primary_document"],
+                        client,
+                    )
+                    section_data: dict[str, Any] = {
+                        "section_title": "Item 7 MD&A",
+                        "text_summary": text,
+                        "extraction_status": "EXTRACTED" if text else "SECTION_BOUNDARY_NOT_FOUND",
+                    }
+                else:
+                    # period_end pins the current year to this filing's exact
+                    # reporting period. The prior year is matched by end-date
+                    # year alone, which is unambiguous because only one annual
+                    # period can end in a given year.
+                    period_end = filing.get("report_date", "")
+                    facts = await self.http.fetch_xbrl_facts(
+                        cik, fiscal_year, client, period_end=period_end
+                    )
+                    prior = await self.http.fetch_xbrl_facts(cik, fiscal_year - 1, client)
+                    section_data = self._shape_statement(section_upper, facts, prior)
+
+        except (FilingNotFoundException, RegistrantMismatchException):
+            # A genuine "SEC does not have this" - or "that ticker is not this
+            # registrant" - is a client error, not an upstream fault. Do not
+            # trip the breaker on it, and do not bury it under a fallback.
+            raise
+        except Exception:
+            self.circuit_breaker.record_failure()
+            return self._get_cached_fallback(ticker, form, fiscal_year, section)
+
+        self.circuit_breaker.record_success()
+
+        return {
+            "ticker": ticker.upper(),
+            "form": form.upper(),
+            "fiscal_year": fiscal_year,
+            "accession_number": filing["accession_number"],
+            "filing_date": filing["filing_date"],
+            "company_name": filing["company_name"],
+            "section_requested": section.upper(),
+            "data": section_data,
+            "data_source": "SEC_EDGAR_LIVE",
+            "provenance_signature": (
+                f"SEC:{ticker.upper()}:{form.upper()}:{fiscal_year}:{filing['accession_number']}"
+            ),
+        }
+
+    @staticmethod
+    def _shape_statement(
+        section: str, facts: dict[str, float], prior: dict[str, float]
+    ) -> dict[str, Any]:
+        """Project flat XBRL concepts onto the statement shape callers expect.
+
+        Keys absent from the filing are omitted rather than defaulted to zero;
+        a missing tag means "the registrant did not report this", and zero
+        would be a materially different claim.
+        """
+        shapes: dict[str, dict[str, float | None]] = {
+            "INCOME_STATEMENT": {
+                "revenue_current": facts.get("revenue"),
+                "revenue_prior": prior.get("revenue"),
+                "operating_income_current": facts.get("operating_income"),
+                "operating_income_prior": prior.get("operating_income"),
+                "net_income": facts.get("net_income"),
+            },
+            "BALANCE_SHEET": {
+                "cash_and_equivalents": facts.get("cash_and_equivalents"),
+                "total_debt": facts.get("total_debt"),
+                "shareholders_equity": facts.get("shareholders_equity"),
+            },
+            "CASH_FLOW": {
+                "cash_from_operations": facts.get("cash_from_operations"),
+                "capital_expenditures": facts.get("capital_expenditures"),
+            },
+        }
+
+        names = {
+            "INCOME_STATEMENT": "Consolidated Statements of Income",
+            "BALANCE_SHEET": "Consolidated Balance Sheets",
+            "CASH_FLOW": "Consolidated Statements of Cash Flows",
+        }
+
+        selected = shapes.get(section)
+        if selected is None:
+            return {}
+
+        result: dict[str, Any] = {"statement_name": names[section], "xbrl_source": "us-gaap"}
+        result.update({k: v for k, v in selected.items() if v is not None})
+        return result
+
     def _get_cached_fallback(self, ticker: str, form: str, fiscal_year: int, section: str) -> dict[str, Any]:
-        """Fallback to cached historical data when upstream SEC EDGAR is down."""
+        """Degraded path: the last-known-good fixture, or an honest 503.
+
+        Two things this must never do, both of which it used to do:
+
+        1. **Omit ``data_source``.** The MCP tool contract tells the model to
+           check that field before citing anything. Leaving it off the exact
+           responses where provenance matters most made the instruction
+           unfollowable, and crashed the server with ``KeyError`` besides.
+        2. **Invent numbers in live mode.** Falling through to
+           ``_generate_generic_filing`` for an unknown ticker produced a
+           complete, plausible, entirely fictional income statement. Offline
+           mode may do that - it is a declared simulation and the placeholder
+           is labelled as one. A live request may not.
+        """
         key = f"{ticker.upper()}_{fiscal_year}_{form.upper()}"
-        filing = self._mock_edgar_filings.get(key) or self._generate_generic_filing(ticker.upper(), fiscal_year, form)
+        filing = self._mock_edgar_filings.get(key)
+        is_curated = filing is not None
+
+        if filing is None:
+            if not self.settings.offline_mode:
+                raise UpstreamUnavailableException(
+                    service="SEC_EDGAR", ticker=ticker.upper(), form=form.upper(), fiscal_year=fiscal_year
+                )
+            filing = self._generate_generic_filing(ticker.upper(), fiscal_year, form)
+
         return {
             "ticker": ticker.upper(),
             "form": form.upper(),
@@ -266,6 +398,9 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             "company_name": filing["company_name"],
             "section_requested": section.upper(),
             "data": filing["statements"].get(section.upper(), {}),
+            # Same vocabulary as the happy paths, so there is one provenance
+            # enum for the model to reason about rather than three.
+            "data_source": "OFFLINE_FIXTURE" if is_curated else "OFFLINE_SYNTHETIC_PLACEHOLDER",
             "source_status": "CACHED_FALLBACK_CIRCUIT_BREAKER_ACTIVE",
             "provenance_signature": f"SEC:CACHE:{ticker}:{form}:{fiscal_year}"
         }

@@ -59,15 +59,69 @@ class FilingNotFoundException(FinancialAgentException):
         )
 
 
-class UpstreamRateLimitException(FinancialAgentException):
-    """Raised when an upstream service returns 429 after retries."""
+class RegistrantMismatchException(FinancialAgentException):
+    """The entity holding the ticker today is not the one that filed the report.
 
-    def __init__(self, service: str, retry_after: int | None = None) -> None:
+    Distinct from FilingNotFoundException on purpose. "This company has no
+    FY2024 10-K" and "you are looking at the wrong company" need different
+    answers, and conflating them sent a reader hunting for a missing filing
+    when the filing exists under another CIK.
+    """
+
+    def __init__(
+        self, ticker: str, cik: str, entity_name: str, form: str, fiscal_year: int
+    ) -> None:
         super().__init__(
-            message=f"Upstream provider '{service}' rate limit reached. Circuit breaker engaged.",
-            error_code="UPSTREAM_RATE_LIMIT",
-            status_code=429,
-            details={"service": service, "retry_after": retry_after},
+            message=(
+                f"Ticker '{ticker}' currently resolves to '{entity_name}' (CIK {cik}), "
+                f"which has never filed a {form}. The ticker has most likely moved "
+                f"registrant - a reorganisation, merger or holding-company insertion - "
+                f"so the FY{fiscal_year} {form} belongs to a predecessor entity under a "
+                f"different CIK. SEC publishes no reverse index from ticker to former "
+                f"registrant; map it explicitly in TICKER_CIK_OVERRIDES "
+                f"(src/tools/sec_edgar_http.py)."
+            ),
+            error_code="REGISTRANT_MISMATCH",
+            status_code=404,
+            details={
+                "ticker": ticker,
+                "resolved_cik": cik,
+                "resolved_entity": entity_name,
+                "form": form,
+                "fiscal_year": fiscal_year,
+            },
+        )
+
+
+class UpstreamUnavailableException(FinancialAgentException):
+    """Raised when an upstream source is unreachable and no real data is cached.
+
+    Deliberately distinct from FilingNotFoundException (404, "this does not
+    exist"). This one means "the filing exists, we just cannot reach it right
+    now" - a 503. SEC 429s land here too: sec_edgar_http backs off and retries,
+    and an exhausted retry budget is an unreachable upstream like any other.
+
+    It exists because the alternative was worse. The degraded path used to fall
+    through to generated placeholder figures, which meant an EDGAR outage
+    produced a brief full of confident, fabricated numbers rather than an
+    error. An analyst can act on an error; they cannot detect a plausible lie.
+    """
+
+    def __init__(self, service: str, ticker: str, form: str, fiscal_year: int) -> None:
+        super().__init__(
+            message=(
+                f"Upstream provider '{service}' is unavailable and no verified filing "
+                f"for {ticker} {form} FY{fiscal_year} is cached locally. Refusing to "
+                f"substitute synthetic figures for filed data."
+            ),
+            error_code="UPSTREAM_UNAVAILABLE",
+            status_code=503,
+            details={
+                "service": service,
+                "ticker": ticker,
+                "form": form,
+                "fiscal_year": fiscal_year,
+            },
         )
 
 

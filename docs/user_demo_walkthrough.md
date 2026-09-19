@@ -145,19 +145,28 @@ curl -X POST "http://localhost:8080/v1/research/equity" \
   ],
   "metadata": {
     "generation_timestamp": "2026-09-14T12:00:00Z",
-    "latency_ms": 38500,
-    "total_tokens_consumed": 24500,
-    "context_cache_hit": true,
-    "estimated_cost_usd": 0.165,
-    "model_routing": {
-      "root_coordinator": "gemini-2.5-pro",
-      "sec_agent": "gemini-2.5-flash",
-      "transcript_agent": "gemini-2.5-flash",
-      "macro_agent": "vertex-search"
-    }
+    "latency_ms": 247,
+    "total_tokens_consumed": 0,
+    "context_cache_hit": false,
+    "estimated_cost_usd": 0.0,
+    "model_routing": {}
   }
 }
 ```
+
+> [!NOTE]
+> The four zeros are correct, not missing data. This endpoint runs the
+> deterministic pipeline — XBRL facts in, `FinancialCalculator` for the
+> arithmetic, a template for the prose — and calls no language model, so there
+> are no tokens to count, no cache to hit and no inference to bill.
+>
+> It used to report `24500` tokens, `estimated_cost_usd: 0.165`, and a
+> `model_routing` map naming two models the request never invoked. Those were
+> constants.
+>
+> Model routing and context caching are real, and they live on the ADK path
+> (`adk run src/agents`): a Pro coordinator delegating retrieval to a Flash
+> specialist, with ADK's `ContextCacheConfig` against Vertex `CachedContent`.
 
 ---
 

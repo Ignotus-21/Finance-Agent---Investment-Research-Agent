@@ -74,11 +74,6 @@ class VertexSearchClient(MarketDataInterface, BaseTool):
     def description(self) -> str:
         return "Queries real-time macroeconomic indicators and market news with source citations."
 
-    async def execute(self, **kwargs: Any) -> Any:
-        ticker = kwargs.get("ticker", "")
-        focus_areas = kwargs.get("focus_areas", [])
-        return await self.query_market_context(ticker, focus_areas)
-
     async def query_market_context(
         self, ticker: str, focus_areas: list[str]
     ) -> list[dict[str, Any]]:

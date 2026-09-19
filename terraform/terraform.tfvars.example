@@ -5,3 +5,46 @@ container_image       = "us-central1-docker.pkg.dev/ira-capstone-finance-prod/ir
 min_instances         = 1
 max_instances         = 50
 container_concurrency = 80
+
+# Must match the _ARTIFACT_REPO substitution in cloudbuild.yaml.
+artifact_repository_id = "ira-repo"
+
+# Destination for every Cloud Monitoring alert policy. Set this to a real
+# address or the alerts fire into a mailbox nobody reads.
+oncall_email = "ira-oncall@example.com"
+
+# REQUIRED, no default. SEC bans the egress IP of callers it cannot identify,
+# and every request from this service leaves through one VPC connector, so the
+# ban would take down the whole deployment. Use a monitored mailbox.
+sec_edgar_user_agent = "IRA Research admin@example.com"
+
+# false = live sec.gov. Set true only to stand the service up against the
+# recorded FY2024 corpus, e.g. for a demo with no external dependency.
+offline_mode = false
+
+# What an incoming ID token's `aud` claim must say. A name you choose, not the
+# service URL - the URL does not exist until the apply that creates the service,
+# and callers cannot be configured before it. Required: a production container
+# started with this empty exits rather than accept credentials it cannot verify.
+# Any string; a URL-shaped value such as "https://ira.internal.example.com"
+# works equally well and is what the provider docs show.
+custom_audiences = ["ira-service-production"]
+
+# Who may impersonate the caller service account to mint one of those tokens.
+# This is the list to put your own address in if you intend to curl the service.
+token_creator_members = [
+  # "user:analyst@example.com",
+]
+
+# Who may invoke the service. The caller service account is added automatically;
+# this is for anything else. Empty is the correct starting point.
+invoker_members = [
+  # "user:analyst@example.com",
+  # "serviceAccount:reporting@example.iam.gserviceaccount.com",
+]
+
+# Flip to true after installing the Cloud Build GitHub App on the repository.
+enable_cloudbuild_trigger = false
+github_owner              = "delta-fde"
+github_repo               = "itsadi-finance-investment-research-agent"
+cloudbuild_trigger_branch = "^develop$"

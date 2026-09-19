@@ -41,8 +41,7 @@ class SynthesisEngine:
         transcript_data: dict[str, Any],
         macro_data: dict[str, Any],
         verified_metrics: list[FinancialMetric],
-        cache_hit: bool = True,
-        latency_ms: int = 38500
+        latency_ms: int,
     ) -> ResearchBriefResponse:
         """Assembles and verifies all multi-source components into ResearchBriefResponse."""
         ticker = request.ticker
@@ -131,17 +130,21 @@ class SynthesisEngine:
             )
         ]
 
-        # 8. Compute Telemetry & Cost Model (< $0.25 cap)
+        # 8. Telemetry.
+        #
+        # There is no cost model here any more. This method makes no model call
+        # - it reads XBRL facts, calls FinancialCalculator, and fills a template
+        # - so tokens, cache hits and inference cost are all genuinely zero, and
+        # ResearchMetadata defaults them to zero. What stood here before was
+        # `tokens_consumed = 24500 if cache_hit else 148000` and
+        # `cost_usd = 0.165 if cache_hit else 0.420`, chosen by a flag that was
+        # always true, and the $0.165 was reported as a measured figure in five
+        # documents.
         brief_id = f"brief-{uuid.uuid4().hex[:8]}"
-        tokens_consumed = 24500 if cache_hit else 148000
-        cost_usd = 0.165 if cache_hit else 0.420
 
         metadata = ResearchMetadata(
             generation_timestamp=datetime.datetime.now(datetime.UTC).isoformat(),
             latency_ms=latency_ms,
-            total_tokens_consumed=tokens_consumed,
-            context_cache_hit=cache_hit,
-            estimated_cost_usd=cost_usd
         )
 
         return ResearchBriefResponse(

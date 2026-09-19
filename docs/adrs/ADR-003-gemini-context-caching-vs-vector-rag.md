@@ -47,16 +47,16 @@ We must decide on the optimal strategy for processing annual 10-K filings.
 ```mermaid
 flowchart TD
     Request[Research Query: AAPL FY2024] --> CacheCheck{Gemini Context<br/>Cache Exists?}
-    
+
     CacheCheck -- No --> Ingest10K[Download & Normalize Form 10-K<br/>~150k Tokens]
     Ingest10K --> CreateCache[Create Vertex AI Context Cache<br/>TTL: 60 mins]
     CreateCache --> BindAgent[Bind Model to Context Cache]
-    
+
     CacheCheck -- Yes --> BindAgent
-    
+
     BindAgent --> Query1[SEC Agent: Extract Balance Sheet & MD&A<br/>Cached Input: $0.3125 / 1M]
     BindAgent --> Query2[Synthesis Engine: Cross-Verify Footnotes<br/>Cached Input: $0.3125 / 1M]
-    
+
     Query1 --> Result[100% Table Fidelity & Verified Provenance]
     Query2 --> Result
 ```
@@ -79,3 +79,59 @@ flowchart TD
 - **Positive:** Complete preservation of dense tabular financial statements and multi-page footnote disclosures, eliminating table destruction caused by text chunkers.
 - **Positive:** Achieves 75% cost reduction on input tokens, keeping total research brief synthesis cost well under the $0.25 target.
 - **Trade-off:** Cache creation requires a one-time setup latency of ~10 seconds per unique ticker/filing on first access. This is mitigated by background pre-warming for core coverage universe tickers.
+
+---
+
+### Deliberately Not Provisioned: Vertex AI Vector Search
+
+This ADR has a direct infrastructure consequence that is recorded here so it is
+discoverable from the architecture documents themselves.
+
+**Vertex AI Vector Search Index and Index Endpoint are intentionally NOT provisioned**
+in `terraform/`. No `google_vertex_ai_index` or `google_vertex_ai_index_endpoint`
+resource exists, and no embedding/chunking ingestion pipeline is implemented.
+
+#### Rationale
+
+Option 3 was chosen precisely *because* chunk-based vector retrieval is the wrong
+primitive for this document class. Provisioning the index anyway would mean shipping
+infrastructure that **no code path queries**:
+
+1. **Continuous cost with zero utilisation.** A Vector Search Index Endpoint is a
+   long-lived, always-billed resource. It would consume budget indefinitely while
+   serving no query, directly working against the `< $0.25` per-brief target that this
+   same ADR's caching decision exists to protect.
+2. **Unjustified attack surface.** An unused endpoint still requires IAM bindings,
+   VPC reachability, and lifecycle management — expanding the security perimeter
+   documented in the threat model for no functional return.
+3. **Maintenance burden without a consumer.** Index schema, dimensionality, and
+   distance-measure choices would need upkeep across provider upgrades, with no test
+   able to meaningfully exercise them.
+4. **Architectural honesty.** Infrastructure whose only purpose is to be pointed at
+   during a review is not architecture. The decision recorded above is the deliverable;
+   contradicting it in Terraform would make both the ADR and the IaC untrustworthy.
+
+The capabilities the vector store would have provided are met by other means:
+
+| Capability | Delivered by |
+|---|---|
+| Large-document retrieval | Gemini Context Caching — ADK `ContextCacheConfig` on the App, `src/agents/adk_agent.py`. Superseded `src/cache/context_caching.py`, which simulated it. |
+| Table-aware structured extraction | `src/tools/sec_edgar_mcp.py` (XBRL statement parsing) |
+| Analytical querying over historical metrics | BigQuery datasets — `terraform/modules/bigquery/` |
+| Real-time external grounding | Vertex AI Search grounding — `src/tools/search_grounding.py` |
+
+#### Reversal Trigger
+
+This waiver holds **only while the system operates on one filing per request**. It must
+be revisited if scope expands to **multi-document corpus search** — for example
+*"find every 10-K across the S&P 500 that discusses FX headwinds in Item 7"*. Context
+caching cannot hold hundreds of filings in a single context window, so at that point
+vector search becomes the correct primitive and this section should be superseded by a
+new ADR.
+
+#### Traceability
+
+- Capstone specification clause: p.12 *"Datastore & Vector Search Provisioning"* and
+  p.14 *"…and vector store embeddings"*.
+- Waiver registered as **DEV-01** in the project's plan deviation register.
+- Approved by the project owner on 2026-09-16.

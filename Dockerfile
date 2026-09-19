@@ -29,6 +29,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY src/ ./src/
 COPY configs/ ./configs/
 COPY openapi.yaml .
+# The recorded SEC corpus that OFFLINE_MODE serves. Without it the client finds
+# no filings and falls through to synthetic placeholders, so a container built
+# without this line answers questions with invented numbers.
+COPY datasets/sec_fixtures_fy2024.json ./datasets/
 
 # Set non-root ownership
 RUN chown -R irauser:irauser /app

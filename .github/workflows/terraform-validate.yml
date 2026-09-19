@@ -1,0 +1,61 @@
+name: CI - Terraform Validate
+
+# The Terraform estate had no automated verification at all: a syntax error or
+# a bad resource argument would only surface during an actual `apply` against
+# the live project. This workflow catches both at PR time.
+#
+# It deliberately does NOT run `terraform plan` - that needs credentials for a
+# real project and would turn every PR into an authenticated cloud operation.
+# `validate` checks syntax, provider schema conformance, and variable wiring
+# without touching Google Cloud.
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'terraform/**'
+      - 'configs/monitoring/**'
+      - '.github/workflows/terraform-validate.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'terraform/**'
+      - 'configs/monitoring/**'
+      - '.github/workflows/terraform-validate.yml'
+
+# Least privilege for GITHUB_TOKEN. Every job here only reads the
+# repository; the default grant is far wider than that.
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: '1.9.8'
+          terraform_wrapper: false
+
+      - name: Check Canonical Formatting
+        run: terraform fmt -check -recursive -diff
+
+      - name: Initialise Providers (no backend, no credentials)
+        run: terraform init -backend=false -input=false
+
+      - name: Validate Configuration
+        run: terraform validate -no-color
+
+      - name: Validate Monitoring Dashboard JSON
+        # The dashboard is read with file() and passed straight to the
+        # Monitoring API, so Terraform cannot tell us if it is malformed.
+        working-directory: .
+        run: python -c "import json; json.load(open('configs/monitoring/cloud_monitoring_dashboard.json')); print('dashboard JSON is well-formed')"

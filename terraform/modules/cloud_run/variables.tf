@@ -6,6 +6,11 @@ variable "region" {
   type = string
 }
 
+variable "environment" {
+  type    = string
+  default = "production"
+}
+
 variable "service_name" {
   type    = string
   default = "ira-multiagent-service"
@@ -36,4 +41,51 @@ variable "max_instances" {
 variable "container_concurrency" {
   type    = number
   default = 80
+}
+
+variable "offline_mode" {
+  description = "Serve SEC data from the recorded corpus instead of sec.gov."
+  type        = bool
+  default     = false
+}
+
+variable "sec_edgar_user_agent" {
+  description = "Contact string sent in the User-Agent header on every sec.gov request."
+  type        = string
+}
+
+variable "custom_audiences" {
+  description = "Audiences this service accepts on an incoming ID token, set on the service itself and mirrored into AUTH_ALLOWED_AUDIENCES so IAM and the application agree. Stable names, not the run.app URL: a caller has to mint a token for one of these, and the URL is not known until after the apply that creates it."
+  type        = list(string)
+  default     = []
+}
+
+variable "ingress" {
+  description = "Cloud Run ingress setting."
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+}
+
+variable "invoker_members" {
+  description = "IAM principals granted roles/run.invoker on the service."
+  type        = list(string)
+  default     = []
+}
+
+variable "pubsub_topic_id" {
+  type        = string
+  description = "Topic the broadcaster publishes research.brief.completed events to."
+}
+
+variable "enable_adk_web" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+    Mount the ADK developer UI and agent REST surface at /adk on this service.
+
+    Off by default. That surface accepts free-text prompts straight to the
+    model, so it does not pass through the /v1 guardrail chain, and its
+    sessions are in-memory and do not survive a revision. Enable it on a test
+    deployment behind IAM, not on one serving analysts.
+  EOT
 }

@@ -23,10 +23,10 @@
 +-----------------------------------------------------------------------------------------+
 |  KEY OUTCOMES:                                                                          |
 |  - End-to-End Latency: 38.5 seconds (P95 SLA: <= 60s)                                   |
-|  - Numerical Faithfulness: 1.0000 (Zero Hallucination permitted on financial numbers)   |
+|  - Numerical Faithfulness: 1.0000 at 51.8% coverage - TARGET MET, enforced in CI        |
 |  - Evidentiary Provenance: 100% Verifiable Primary SEC Form 10-K & Transcript Citations |
 |  - Unit & Integration Test Coverage: 91% (DoD Threshold: >= 80%)                        |
-|  - Per-Query Cost: $0.165 (DoD Budget Cap: <= $0.25) via Gemini Context Caching         |
+|  - Per-Query Cost: $0.165 MODELLED, not measured (Cap <= $0.25); REST path = $0.00      |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -43,7 +43,7 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
    - *Proof Artifact:* [`src/tools/sec_edgar_mcp.py`](file:///src/tools/sec_edgar_mcp.py), [`src/tools/transcript_parser.py`](file:///src/tools/transcript_parser.py).
 3. **Model Selection, Tuning & Optimization (Score: 3):** Model tier routing: Gemini 2.5 Pro for planning/synthesis; Gemini 2.5 Flash for sub-agent document parsing; Pydantic v2 strict JSON schema validation; system prompt engineering.
    - *Proof Artifact:* [`configs/settings.yaml`](file:///configs/settings.yaml), [`configs/prompts/`](file:///configs/prompts/).
-4. **LLM Ops and Evaluation (Score: 3):** Curated Golden Evaluation Dataset (52 multi-sector scenarios); Vertex AI Gen AI Evaluation calculating Faithfulness (=1.0), Relevance (>=0.90), and Citation Precision (=100%); regression gates.
+4. **LLM Ops and Evaluation (Score: 3):** Curated Golden Evaluation Dataset (52 multi-sector scenarios); dual-backend harness - deterministic local scorers (CI default) plus the **Vertex AI Gen AI Evaluation Service** via `--backend=vertex` for LLM-judged groundedness (`eval/vertex_backend.py`); automated regression gate. Relevance (1.0) and Citation Precision (1.0) pass. **Faithfulness measures 1.0000 at 51.8% figure coverage** against filings recorded from sec.gov, and blocks the build rather than being waived. Coverage is deliberately short of 100%: the pipeline answers every question with the same five ratios, and the unverified remainder is the measure of that gap (DEV-15).
    - *Proof Artifact:* [`datasets/golden_evaluation_dataset.json`](file:///datasets/golden_evaluation_dataset.json), [`eval/regression_gate.py`](file:///eval/regression_gate.py).
 5. **Domain-Applied AI/ML Expertise (Score: 3):** Deterministic formulas for YoY revenue growth, operating margin compression, FCF conversion, debt-to-equity; strict SEC Item 1A & Item 7 MD&A line-item citations; FINRA regulatory compliance.
    - *Proof Artifact:* [`src/tools/financial_calculator.py`](file:///src/tools/financial_calculator.py), [`docs/financial_kpi_specification.md`](file:///docs/financial_kpi_specification.md).
@@ -59,8 +59,8 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
    - *Proof Artifact:* [`docs/prd_functional_requirements.md#section-7`](file:///docs/prd_functional_requirements.md).
 9. **System Design Artifacts (Score: 3):** Visual system block diagrams, C4 container & component diagrams, UML sequence diagrams, data flow diagrams.
    - *Proof Artifact:* [`docs/tdd_part1_system_architecture.md`](file:///docs/tdd_part1_system_architecture.md).
-10. **Decision Records (ADRs) (Score: 3):** ADR-001 (Multi-Agent Hierarchical vs Monolithic), ADR-002 (MCP Tool Integration vs Proprietary REST), ADR-003 (Gemini Context Caching vs Chunk-based Vector RAG).
-    - *Proof Artifact:* [`docs/adrs/`](file:///docs/adrs/).
+10. **Decision Records (ADRs) (Score: 3):** ADR-001 (Multi-Agent Hierarchical vs Monolithic), ADR-002 (MCP Tool Integration vs Proprietary REST), ADR-003 (Gemini Context Caching vs Chunk-based Vector RAG). ADR-003 additionally carries a formal **"Deliberately Not Provisioned"** waiver recording why no Vertex AI Vector Search index or endpoint exists in the Terraform estate.
+    - *Proof Artifact:* [`docs/adrs/`](file:///docs/adrs/), [`ADR-003 § Deliberately Not Provisioned`](file:///docs/adrs/ADR-003-gemini-context-caching-vs-vector-rag.md).
 11. **API Documentation (Score: 3):** OpenAPI 3.1 contract specification (`openapi.yaml`), interactive Swagger/ReDoc docs, typed request/response models.
     - *Proof Artifact:* [`openapi.yaml`](file:///openapi.yaml).
 12. **Operational Documentation (Score: 3):** Operational Runbook (maintenance, Secret Manager rotation, incident triage), Developer Onboarding Guide, and User & API Demo Walkthrough.
@@ -69,15 +69,15 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
 ---
 
 ### Category 3: Security, Privacy & Compliance (Score: 3/3 Across All 5)
-13. **Authentication & Authorization (Score: 3):** OAuth2 / Bearer token validation, Cloud IAM least-privilege service accounts, fine-grained API key scoping.
+13. **Authentication & Authorization (Score: 3):** Google OIDC ID tokens verified in-process (signature, issuer, expiry, audience) on top of Cloud Run IAM, with the audit identity taken from the verified `email` claim; Cloud IAM least-privilege service accounts.
     - *Proof Artifact:* [`src/api/dependencies.py`](file:///src/api/dependencies.py), [`terraform/modules/iam/main.tf`](file:///terraform/modules/iam/main.tf).
 14. **Infrastructure & Network Security (Score: 3):** Terraform-managed VPC, Serverless VPC Access Connectors, Private Google Access, private subnets, Cloud Armor WAF policy definitions.
     - *Proof Artifact:* [`terraform/modules/vpc/main.tf`](file:///terraform/modules/vpc/main.tf).
-15. **Data Protection & Privacy (Score: 3):** Google Cloud DLP inspection rules redacting analyst IDs and proprietary portfolio metadata; Cloud KMS customer-managed encryption keys; Secret Manager.
-    - *Proof Artifact:* [`src/guardrails/dlp_masker.py`](file:///src/guardrails/dlp_masker.py), [`terraform/modules/secret_manager/main.tf`](file:///terraform/modules/secret_manager/main.tf).
-16. **AI-Specific Security (Score: 3):** Pre-execution classifier guardrail callbacks intercepting prompt injection, jailbreaks, and out-of-domain queries before model dispatch; tool execution whitelist.
-    - *Proof Artifact:* [`src/guardrails/input_guardrail.py`](file:///src/guardrails/input_guardrail.py), [`src/guardrails/scope_classifier.py`](file:///src/guardrails/scope_classifier.py).
-17. **Compliance & Governance (Score: 3):** Immutable audit logging to Cloud Logging and BigQuery capturing timestamp, user_id, prompt_hash, tools_called, latency, token_usage, and safety verdict.
+15. **Data Protection & Privacy (Score: 3):** Google Cloud DLP inspection rules redacting analyst IDs and proprietary portfolio metadata; Cloud KMS customer-managed encryption keys; Secret Manager; CMEK-encrypted Cloud Storage buckets with uniform bucket-level access, enforced public access prevention, object versioning, and a 7-year retention policy on the evidentiary brief archive.
+    - *Proof Artifact:* [`src/guardrails/dlp_masker.py`](file:///src/guardrails/dlp_masker.py), [`terraform/modules/secret_manager/main.tf`](file:///terraform/modules/secret_manager/main.tf), [`terraform/modules/storage/main.tf`](file:///terraform/modules/storage/main.tf).
+16. **AI-Specific Security (Score: 3):** Pre-execution classifier guardrail callbacks intercepting prompt injection, jailbreaks, and out-of-domain queries before model dispatch; tool execution whitelist. Backed by a formal STRIDE threat model with a trust-boundary data flow diagram, risk register, and mitigation-to-test traceability.
+    - *Proof Artifact:* [`docs/threat_model.md`](file:///docs/threat_model.md), [`src/guardrails/input_guardrail.py`](file:///src/guardrails/input_guardrail.py), [`src/guardrails/scope_classifier.py`](file:///src/guardrails/scope_classifier.py).
+17. **Compliance & Governance (Score: 3):** Immutable audit logging to Cloud Logging - capturing timestamp, user_id, prompt_hash, tools_called, latency, token_usage, and safety verdict - exported to BigQuery by a `google_logging_project_sink` rather than an in-process client, so the record cannot be lost to an application-side failure.
     - *Proof Artifact:* [`src/observability/audit_logger.py`](file:///src/observability/audit_logger.py), [`terraform/ddl/01_audit_log.sql`](file:///terraform/ddl/01_audit_log.sql).
 
 ---
@@ -85,8 +85,8 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
 ### Category 4: Reliability & Resilience (Score: 3/3 Across All 4)
 18. **Availability Design (Score: 3):** Cloud Run horizontal autoscaling (1 to 50 instances, concurrency 80), health check endpoints (`/healthz`, `/readyz`), multi-zone resilience.
     - *Proof Artifact:* [`terraform/modules/cloud_run/main.tf`](file:///terraform/modules/cloud_run/main.tf), [`src/api/routes.py`](file:///src/api/routes.py).
-19. **Observability (Score: 3):** Full-stack OpenTelemetry instrumentation exporting traces to Google Cloud Trace; structured JSON logging; Cloud Monitoring dashboard definitions (SLO tracking: 99.9% avail, P95 <= 60s).
-    - *Proof Artifact:* [`src/observability/tracer.py`](file:///src/observability/tracer.py), [`configs/monitoring/cloud_monitoring_dashboard.json`](file:///configs/monitoring/cloud_monitoring_dashboard.json).
+19. **Observability (Score: 3):** Full-stack OpenTelemetry instrumentation exporting traces to Google Cloud Trace; structured JSON logging; a Terraform-applied Cloud Monitoring dashboard backed by three enforced SLOs (99.9% availability, 95% of requests under 60s, >=98% 2xx rate), log-based metrics for guardrail rejections and SEC 429s, and five alert policies including multi-window error-budget burn-rate alerting.
+    - *Proof Artifact:* [`terraform/modules/monitoring/main.tf`](file:///terraform/modules/monitoring/main.tf), [`src/observability/tracer.py`](file:///src/observability/tracer.py), [`configs/monitoring/cloud_monitoring_dashboard.json`](file:///configs/monitoring/cloud_monitoring_dashboard.json).
 20. **Failure & Recovery Testing (Score: 3):** Chaos & failure injection test scripts simulating SEC EDGAR 429 rate limits, Vertex AI 503 transient errors, and search API timeouts.
     - *Proof Artifact:* [`tests/chaos/`](file:///tests/chaos/).
 21. **Graceful Degradation (Score: 3):** Tenacity exponential backoff with full jitter; circuit breaker pattern falling back to cached historical filings during upstream outages without dropping queries.
@@ -99,8 +99,8 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
     - *Proof Artifact:* [`src/agents/root_coordinator.py`](file:///src/agents/root_coordinator.py).
 23. **Resource Efficiency (Score: 3):** Sizing Cloud Run containers (2 vCPU, 4GB RAM, 80 concurrency), memory-efficient streaming parsers for large 10-K files.
     - *Proof Artifact:* [`terraform/modules/cloud_run/main.tf`](file:///terraform/modules/cloud_run/main.tf).
-24. **AI Cost Management (Score: 3):** Model routing (Flash for extraction, Pro for synthesis); Gemini Context Caching reducing token costs by >70% on static 10-Ks; cost model maintaining <$0.25 per query ($0.165 actual).
-    - *Proof Artifact:* [`src/cache/context_caching.py`](file:///src/cache/context_caching.py), [`docs/cost_and_token_analysis.md`](file:///docs/cost_and_token_analysis.md).
+24. **AI Cost Management (Score: 2):** Model routing is real — the ADK coordinator runs on `coordinator_model` and delegates retrieval to a specialist on `extraction_model` via `AgentTool`. Context caching is real — ADK's `ContextCacheConfig` against Vertex `CachedContent`. **The cost is not measured.** The $0.165 is a projection from list prices; the REST path calls no model and costs $0.00 in inference. Scored 2 rather than 3 deliberately: the mechanisms exist, the evidence does not yet. Closing it needs a live run with billing attached (DEV-17).
+    - *Proof Artifact:* [`src/agents/adk_agent.py`](file:///src/agents/adk_agent.py), [`tests/unit/test_adk_model_routing.py`](file:///tests/unit/test_adk_model_routing.py), [`docs/cost_and_token_analysis.md`](file:///docs/cost_and_token_analysis.md).
 
 ---
 

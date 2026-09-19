@@ -117,15 +117,15 @@ Upstream external dependencies inevitably experience transient hiccups, latency 
 flowchart TD
     Request[Sub-Agent Tool Call] --> RateLimiter[Token Bucket Rate Limiter<br/>Enforce max 8 req/s to SEC]
     RateLimiter --> CircuitBreakerCheck{Circuit Breaker<br/>State Open?}
-    
+
     CircuitBreakerCheck -- Yes --> LocalCacheFallback[Fallback: Load Cached Filing Extract]
     CircuitBreakerCheck -- No --> ExecuteCall[Execute Upstream HTTP Request]
-    
+
     ExecuteCall --> ResponseCheck{HTTP Status?}
     ResponseCheck -- 200 OK --> RecordSuccess[Reset Fail Count -> Return Data]
     ResponseCheck -- 429 Rate Limit --> ExponentialBackoff[Backoff with Full Jitter<br/>Base: 1.0s, Max: 30s, Retries: 3]
     ResponseCheck -- 503 / Timeout --> ExponentialBackoff
-    
+
     ExponentialBackoff --> RetryAttempt{Retries Left?}
     RetryAttempt -- Yes --> ExecuteCall
     RetryAttempt -- No --> TripCircuitBreaker[Increment Failure Count<br/>Trip Circuit Breaker to OPEN]

@@ -113,14 +113,14 @@ graph TB
         subgraph ServerlessConnector [Serverless VPC Access Connector: 10.10.1.0/28]
             CloudRunService[Google Cloud Run Service<br/>IRA Multi-Agent Runtime]
         end
-        
+
         subgraph PrivateEndpoints [Private Google APIs & Datastores]
             PGA[Private Google Access / Private Service Connect]
             VertexAPI[Vertex AI Gemini 2.5 Endpoints]
             BigQueryData[BigQuery Audit & Metrics Datasets]
             SecretMgr[Google Secret Manager]
         end
-        
+
         CloudRunService --> PGA
         PGA --> VertexAPI
         PGA --> BigQueryData

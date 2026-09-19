@@ -136,18 +136,30 @@ paths:
                   status:
                     type: string
                     example: "READY"
+                  runtime:
+                    type: object
+                    description: >-
+                      Which data path this revision is on. Offline and live
+                      responses are otherwise indistinguishable without reading
+                      the provenance field on a generated brief.
+                    properties:
+                      environment:
+                        type: string
+                        example: "production"
+                      offline_mode:
+                        type: boolean
+                        example: false
                   dependencies:
                     type: object
+                    description: >-
+                      Only state the process can establish without a network
+                      call. The previous vertex_ai / bigquery / secret_manager
+                      entries were string literals that could not fail.
                     properties:
-                      vertex_ai:
+                      circuit_breaker:
                         type: string
-                        example: "CONNECTED"
-                      bigquery:
-                        type: string
-                        example: "CONNECTED"
-                      secret_manager:
-                        type: string
-                        example: "CONNECTED"
+                        enum: [CLOSED, OPEN, HALF_OPEN]
+                        example: "CLOSED"
 
 components:
   securitySchemes:
@@ -155,7 +167,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Google Cloud IAM OIDC Identity Token or OAuth2 JWT
+      description: >-
+        Google-signed OIDC identity token. Verified twice: by Cloud Run IAM
+        before the request reaches the container, and again in-process against
+        Google's published certificates, with the `aud` claim required to be one
+        of the service's configured custom audiences. A token minted for any
+        other service is rejected. A user account cannot mint one of these:
+        impersonate the caller service account
+        (`gcloud auth print-identity-token --impersonate-service-account=... --audiences=...`).
 
   schemas:
     EquityResearchRequest:
@@ -358,13 +377,30 @@ components:
               example: 42150
             total_tokens_consumed:
               type: integer
-              example: 32400
+              description: >-
+                LLM tokens consumed. Always 0 on this endpoint, which runs the
+                deterministic pipeline and calls no model.
+              example: 0
             context_cache_hit:
               type: boolean
-              example: true
+              description: >-
+                Whether a Gemini context cache was reused. Always false here:
+                no model call, nothing to cache.
+              example: false
             estimated_cost_usd:
               type: number
-              example: 0.165
+              description: >-
+                Inference cost. Always 0.0 on this endpoint. Compute cost is
+                Cloud Run's and is not attributed per brief.
+              example: 0.0
+            model_routing:
+              type: object
+              additionalProperties:
+                type: string
+              description: >-
+                Model used per agent. Empty on this endpoint; populated only
+                where a model was actually invoked.
+              example: {}
 
     FilingExtractionResponse:
       type: object
