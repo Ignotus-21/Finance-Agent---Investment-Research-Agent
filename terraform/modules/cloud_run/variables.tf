@@ -76,3 +76,16 @@ variable "pubsub_topic_id" {
   type        = string
   description = "Topic the broadcaster publishes research.brief.completed events to."
 }
+
+variable "enable_adk_web" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+    Mount the ADK developer UI and agent REST surface at /adk on this service.
+
+    Off by default. That surface accepts free-text prompts straight to the
+    model, so it does not pass through the /v1 guardrail chain, and its
+    sessions are in-memory and do not survive a revision. Enable it on a test
+    deployment behind IAM, not on one serving analysts.
+  EOT
+}

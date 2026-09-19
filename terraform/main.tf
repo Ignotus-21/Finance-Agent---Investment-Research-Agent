@@ -139,6 +139,7 @@ module "cloud_run" {
   custom_audiences     = var.custom_audiences
   ingress              = var.ingress
   pubsub_topic_id      = google_pubsub_topic.research_events.name
+  enable_adk_web       = var.enable_adk_web
 
   # The caller SA is appended rather than left to the operator: it is the only
   # identity that can actually mint an acceptable token, so a service deployed
@@ -244,6 +245,102 @@ resource "google_pubsub_topic_iam_member" "runtime_publisher" {
   topic   = google_pubsub_topic.research_events.name
   role    = "roles/pubsub.publisher"
   member  = "serviceAccount:${module.iam.service_account_email}"
+}
+
+# 7b. Streamlit test console.
+#
+# A second service, not a second container in the same one. The console pulls
+# in Streamlit, pandas, pyarrow and altair - ~200MB whose only job is to render
+# a page - and putting that in the image that serves the research contract
+# would buy cold-start latency and CVE surface for every API caller in exchange
+# for nothing.
+#
+# It runs as the **caller** service account, deliberately. That identity already
+# means exactly "may invoke the research service and do nothing else", which is
+# precisely the console's authority; minting a third principal with the same
+# grants would just be another thing to keep in sync.
+resource "google_cloud_run_v2_service" "ira_ui" {
+  count = var.enable_ui_service ? 1 : 0
+
+  name     = "ira-ui-${var.environment}"
+  project  = var.project_id
+  location = var.region
+
+  # No custom audience here. Nothing calls this service programmatically -
+  # humans reach it through `gcloud run services proxy`, which handles the
+  # token itself. The audience machinery exists for the API, which is called by
+  # code.
+  ingress = var.ingress
+
+  template {
+    service_account = module.iam.caller_service_account_email
+
+    # Streamlit holds session state in the server process, so a request routed
+    # to a different instance mid-session loses the page. One instance, low
+    # concurrency: this is a test console for a handful of people, not a
+    # workload to scale.
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 1
+    }
+    max_instance_request_concurrency = 20
+
+    containers {
+      image = var.ui_container_image
+
+      ports {
+        container_port = 8080
+      }
+
+      # The console reads both from the environment so the sidebar arrives
+      # prefilled. An operator who has to paste a URL and an audience by hand
+      # will eventually paste the run.app URL into the audience box, which
+      # passes IAM and is then rejected by the application.
+      env {
+        name  = "IRA_SERVICE_URL"
+        value = module.cloud_run.service_url
+      }
+
+      env {
+        name  = "IRA_AUDIENCE"
+        value = length(var.custom_audiences) > 0 ? var.custom_audiences[0] : ""
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "1Gi"
+        }
+      }
+
+      startup_probe {
+        http_get {
+          # Streamlit's own health endpoint. `/healthz` would be answered by
+          # Google's Front End before reaching the container - see the
+          # blue/green gate in cloudbuild.yaml for how that hid a defect.
+          path = "/_stcore/health"
+        }
+        initial_delay_seconds = 10
+        period_seconds        = 5
+        failure_threshold     = 6
+      }
+    }
+  }
+
+  depends_on = [google_project_service.required]
+}
+
+# Same posture as the API: private, IAM-gated, no allUsers. Reached with
+# `gcloud run services proxy ira-ui-<env> --region <region>`, which
+# authenticates the tunnel and serves the console on localhost.
+resource "google_cloud_run_v2_service_iam_member" "ira_ui_invokers" {
+  for_each = var.enable_ui_service ? toset(var.ui_invoker_members) : toset([])
+
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.ira_ui[0].name
+  role     = "roles/run.invoker"
+  member   = each.value
 }
 
 # 9. Continuous delivery trigger.

@@ -46,5 +46,8 @@ tests/
 docs/
 terraform/
 .github/
-# Developer test console. Streamlit must not reach the runtime image.
-ui/
+# `ui/` is deliberately NOT excluded. It used to be, on the grounds that
+# Streamlit must not reach the runtime image - which is true, and is enforced
+# where it belongs: the API Dockerfile simply does not COPY it. Excluding it
+# from the shared build context instead broke `Dockerfile.ui`, which needs it.
+# The directory is ~15KB; bounding context size was never the real motive.

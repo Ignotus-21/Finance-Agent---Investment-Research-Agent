@@ -11,6 +11,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # substring guess, and so there is exactly one place to change it.
 SAMPLE_SEC_USER_AGENT = "SampleInstitutionalResearch AdminContact@samplecompany.com"
 
+# Same idea for the project: a named placeholder the validator can reject by
+# identity. Unlike the User-Agent, a wrong project id is not rejected by anyone
+# upstream - it simply addresses resources in a project that is not ours.
+SAMPLE_GCP_PROJECT_ID = "ira-capstone-finance-prod"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -27,7 +32,7 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8080)
 
     # Google Cloud Platform Settings
-    gcp_project_id: str = Field(default="ira-capstone-finance-prod", description="GCP Project ID")
+    gcp_project_id: str = Field(default=SAMPLE_GCP_PROJECT_ID, description="GCP Project ID")
     gcp_region: str = Field(default="us-central1", description="Target GCP Region")
 
     # Model Tier & Reasoning Settings
@@ -84,9 +89,29 @@ class Settings(BaseSettings):
     enforce_guardrails: bool = Field(default=True, description="Enforce pre-execution prompt injection filter")
 
     # Observability & Audit Logging
+    log_level: str = Field(
+        default="INFO",
+        description=(
+            "Root log level for the stdlib logging module. Applies to uvicorn "
+            "and third-party library output, not to the audit record, which is "
+            "written unconditionally."
+        ),
+    )
     enable_cloud_trace: bool = Field(default=True, description="Export OpenTelemetry traces to Cloud Trace")
     bigquery_dataset_id: str = Field(default="ira_financial_intelligence", description="BigQuery dataset")
     pubsub_topic_id: str = Field(default="ira-research-events", description="Cloud Pub/Sub broadcast topic")
+
+    # Agent Surfaces
+    enable_adk_web: bool = Field(
+        default=False,
+        description=(
+            "Mount the ADK developer UI and its REST surface under /adk. "
+            "Off by default: it exposes arbitrary agent invocation, free-text "
+            "prompts that bypass the /v1 guardrail chain, and in-memory "
+            "sessions that do not survive a revision. Enable it on a test "
+            "deployment behind IAM, not on one serving real analysts."
+        ),
+    )
 
     # Circuit Breaker Configuration
     circuit_breaker_failure_threshold: int = Field(default=5)
@@ -141,6 +166,31 @@ class Settings(BaseSettings):
                 "organisation name and a monitored contact address, e.g. "
                 "'IRA Research admin@example.com'. Got: "
                 f"{self.sec_edgar_user_agent!r}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _reject_placeholder_project_in_production(self) -> "Settings":
+        """
+        Refuse to start a production revision still carrying the sample project.
+
+        This is not hypothetical. A revision deployed without `GCP_PROJECT_ID`
+        inherited the default below, addressed its Pub/Sub topic as
+        `projects/ira-capstone-finance-prod/topics/...`, and got 404 NOT_FOUND
+        on every publish. Research requests kept returning 200 - correctly, the
+        broadcaster must never fail a brief - so the only evidence was a stderr
+        line nobody was reading. Observed on `ira-service-test`, 2026-09-18.
+
+        Every Google client in the process resolves a project the same way, so
+        the same default would quietly misdirect Vertex, Cloud Trace and the
+        audit log's trace correlation too.
+        """
+        if self.environment == "production" and self.gcp_project_id == SAMPLE_GCP_PROJECT_ID:
+            raise ValueError(
+                "ENVIRONMENT=production requires GCP_PROJECT_ID to name the real "
+                f"project; it is still the placeholder {SAMPLE_GCP_PROJECT_ID!r}. "
+                "Every Google client resolves the project from this value, so the "
+                "failure mode is silent misdirection rather than an error."
             )
         return self
 

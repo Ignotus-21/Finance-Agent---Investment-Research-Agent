@@ -29,6 +29,7 @@ from typing import Any
 
 from src.config import Settings
 from src.models.audit import AuditLogEntry
+from src.observability.tracer import current_trace_context
 
 # Audit records are emitted to Cloud Logging; this deque is a small in-process
 # tail for tests and for /readyz-style introspection. It was an unbounded list,
@@ -95,12 +96,19 @@ class AuditLogger:
         self.audit_records.append(record_dict)
 
         # Emit structured JSON log conforming to Google Cloud Logging specification
-        cloud_log_payload = {
+        cloud_log_payload: dict[str, Any] = {
             "severity": "INFO",
             "message": f"Compliance Audit: Research completed for {ticker} FY{fiscal_year}",
-            "logging.googleapis.com/trace": audit_id,
-            "compliance_metadata": record_dict
+            "compliance_metadata": record_dict,
         }
+
+        # This field used to be set to `audit_id` - a bare uuid4. Cloud Logging
+        # accepts any string there and silently correlates nothing, so the
+        # console showed a trace link on every audit record that led nowhere.
+        # `current_trace_context` returns the correctly-formatted resource name
+        # or an empty dict; a missing link is visibly missing.
+        cloud_log_payload.update(current_trace_context(self.settings.gcp_project_id))
+
         # stdout is the transport. Cloud Run forwards it to Cloud Logging, and
         # the log sink forwards it from there to BigQuery.
         print(json.dumps(cloud_log_payload))

@@ -14,7 +14,7 @@ from google.auth.exceptions import GoogleAuthError
 from pydantic import ValidationError
 
 from src.api import dependencies
-from src.config import Settings
+from src.config import SAMPLE_GCP_PROJECT_ID, Settings
 
 pytestmark = pytest.mark.asyncio
 
@@ -216,6 +216,23 @@ def test_production_starts_with_an_audience() -> None:
     settings = Settings(
         environment="production",
         auth_allowed_audiences=CONFIGURED,
+        gcp_project_id="a-real-project",
         offline_mode=True,
     )
     assert settings.allowed_audiences == (AUDIENCE, RUN_URL)
+
+
+def test_production_refuses_to_start_on_the_sample_project_id() -> None:
+    """A production deployment that kept the sample project id publishes nowhere.
+
+    Leaving the default in place is not a harmless no-op: Pub/Sub and the audit
+    trace links silently address a project this deployment does not own, and the
+    only evidence is a contained error on stderr. Fail at startup instead.
+    """
+    with pytest.raises(ValidationError, match="GCP_PROJECT_ID"):
+        Settings(
+            environment="production",
+            auth_allowed_audiences=CONFIGURED,
+            gcp_project_id=SAMPLE_GCP_PROJECT_ID,
+            offline_mode=True,
+        )
