@@ -105,6 +105,37 @@ class UpstreamRateLimitException(FinancialAgentException):
         )
 
 
+class UpstreamUnavailableException(FinancialAgentException):
+    """Raised when an upstream source is unreachable and no real data is cached.
+
+    Deliberately distinct from UpstreamRateLimitException (429, "come back
+    later") and FilingNotFoundException (404, "this does not exist"). This one
+    means "the filing exists, we just cannot reach it right now" - a 503.
+
+    It exists because the alternative was worse. The degraded path used to fall
+    through to generated placeholder figures, which meant an EDGAR outage
+    produced a brief full of confident, fabricated numbers rather than an
+    error. An analyst can act on an error; they cannot detect a plausible lie.
+    """
+
+    def __init__(self, service: str, ticker: str, form: str, fiscal_year: int) -> None:
+        super().__init__(
+            message=(
+                f"Upstream provider '{service}' is unavailable and no verified filing "
+                f"for {ticker} {form} FY{fiscal_year} is cached locally. Refusing to "
+                f"substitute synthetic figures for filed data."
+            ),
+            error_code="UPSTREAM_UNAVAILABLE",
+            status_code=503,
+            details={
+                "service": service,
+                "ticker": ticker,
+                "form": form,
+                "fiscal_year": fiscal_year,
+            },
+        )
+
+
 class VerificationFailedException(FinancialAgentException):
     """Raised when evidentiary line-item provenance fails validation."""
 

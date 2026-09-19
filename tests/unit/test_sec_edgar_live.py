@@ -13,7 +13,11 @@ import pytest
 from pydantic import ValidationError
 
 from src.config import SAMPLE_SEC_USER_AGENT, Settings
-from src.core.exceptions import FilingNotFoundException, RegistrantMismatchException
+from src.core.exceptions import (
+    FilingNotFoundException,
+    RegistrantMismatchException,
+    UpstreamUnavailableException,
+)
 from src.tools.sec_edgar_http import TICKER_CIK_OVERRIDES, SECEdgarHTTPClient
 from src.tools.sec_edgar_mcp import SECFilingClient
 
@@ -645,3 +649,75 @@ async def test_a_real_filer_missing_one_year_is_still_not_found() -> None:
     async with _mock_client() as client:
         with pytest.raises(FilingNotFoundException):
             await edgar.find_filing("0000320193", "10-K", 2019, client, ticker="AAPL")
+
+
+# ---------------------------------------------------------------------------
+# Degraded-mode provenance.
+#
+# The circuit-breaker fallback used to omit ``data_source`` entirely, which
+# crashed the MCP tool with KeyError at exactly the moment the agent most
+# needed an answer, and - worse - served invented figures for any ticker
+# without a curated fixture.
+# ---------------------------------------------------------------------------
+
+
+async def test_breaker_open_fallback_still_stamps_provenance() -> None:
+    """Every response carries data_source, including the degraded ones.
+
+    The MCP tool contract instructs the model to check this field before
+    citing anything. An absent key makes that instruction unfollowable.
+    """
+    settings = Settings(offline_mode=True)
+    client = SECFilingClient(settings)
+    for _ in range(settings.circuit_breaker_failure_threshold):
+        client.circuit_breaker.record_failure()
+    assert not client.circuit_breaker.is_available()
+
+    result = await client.fetch_filing_section("AAPL", "10-K", 2024, "INCOME_STATEMENT")
+
+    assert result["data_source"] == "OFFLINE_FIXTURE"
+    assert result["source_status"] == "CACHED_FALLBACK_CIRCUIT_BREAKER_ACTIVE"
+
+
+async def test_breaker_open_fallback_labels_generated_data_as_synthetic() -> None:
+    """A ticker with no curated fixture is labelled a placeholder, not a filing."""
+    settings = Settings(offline_mode=True)
+    client = SECFilingClient(settings)
+    for _ in range(settings.circuit_breaker_failure_threshold):
+        client.circuit_breaker.record_failure()
+
+    result = await client.fetch_filing_section("ZZZZ", "10-K", 2024, "INCOME_STATEMENT")
+
+    assert result["data_source"] == "OFFLINE_SYNTHETIC_PLACEHOLDER"
+
+
+async def test_live_breaker_open_without_a_fixture_raises_503() -> None:
+    """Live mode refuses to invent numbers when the upstream is down.
+
+    Returning a generated income statement here would have produced a brief
+    full of confident, fabricated figures during an EDGAR outage. An analyst
+    can act on a 503; they cannot detect a plausible lie.
+    """
+    settings = Settings(offline_mode=False, sec_edgar_user_agent=VALID_UA)
+    client = SECFilingClient(settings)
+    for _ in range(settings.circuit_breaker_failure_threshold):
+        client.circuit_breaker.record_failure()
+
+    with pytest.raises(UpstreamUnavailableException) as excinfo:
+        await client.fetch_filing_section("ZZZZ", "10-K", 2024, "INCOME_STATEMENT")
+
+    assert excinfo.value.status_code == 503
+    assert excinfo.value.error_code == "UPSTREAM_UNAVAILABLE"
+
+
+async def test_live_breaker_open_with_a_fixture_serves_it_labelled() -> None:
+    """A recorded filing for the exact request is real data, so serve it."""
+    settings = Settings(offline_mode=False, sec_edgar_user_agent=VALID_UA)
+    client = SECFilingClient(settings)
+    for _ in range(settings.circuit_breaker_failure_threshold):
+        client.circuit_breaker.record_failure()
+
+    result = await client.fetch_filing_section("AAPL", "10-K", 2024, "INCOME_STATEMENT")
+
+    assert result["data_source"] == "OFFLINE_FIXTURE"
+    assert result["source_status"] == "CACHED_FALLBACK_CIRCUIT_BREAKER_ACTIVE"
