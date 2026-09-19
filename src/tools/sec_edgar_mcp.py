@@ -25,7 +25,11 @@ from pathlib import Path
 from typing import Any
 
 from src.config import Settings
-from src.core.exceptions import FilingNotFoundException
+from src.core.exceptions import (
+    FilingNotFoundException,
+    RegistrantMismatchException,
+    UpstreamUnavailableException,
+)
 from src.core.interfaces import BaseTool, FilingRetrievalInterface
 from src.tools.sec_edgar_http import SECEdgarHTTPClient
 
@@ -251,9 +255,12 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
     ) -> dict[str, Any]:
         """Live path: real SEC EDGAR data, or an honest failure.
 
-        Never falls back to synthetic data. If EDGAR is unreachable the circuit
-        breaker records the failure and the cached fixture is returned - clearly
-        labelled - which is a different thing from inventing numbers.
+        Never returns synthetic data. If EDGAR is unreachable the circuit
+        breaker records the failure and a previously recorded fixture for this
+        exact filing is returned, clearly labelled ``OFFLINE_FIXTURE`` with a
+        degraded ``source_status`` - which is a different thing from inventing
+        numbers. Where no such fixture exists the request fails with
+        :class:`UpstreamUnavailableException` (503).
         """
         try:
             async with self.http.build_client() as client:
@@ -287,9 +294,10 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
                     prior = await self.http.fetch_xbrl_facts(cik, fiscal_year - 1, client)
                     section_data = self._shape_statement(section_upper, facts, prior)
 
-        except FilingNotFoundException:
-            # A genuine "SEC does not have this" is a client error, not an
-            # upstream fault. Do not trip the breaker on it.
+        except (FilingNotFoundException, RegistrantMismatchException):
+            # A genuine "SEC does not have this" - or "that ticker is not this
+            # registrant" - is a client error, not an upstream fault. Do not
+            # trip the breaker on it, and do not bury it under a fallback.
             raise
         except Exception:
             self.circuit_breaker.record_failure()
@@ -356,9 +364,31 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
         return result
 
     def _get_cached_fallback(self, ticker: str, form: str, fiscal_year: int, section: str) -> dict[str, Any]:
-        """Fallback to cached historical data when upstream SEC EDGAR is down."""
+        """Degraded path: the last-known-good fixture, or an honest 503.
+
+        Two things this must never do, both of which it used to do:
+
+        1. **Omit ``data_source``.** The MCP tool contract tells the model to
+           check that field before citing anything. Leaving it off the exact
+           responses where provenance matters most made the instruction
+           unfollowable, and crashed the server with ``KeyError`` besides.
+        2. **Invent numbers in live mode.** Falling through to
+           ``_generate_generic_filing`` for an unknown ticker produced a
+           complete, plausible, entirely fictional income statement. Offline
+           mode may do that - it is a declared simulation and the placeholder
+           is labelled as one. A live request may not.
+        """
         key = f"{ticker.upper()}_{fiscal_year}_{form.upper()}"
-        filing = self._mock_edgar_filings.get(key) or self._generate_generic_filing(ticker.upper(), fiscal_year, form)
+        filing = self._mock_edgar_filings.get(key)
+        is_curated = filing is not None
+
+        if filing is None:
+            if not self.settings.offline_mode:
+                raise UpstreamUnavailableException(
+                    service="SEC_EDGAR", ticker=ticker.upper(), form=form.upper(), fiscal_year=fiscal_year
+                )
+            filing = self._generate_generic_filing(ticker.upper(), fiscal_year, form)
+
         return {
             "ticker": ticker.upper(),
             "form": form.upper(),
@@ -368,6 +398,9 @@ class SECFilingClient(FilingRetrievalInterface, BaseTool):
             "company_name": filing["company_name"],
             "section_requested": section.upper(),
             "data": filing["statements"].get(section.upper(), {}),
+            # Same vocabulary as the happy paths, so there is one provenance
+            # enum for the model to reason about rather than three.
+            "data_source": "OFFLINE_FIXTURE" if is_curated else "OFFLINE_SYNTHETIC_PLACEHOLDER",
             "source_status": "CACHED_FALLBACK_CIRCUIT_BREAKER_ACTIVE",
             "provenance_signature": f"SEC:CACHE:{ticker}:{form}:{fiscal_year}"
         }

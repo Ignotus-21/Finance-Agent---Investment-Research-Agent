@@ -29,7 +29,7 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from src.config import Settings
-from src.core.exceptions import FilingNotFoundException
+from src.core.exceptions import FinancialAgentException
 from src.tools.sec_edgar_mcp import SECFilingClient
 
 server: MCPServer = MCPServer(
@@ -72,12 +72,12 @@ async def fetch_sec_filing_section(
         return await _client.fetch_filing_section(
             ticker=ticker, form=form, fiscal_year=fiscal_year, section=section
         )
-    except FilingNotFoundException as exc:
+    except FinancialAgentException as exc:
         # Surface as structured data rather than a protocol error: the model
-        # can reason about "this filing does not exist" and tell the analyst,
-        # whereas an MCP error just aborts the tool call.
+        # can reason about "this filing does not exist" or "EDGAR is down" and
+        # tell the analyst, whereas an MCP error just aborts the tool call.
         return {
-            "error": "FILING_NOT_FOUND",
+            "error": exc.error_code,
             "message": exc.message,
             "ticker": ticker,
             "form": form,

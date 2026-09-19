@@ -13,9 +13,9 @@ from src.config import settings
 from src.core.container import ApplicationContainer
 from src.core.exceptions import (
     FilingNotFoundException,
+    FinancialAgentException,
     OutOfDomainQueryException,
     SecurityViolationException,
-    UpstreamRateLimitException,
 )
 from src.models.request import EquityResearchRequest, FilingResearchRequest
 from src.models.response import ResearchBriefResponse
@@ -83,10 +83,12 @@ async def generate_equity_research(
     # Step 2: Multi-Agent Orchestration Loop
     try:
         brief = await app_container.root_coordinator.execute_research(request)
-    except FilingNotFoundException as e:
-        raise HTTPException(status_code=404, detail=e.message) from e
-    except UpstreamRateLimitException as e:
-        raise HTTPException(status_code=429, detail=e.message) from e
+    except FinancialAgentException as e:
+        # Every domain exception already declares the status it means - 404 for
+        # a missing filing or a registrant mismatch, 429 for a rate limit, 503
+        # for an unreachable upstream. Honour that instead of re-deriving it
+        # here and collapsing the interesting ones into 500.
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Multi-agent execution failure: {str(e)}") from e
 
