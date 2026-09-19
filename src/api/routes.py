@@ -85,9 +85,9 @@ async def generate_equity_research(
         brief = await app_container.root_coordinator.execute_research(request)
     except FinancialAgentException as e:
         # Every domain exception already declares the status it means - 404 for
-        # a missing filing or a registrant mismatch, 429 for a rate limit, 503
-        # for an unreachable upstream. Honour that instead of re-deriving it
-        # here and collapsing the interesting ones into 500.
+        # a missing filing or a registrant mismatch, 422 for a provenance
+        # failure, 503 for an unreachable upstream. Honour that instead of
+        # re-deriving it here and collapsing the interesting ones into 500.
         raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Multi-agent execution failure: {str(e)}") from e

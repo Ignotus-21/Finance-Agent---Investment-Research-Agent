@@ -1,15 +1,26 @@
 """
 Root Coordinator Agent.
-The central orchestrator of the multi-agent system built with Google ADK and Gemini 2.5 Pro.
-Executes a Plan-and-Execute reasoning loop with explicit thought budgeting,
-dispatches tasks concurrently to specialized sub-agents, and drives end-to-end brief synthesis.
+
+The central orchestrator of the deterministic research pipeline. Dispatches
+the SEC, transcript and macro sub-agents concurrently, runs the deterministic
+calculator over what they return, and drives brief synthesis.
+
+No model is called anywhere on this path. That is deliberate - it is what
+makes the REST endpoint reproducible, fast and free - but it does mean this
+class is an orchestrator, not a reasoner. The agentic Plan-and-Execute loop
+lives in :mod:`src.agents.adk_agent`, where a Gemini coordinator really does
+plan and delegate.
+
+This docstring used to claim "a Plan-and-Execute reasoning loop with explicit
+thought budgeting". The corresponding code was a ``_formulate_execution_plan``
+method that returned a hardcoded five-element list, whose result was assigned
+to ``_`` and discarded, with a ``thought_budget_allocated`` field nothing read.
+It has been removed rather than described more carefully.
 """
 
 import asyncio
 import time
 from typing import Any
-
-from pydantic import BaseModel
 
 from src.agents.macro_agent import MacroSubAgent
 from src.agents.sec_agent import SECSubAgent
@@ -22,27 +33,10 @@ from src.models.response import ResearchBriefResponse
 from src.tools.financial_calculator import FinancialCalculator
 
 
-class SubTaskPlan(BaseModel):
-    """Sub-task definition in the decomposed execution plan."""
-    task_id: str
-    target_agent: str
-    action: str
-    parameters: dict[str, Any]
-
-
-class ExecutionPlan(BaseModel):
-    """Decomposed multi-agent execution plan formulated by the Root Coordinator."""
-    ticker: str
-    fiscal_year: int
-    focus_areas: list[str]
-    planned_steps: list[SubTaskPlan]
-    thought_budget_allocated: int
-
-
 class RootCoordinatorAgent(BaseAgent):
     """
-    Central reasoning orchestrator.
-    Manages Plan-and-Execute workflow, state aggregation, and concurrent delegation.
+    Central orchestrator.
+    Manages concurrent delegation, state aggregation, and synthesis.
     """
 
     def __init__(
@@ -77,10 +71,7 @@ class RootCoordinatorAgent(BaseAgent):
         """
         start_time = time.monotonic()
 
-        # Step 1: Formulate Decomposed Execution Plan (Gemini 2.5 Pro reasoning with Thinking Budget)
-        _ = self._formulate_execution_plan(request)
-
-        # Step 2: Concurrent Multi-Agent Dispatch (asyncio.gather)
+        # Concurrent Multi-Agent Dispatch (asyncio.gather)
         #
         # There used to be a context-cache check here. It consulted an
         # in-process dict, reported a `cache_id` naming a Vertex resource that
@@ -127,46 +118,3 @@ class RootCoordinatorAgent(BaseAgent):
         )
 
         return brief
-
-    def _formulate_execution_plan(self, request: EquityResearchRequest) -> ExecutionPlan:
-        """Formulates decomposed plan using Gemini 2.5 Pro planning loop."""
-        steps = [
-            SubTaskPlan(
-                task_id="task-1-sec-10k",
-                target_agent=self.sec_agent.agent_name,
-                action="fetch_sec_filing_section",
-                parameters={"ticker": request.ticker, "fiscal_year": request.fiscal_year, "form": "10-K"}
-            ),
-            SubTaskPlan(
-                task_id="task-2-transcript",
-                target_agent=self.transcript_agent.agent_name,
-                action="get_earnings_transcript",
-                parameters={"ticker": request.ticker, "quarter": f"Q4_{request.fiscal_year}"}
-            ),
-            SubTaskPlan(
-                task_id="task-3-macro",
-                target_agent=self.macro_agent.agent_name,
-                action="query_macro_news",
-                parameters={"ticker": request.ticker, "focus_areas": request.focus_areas}
-            ),
-            SubTaskPlan(
-                task_id="task-4-deterministic-verify",
-                target_agent="financial_calculator",
-                action="compute_all_metrics",
-                parameters={"target": "income_statement, balance_sheet, cash_flow"}
-            ),
-            SubTaskPlan(
-                task_id="task-5-synthesis",
-                target_agent="synthesis_engine",
-                action="cross_verify_and_synthesize",
-                parameters={"assert_provenance": True}
-            )
-        ]
-
-        return ExecutionPlan(
-            ticker=request.ticker,
-            fiscal_year=request.fiscal_year,
-            focus_areas=request.focus_areas,
-            planned_steps=steps,
-            thought_budget_allocated=self.settings.thinking_budget
-        )

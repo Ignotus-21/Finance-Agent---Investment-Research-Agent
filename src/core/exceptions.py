@@ -93,24 +93,13 @@ class RegistrantMismatchException(FinancialAgentException):
         )
 
 
-class UpstreamRateLimitException(FinancialAgentException):
-    """Raised when an upstream service returns 429 after retries."""
-
-    def __init__(self, service: str, retry_after: int | None = None) -> None:
-        super().__init__(
-            message=f"Upstream provider '{service}' rate limit reached. Circuit breaker engaged.",
-            error_code="UPSTREAM_RATE_LIMIT",
-            status_code=429,
-            details={"service": service, "retry_after": retry_after},
-        )
-
-
 class UpstreamUnavailableException(FinancialAgentException):
     """Raised when an upstream source is unreachable and no real data is cached.
 
-    Deliberately distinct from UpstreamRateLimitException (429, "come back
-    later") and FilingNotFoundException (404, "this does not exist"). This one
-    means "the filing exists, we just cannot reach it right now" - a 503.
+    Deliberately distinct from FilingNotFoundException (404, "this does not
+    exist"). This one means "the filing exists, we just cannot reach it right
+    now" - a 503. SEC 429s land here too: sec_edgar_http backs off and retries,
+    and an exhausted retry budget is an unreachable upstream like any other.
 
     It exists because the alternative was worse. The degraded path used to fall
     through to generated placeholder figures, which meant an EDGAR outage

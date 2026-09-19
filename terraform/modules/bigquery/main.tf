@@ -80,5 +80,7 @@ resource "google_bigquery_dataset_iam_member" "audit_sink_writer" {
 # rather than "nothing was ever recorded".
 #
 # Restore it in the same change that adds the writer, not before. The schema is
-# preserved in git history and in terraform/ddl/ if that day comes.
+# preserved in git history if that day comes. The terraform/ddl/ directory that
+# also described it has been deleted: it was executed by nothing, which made it
+# a second, drifting source of truth for tables that do not exist.
 
