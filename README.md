@@ -1,5 +1,7 @@
 # Autonomous Investment Research Intelligence Agent (IRA)
 
+[![GCP Cloud Run](https://img.shields.io/badge/GCP-Cloud%20Run%20(Production)-4285F4.svg)](https://cloud.google.com/run)
+[![Agent Development Kit](https://img.shields.io/badge/Agent-Google%20ADK%20GenAI-FBBC04.svg)](https://cloud.google.com/vertex-ai)
 [![CI - Lint, Type-Check & Automated Tests](https://github.com/Ignotus-21/Finance-Agent---Investment-Research-Agent/actions/workflows/ci-lint-test.yml/badge.svg)](https://github.com/Ignotus-21/Finance-Agent---Investment-Research-Agent/actions/workflows/ci-lint-test.yml)
 [![CI - Evaluation Regression Gate](https://github.com/Ignotus-21/Finance-Agent---Investment-Research-Agent/actions/workflows/eval-gate.yml/badge.svg)](https://github.com/Ignotus-21/Finance-Agent---Investment-Research-Agent/actions/workflows/eval-gate.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
@@ -77,24 +79,6 @@ graph TB
 - **Gemini Context Caching:** Enabled through ADK's `ContextCacheConfig`, which calls Vertex's `CachedContent` API. Two honest caveats: nothing is cached on the first turn of a session, and Gemini will not cache a prefix under 2,048 tokens. **The per-brief cost has not been measured** — the $0.165 in [Cost &amp; Token Consumption Analysis](docs/cost_and_token_analysis.md) is a projection from list prices. The REST endpoint calls no model at all, so its inference cost is genuinely $0.00.
 - **Pre-Execution Defense-in-Depth:** Incoming prompts are inspected for adversarial prompt injections (DAN jailbreaks, system prompt overrides) and financial domain boundaries before invoking LLMs or tools.
 - **Enterprise Observability & Compliance:** Full-stack OpenTelemetry tracing exported to Google Cloud Trace, structured compliance audit logging emitted to Google Cloud Logging and exported to BigQuery by a logging sink (outside the request path, so a BigQuery outage cannot fail a brief), and asynchronous event broadcasting via Cloud Pub/Sub.
-
----
-
-## 🎯 32 CPSE-to-FDE Competency Scorecard Mapping
-
-The project demonstrates **Level 3 (Proficient)** across all 32 competencies in the *CPSE to FDE Readiness Assessment Scorecard*:
-
-| #               | Category                           | Competency                                                                            | Target Level      | Primary Proof Artifact                                                                                                                                                                                                                               |
-| --------------- | ---------------------------------- | ------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1-5**   | **AI/ML Engineering**        | Agentic Systems, RAG/Data Eng, Model Tuning, LLM Ops, Domain AI                       | **Level 3** | [root_coordinator.py](src/agents/root_coordinator.py), [sec_edgar_mcp.py](src/tools/sec_edgar_mcp.py), [regression_gate.py](eval/regression_gate.py), [financial_calculator.py](src/tools/financial_calculator.py)                                       |
-| **6-12**  | **Scoping & Documentation**  | Problem Definition, Scope & Constraints, DoD, System Design, ADRs, API Docs, Runbooks | **Level 3** | [prd_functional_requirements.md](docs/prd_functional_requirements.md), [tdd_part1_system_architecture.md](docs/tdd_part1_system_architecture.md), [ADRs](docs/adrs/), [openapi.yaml](openapi.yaml), [operational_runbook.md](docs/operational_runbook.md) |
-| **13-17** | **Security & Privacy**       | AuthN/AuthZ, Network Security, DLP/Privacy, AI Guardrails, Audit Logging              | **Level 3** | [iam module](terraform/modules/iam/main.tf), [vpc module](terraform/modules/vpc/main.tf), [dlp_masker.py](src/guardrails/dlp_masker.py), [input_guardrail.py](src/guardrails/input_guardrail.py), [audit_logger.py](src/observability/audit_logger.py)    |
-| **18-21** | **Reliability & Resilience** | Availability, Observability, Failure Testing, Graceful Degradation                    | **Level 3** | [cloud_run module](terraform/modules/cloud_run/main.tf), [tracer.py](src/observability/tracer.py), [chaos tests](tests/chaos/), [CircuitBreaker in sec_edgar_mcp.py](src/tools/sec_edgar_mcp.py)                                                         |
-| **22-24** | **Performance & Cost**       | Scalability, Resource Sizing, AI Cost Management                                      | **Level 3** | [asyncio.gather in root_coordinator.py](src/agents/root_coordinator.py), [model routing + ContextCacheConfig in adk_agent.py](src/agents/adk_agent.py), [cost_and_token_analysis.md](docs/cost_and_token_analysis.md)                                   |
-| **25-28** | **Operational Excellence**   | CI/CD, IaC, AI Lifecycle, Testing Quality                                             | **Level 3** | [cloudbuild.yaml](cloudbuild.yaml), [terraform/](terraform/), [agent instructions](src/agents/adk_agent.py), [90% Test Coverage in tests/](tests/)                                                                                                       |
-| **29-32** | **Designing for Change**     | Modularity/DI, Config Management, Contract-First API, Extensibility                   | **Level 3** | [interfaces.py](src/core/interfaces.py), [container.py](src/core/container.py), [config.py](src/config.py), [openapi.yaml](openapi.yaml), [pubsub_broadcaster.py](src/observability/pubsub_broadcaster.py)                                                |
-
-*Full verification details available in [docs/product_readiness_review_deck.md](docs/product_readiness_review_deck.md).*
 
 ---
 
