@@ -1,7 +1,7 @@
 """
-Vertex AI Search & Google Grounding Adapter.
-Executes grounded macroeconomic web queries and retrieves real-time interest rate decisions,
-regulatory updates, and market context.
+Macroeconomic Context Client.
+Serves a curated, dated corpus of macroeconomic and company news items - interest rate
+decisions, regulatory updates and market context - each with its source URL.
 """
 
 from typing import Any
@@ -10,16 +10,16 @@ from src.config import Settings
 from src.core.interfaces import BaseTool, MarketDataInterface
 
 
-class VertexSearchClient(MarketDataInterface, BaseTool):
+class MacroContextClient(MarketDataInterface, BaseTool):
     """
-    Search Grounding Client interfacing with Vertex AI Grounding APIs.
-    Provides verifiable citations with source URLs and timestamps.
+    Curated macroeconomic context with verifiable source URLs and publication dates.
+    No external call is made; tickers without company items get the global backdrop only.
     """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings()
 
-        # Grounded macroeconomic context cache
+        # Curated macroeconomic corpus
         self._macro_backdrop: dict[str, list[dict[str, Any]]] = {
             "GLOBAL_MACRO": [
                 {
@@ -72,7 +72,7 @@ class VertexSearchClient(MarketDataInterface, BaseTool):
 
     @property
     def description(self) -> str:
-        return "Queries real-time macroeconomic indicators and market news with source citations."
+        return "Returns curated macroeconomic context and market news with source citations."
 
     async def query_market_context(
         self, ticker: str, focus_areas: list[str]

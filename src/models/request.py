@@ -27,7 +27,7 @@ class EquityResearchRequest(BaseModel):
     )
     include_macro_context: bool = Field(
         default=True,
-        description="Whether to run live search grounding for macroeconomic context."
+        description="Whether to include curated macroeconomic context."
     )
 
     @field_validator("ticker")

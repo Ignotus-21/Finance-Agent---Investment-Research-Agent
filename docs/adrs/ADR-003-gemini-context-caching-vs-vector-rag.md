@@ -39,26 +39,22 @@ We must decide on the optimal strategy for processing annual 10-K filings.
 **Chosen Option:** **Option 3: Gemini Context Caching with Hybrid Table Extraction**.
 
 #### Architecture Overview:
-1. When an equity research request is initiated for a ticker, the system checks if a Gemini Context Cache already exists for the company's Form 10-K.
-2. If absent, the SEC sub-agent loads the normalized 10-K document (approx. 150k tokens) and initializes a **Gemini Context Cache** on Vertex AI with a Time-To-Live (TTL) of 60 minutes.
-3. The SEC Filing Specialist, Transcript Specialist, and Synthesis Engine query the cached model endpoint.
-4. Because the full document remains resident in the cache, the model can inspect cross-statement footnote linkages with 100% table structure preservation.
+1. Context caching is configured once on the ADK `App` via `ContextCacheConfig`, which drives Vertex AI `CachedContent` through ADK's `GeminiContextCacheManager`.
+2. Each agent (the Pro coordinator and the Flash extraction specialist) caches its own request prefix: system instruction, tool declarations, and the conversation so far, including retrieved filing sections.
+3. Caching engages from the second turn of a session, once the prefix exceeds Gemini's 2,048-token minimum; ADK invalidates and recreates the cache whenever the prefix changes.
+4. Filing sections are retrieved whole rather than chunked, so table structure and cross-statement linkages are preserved in context.
 
 ```mermaid
 flowchart TD
-    Request[Research Query: AAPL FY2024] --> CacheCheck{Gemini Context<br/>Cache Exists?}
+    Request[Research Query: AAPL FY2024] --> Turn1[Turn 1: full prefix sent<br/>token count recorded]
+    Turn1 --> CacheCheck{Prefix >= 2,048 tokens<br/>and unchanged?}
 
-    CacheCheck -- No --> Ingest10K[Download & Normalize Form 10-K<br/>~150k Tokens]
-    Ingest10K --> CreateCache[Create Vertex AI Context Cache<br/>TTL: 60 mins]
-    CreateCache --> BindAgent[Bind Model to Context Cache]
+    CacheCheck -- No --> Full[Send full prefix]
+    CacheCheck -- Yes --> CreateCache[ADK creates / reuses<br/>Vertex CachedContent]
+    CreateCache --> Cached[Later turns bill the cached prefix<br/>at the discounted rate]
 
-    CacheCheck -- Yes --> BindAgent
-
-    BindAgent --> Query1[SEC Agent: Extract Balance Sheet & MD&A<br/>Cached Input: $0.3125 / 1M]
-    BindAgent --> Query2[Synthesis Engine: Cross-Verify Footnotes<br/>Cached Input: $0.3125 / 1M]
-
-    Query1 --> Result[100% Table Fidelity & Verified Provenance]
-    Query2 --> Result
+    Full --> Result[Brief with whole-section filing context]
+    Cached --> Result
 ```
 
 ---
@@ -118,7 +114,7 @@ The capabilities the vector store would have provided are met by other means:
 | Large-document retrieval | Gemini Context Caching — ADK `ContextCacheConfig` on the App, `src/agents/adk_agent.py`. Superseded `src/cache/context_caching.py`, which simulated it. |
 | Table-aware structured extraction | `src/tools/sec_edgar_mcp.py` (XBRL statement parsing) |
 | Analytical querying over historical metrics | BigQuery datasets — `terraform/modules/bigquery/` |
-| Real-time external grounding | Vertex AI Search grounding — `src/tools/search_grounding.py` |
+| External macro context | Curated macroeconomic corpus — `src/tools/macro_context.py` |
 
 #### Reversal Trigger
 

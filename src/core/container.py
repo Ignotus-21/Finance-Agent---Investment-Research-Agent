@@ -13,7 +13,7 @@ from src.config import Settings
 from src.engine.synthesis_engine import SynthesisEngine
 from src.guardrails.input_guardrail import InputGuardrail
 from src.tools.financial_calculator import FinancialCalculator
-from src.tools.search_grounding import VertexSearchClient
+from src.tools.macro_context import MacroContextClient
 from src.tools.sec_edgar_mcp import SECFilingClient
 from src.tools.transcript_parser import TranscriptClient
 
@@ -28,7 +28,7 @@ class ApplicationContainer:
         self.calculator = FinancialCalculator()
         self.sec_client = SECFilingClient(settings=self.settings)
         self.transcript_client = TranscriptClient(settings=self.settings)
-        self.search_client = VertexSearchClient(settings=self.settings)
+        self.search_client = MacroContextClient(settings=self.settings)
 
         # Pre-execution Security Guardrails
         self.guardrail = InputGuardrail(settings=self.settings)

@@ -45,7 +45,7 @@ from mcp import StdioServerParameters
 
 from src.config import Settings
 from src.tools.financial_calculator import FinancialCalculator
-from src.tools.search_grounding import VertexSearchClient
+from src.tools.macro_context import MacroContextClient
 from src.tools.transcript_parser import TranscriptClient
 
 # Gemini will not cache a prefix below this no matter what ADK is configured
@@ -58,7 +58,7 @@ _GEMINI_25_MIN_CACHEABLE_TOKENS = 2048
 # Initialize tool dependencies for the natively-hosted tools. SEC retrieval has
 # no client here: it lives in the MCP server subprocess.
 _transcript_client = TranscriptClient()
-_search_client = VertexSearchClient()
+_search_client = MacroContextClient()
 _calculator = FinancialCalculator()
 
 
@@ -98,7 +98,7 @@ async def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") ->
 
 
 async def query_macro_market_news(query: str, ticker: str = "") -> str:
-    """Grounds analysis in real-time macroeconomic news, benchmark interest rates, and industry dynamics.
+    """Returns curated macroeconomic context: benchmark interest rates, macro news, and industry dynamics.
 
     Args:
         query: Market query (e.g. 'semiconductor capex trends', 'enterprise AI monetization', 'interest rate impact').

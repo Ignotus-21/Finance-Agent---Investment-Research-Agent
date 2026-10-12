@@ -37,7 +37,7 @@
 Artifacts set the floor for gate review. Below is the comprehensive proof mapping demonstrating **Level 3 (Proficient)** across all 32 competencies:
 
 ### Category 1: AI/ML Engineering (Score: 3/3 Across All 5)
-1. **Agentic & Multi-Agent Systems (Score: 3):** Hierarchical multi-agent topology using Google ADK; Root Coordinator with Plan-and-Execute reasoning loops, thought budgeting in Gemini 2.5 Pro, state isolation, inter-agent delegation.
+1. **Agentic & Multi-Agent Systems (Score: 3):** Hierarchical multi-agent topology using Google ADK; Root Coordinator with Plan-and-Execute reasoning on Gemini 2.5 Pro, Pro/Flash routing via AgentTool, state isolation, inter-agent delegation.
    - *Proof Artifact:* [`src/agents/root_coordinator.py`](file:///src/agents/root_coordinator.py), [`docs/adrs/ADR-001-multi-agent-hierarchical-orchestration.md`](file:///docs/adrs/ADR-001-multi-agent-hierarchical-orchestration.md).
 2. **Retrieval & Data Engineering for AI (Score: 3):** MCP SEC EDGAR XBRL tabular parser; earnings call transcript speaker segmentation; Gemini context caching on 150+ page filings; hybrid search.
    - *Proof Artifact:* [`src/tools/sec_edgar_mcp.py`](file:///src/tools/sec_edgar_mcp.py), [`src/tools/transcript_parser.py`](file:///src/tools/transcript_parser.py).
@@ -73,7 +73,7 @@ Artifacts set the floor for gate review. Below is the comprehensive proof mappin
     - *Proof Artifact:* [`src/api/dependencies.py`](file:///src/api/dependencies.py), [`terraform/modules/iam/main.tf`](file:///terraform/modules/iam/main.tf).
 14. **Infrastructure & Network Security (Score: 3):** Terraform-managed VPC, Serverless VPC Access Connectors, Private Google Access, private subnets, Cloud Armor WAF policy definitions.
     - *Proof Artifact:* [`terraform/modules/vpc/main.tf`](file:///terraform/modules/vpc/main.tf).
-15. **Data Protection & Privacy (Score: 3):** Google Cloud DLP inspection rules redacting analyst IDs and proprietary portfolio metadata; Cloud KMS customer-managed encryption keys; Secret Manager; CMEK-encrypted Cloud Storage buckets with uniform bucket-level access, enforced public access prevention, object versioning, and a 7-year retention policy on the evidentiary brief archive.
+15. **Data Protection & Privacy (Score: 3):** PII masking rules redacting analyst contact details, fund identifiers and proprietary position sizes; Cloud KMS customer-managed encryption keys; Secret Manager; CMEK-encrypted Cloud Storage buckets with uniform bucket-level access, enforced public access prevention, object versioning, and a 7-year retention policy on the evidentiary brief archive.
     - *Proof Artifact:* [`src/guardrails/pii_masker.py`](file:///src/guardrails/pii_masker.py), [`terraform/modules/secret_manager/main.tf`](file:///terraform/modules/secret_manager/main.tf), [`terraform/modules/storage/main.tf`](file:///terraform/modules/storage/main.tf).
 16. **AI-Specific Security (Score: 3):** Pre-execution classifier guardrail callbacks intercepting prompt injection, jailbreaks, and out-of-domain queries before model dispatch; tool execution whitelist. Backed by a formal STRIDE threat model with a trust-boundary data flow diagram, risk register, and mitigation-to-test traceability.
     - *Proof Artifact:* [`docs/threat_model.md`](file:///docs/threat_model.md), [`src/guardrails/input_guardrail.py`](file:///src/guardrails/input_guardrail.py), [`src/guardrails/scope_classifier.py`](file:///src/guardrails/scope_classifier.py).

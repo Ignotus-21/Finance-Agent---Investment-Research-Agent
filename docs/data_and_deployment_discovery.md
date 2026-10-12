@@ -7,7 +7,7 @@
 - **Document Version:** 1.0.0
 - **Target Cloud Runtime:** Google Cloud Run (Containerized Microservice)
 - **Networking:** Google Cloud VPC + Serverless VPC Access Connector + Private Google Access
-- **Compliance & Security:** Cloud DLP (Data Loss Prevention), Secret Manager, Cloud KMS
+- **Compliance & Security:** PII masking, Secret Manager, Cloud KMS
 
 ---
 
@@ -20,7 +20,7 @@ graph TD
     subgraph DataSources [External Ingestion Feeds]
         SECFeed[SEC EDGAR Submissions API<br/>Form 10-K, 10-Q, 8-K HTML/XBRL]
         TranscriptFeed[Earnings Transcript Feeds<br/>Quarterly Call Audio-to-Text]
-        MacroFeed[Live Macro & Market Feeds<br/>Vertex AI Search & Grounding]
+        MacroFeed[Macro & Market Context<br/>Curated Macro Corpus]
     end
 
     subgraph DataProfiling [Payload & Sizing Profile]
@@ -30,7 +30,7 @@ graph TD
     end
 
     subgraph ProcessingPipeline [Ingestion & Sanitization Engine]
-        DLPFilter[Cloud DLP Sanitization<br/>Redact Portfolio & Analyst IDs]
+        DLPFilter[PII Masking<br/>Redact Portfolio & Analyst IDs]
         TableParser[XBRL & Markdown Table Parser]
         SpeakerSegmenter[Executive vs Q&A Segmenter]
         ContextCache[Gemini Context Caching Layer]
@@ -47,11 +47,11 @@ graph TD
 |---|---|---|---|---|
 | **SEC Public Filings (10-K / 10-Q / 8-K)** | SEC EDGAR REST API & MCP (HTML, XBRL, JSON) | 150 – 300 pages (500 KB – 3 MB raw HTML) | 120,000 – 250,000 tokens per 10-K filing | Max 10 req/sec enforced by SEC.gov with custom User-Agent |
 | **Earnings Call Transcripts** | Structured JSON / Plain Text transcript APIs | 20 – 30 pages (8,000 – 15,000 words) | 15,000 – 25,000 tokens per call | On-demand per quarterly event (P95 latency $\le$ 3s) |
-| **Macro & Industry News Grounding** | Vertex AI Search / Google Search Grounding API | 5 – 10 curated web snippets per topic | 1,500 – 4,000 tokens per search | Google Cloud API quota limits (default 600 req/min) |
+| **Macro & Industry Context** | Curated in-repo corpus (Federal Reserve, Reuters, Bloomberg, WSJ, FT items) | 2 – 4 dated snippets per request | < 1,000 tokens per request | None (no external call) |
 
 ---
 
-## 2. Data Protection & Privacy Review (Cloud DLP)
+## 2. Data Protection & Privacy Review (PII Masking)
 
 ### 2.1 Threat Vectors & Proprietary Data Leakage Risks
 Institutional asset managers submit queries containing:
@@ -61,42 +61,15 @@ Institutional asset managers submit queries containing:
 
 Sending unredacted proprietary data directly to external model APIs or retaining it in query logs violates FINRA data privacy regulations and firm fiduciary standards.
 
-### 2.2 Google Cloud DLP Inspection & De-Identification Rules
-Before any request enters the agent reasoning loop or audit logging pipeline, the FastAPI gateway executes a Cloud DLP inspection pass using the following predefined and custom InfoTypes:
+### 2.2 PII Masking Rules
+Before any request enters the agent reasoning loop or audit logging pipeline, the FastAPI gateway runs a masking pass (`src/guardrails/pii_masker.py`) with the following rules:
 
-```json
-{
-  "deidentify_config": {
-    "info_type_transformations": {
-      "transformations": [
-        {
-          "info_types": [
-            {"name": "EMAIL_ADDRESS"},
-            {"name": "PERSON_NAME"},
-            {"name": "PHONE_NUMBER"}
-          ],
-          "primitive_transformation": {
-            "replace_with_info_type_config": {}
-          }
-        },
-        {
-          "info_types": [
-            {"name": "CUSTOM_PORTFOLIO_ID"},
-            {"name": "CUSTOM_INTERNAL_FUND_CODE"}
-          ],
-          "primitive_transformation": {
-            "character_mask_config": {
-              "masking_character": "*",
-              "number_to_mask": 8,
-              "reverse_order": true
-            }
-          }
-        }
-      ]
-    }
-  }
-}
-```
+| Pattern | Replacement |
+|---|---|
+| Email addresses | `[REDACTED_EMAIL]` |
+| Phone numbers | `[REDACTED_PHONE]` |
+| Institutional fund / account codes (`FUND-`, `ACCT-`, `PORTFOLIO-`, `DESK-`) | `[REDACTED_FUND_ID]` |
+| Internal position sizes ("we hold 450,000 shares") | `[REDACTED_POSITION_SIZE]` |
 
 - **Output Guarantee:** No proprietary fund identifiers or analyst PII enter the LLM reasoning context or the BigQuery audit tables.
 
@@ -153,6 +126,6 @@ To satisfy the target cost threshold of **$\le$ $0.25 per synthesized research b
   - Subsequent sub-agent queries against the cached 10-K cost only ~$0.047 per call.
 
 ### 4.2 Model Tier Routing
-- **Extraction & Parsing Sub-Agents (SEC, Transcript):** Routed to **Gemini 2.5 Flash** ($0.075 / 1M input tokens).
-- **Reasoning, Planning & Final Synthesis:** Routed to **Gemini 2.5 Pro** with explicit thought budgeting for deep multi-source cross-verification.
+- **Filing Extraction Specialist (SEC + Transcripts):** Routed to **Gemini 2.5 Flash** ($0.075 / 1M input tokens).
+- **Reasoning, Planning & Final Synthesis:** Routed to **Gemini 2.5 Pro** for deep multi-source cross-verification.
 - **Net Cost per Research Brief:** **~$0.14 to $0.18**, safely under the **$0.25 cap**.

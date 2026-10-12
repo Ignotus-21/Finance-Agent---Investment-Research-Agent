@@ -39,13 +39,12 @@ async def generate_equity_research(
     app_container: ApplicationContainer = Depends(get_container)
 ) -> ResearchBriefResponse:
     """
-    Executes the multi-agent research workflow:
-    1. Pre-execution DLP sanitization & security guardrail inspection.
-    2. Dynamic planning with Gemini 2.5 Pro thinking budget.
-    3. Concurrent sub-agent extraction (SEC EDGAR MCP, Transcripts, Macro Search).
-    4. Deterministic financial verification tool invocation.
-    5. Synthesis of audit-ready brief with 100% line-item provenance.
-    6. Streaming compliance audit logging and Pub/Sub event broadcast.
+    Executes the deterministic research pipeline (no model call on this path):
+    1. Pre-execution PII masking & security guardrail inspection.
+    2. Concurrent sub-agent extraction (SEC EDGAR, transcripts, macro context).
+    3. Deterministic financial ratio computation (Python Decimal).
+    4. Synthesis of an audit-ready brief with line-item provenance.
+    5. Structured audit logging (exported to BigQuery by a log sink) and Pub/Sub event broadcast.
     """
     req_start = time.monotonic()
 

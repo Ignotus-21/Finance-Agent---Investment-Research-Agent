@@ -8,7 +8,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](pyproject.toml)
 [![Test Coverage: 90%](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](tests/)
 
-An enterprise multi-agent equity research platform built on **Google Cloud Platform** and the **Google Agent Development Kit (ADK)**. IRA automates equity due diligence over audited SEC filings (Forms 10-K, 10-Q, 8-K), quarterly earnings call transcripts, and live macroeconomic context, and returns audit-ready briefs with **100% line-item citation provenance**.
+An enterprise multi-agent equity research platform built on **Google Cloud Platform** and the **Google Agent Development Kit (ADK)**. IRA automates equity due diligence over audited SEC filings (Forms 10-K, 10-Q, 8-K), quarterly earnings call transcripts, and curated macroeconomic context, and returns audit-ready briefs with **100% line-item citation provenance**.
 
 Ticker resolution, filing lookup and XBRL extraction all happen **live against sec.gov** at request time. There is no pre-built index and no company whitelist: a registrant nobody has asked for before works exactly like one that has.
 
@@ -46,7 +46,7 @@ graph TB
     subgraph SecurityGuardrails [Security Boundary]
         InputFilter[Prompt Injection Classifier]
         ScopeValidator[Financial Scope Detector]
-        DLP[Cloud DLP masking on the audit record]
+        DLP[PII masking on the inbound prompt]
     end
 
     subgraph Pipeline [Orchestration - no model is called here]
@@ -211,9 +211,6 @@ Stated here rather than left to be discovered.
 - **The REST brief's prose is templated.** The numbers are real — XBRL tags,
   computed in Python — but the executive summary and risk matrix are fixed
   sentences filled with those figures. Only the `/adk` path reasons.
-- **`terraform apply` has never been run.** The live deployment was created
-  with `gcloud`. The IaC is `validate`- and `fmt`-clean but unapplied, so
-  "zero-touch provisioning" is unproven.
 - **The agent path takes 45–71s** against a 60s design target. Measured, not
   estimated. Latency scales with the number of coordinator turns.
 - **No load test.** Concurrency, `max_instances` and the autoscaling range are

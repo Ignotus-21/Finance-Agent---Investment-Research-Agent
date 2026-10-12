@@ -19,7 +19,7 @@ The **Autonomous Investment Research Intelligence Agent (IRA)** was conceptualiz
 1. **Massive Operational Acceleration:** Slashed end-to-end financial brief synthesis latency from 3–6 hours of manual labor to **38.5 seconds (P95)**.
 2. **Deterministic Arithmetic:** All financial ratios are routed through a pure Python calculator using `Decimal`, so the **arithmetic** cannot hallucinate. *History (PR #9, PR #12): the original "Faithfulness = 1.0000" was a hardcoded literal, not a measurement. Measured honestly it was **0.60 at 4.5% coverage**. After recording the offline corpus from sec.gov and aligning the dataset to the metrics the pipeline emits, it is **1.0000 at 51.8% coverage** and enforced. The calculator's **inputs** are now verified against the filings for the figures that are checked. See DEV-15.*
 3. **100% Evidentiary Provenance:** Every stated numerical figure and executive claim is linked to an audited primary SEC Form 10-K filing or earnings call transcript citation.
-4. **Institutional Security & Governance:** Enforced pre-execution guardrails intercepting 100% of adversarial prompt injections and jailbreaks, coupled with Cloud DLP metadata redaction and immutable BigQuery audit logging.
+4. **Institutional Security & Governance:** Enforced pre-execution guardrails intercepting 100% of adversarial prompt injections and jailbreaks, coupled with PII masking and BigQuery audit logging via a Cloud Logging sink.
 5. **Economic Viability:** Asymmetric model routing (Pro for synthesis, Flash for extraction) and ADK context caching against Vertex `CachedContent`. The **$0.165 per brief is a projection from list prices, not a measurement** — and the REST endpoint calls no model at all, so its inference cost is $0.00. Measuring the ADK path needs a live run with billing attached (DEV-17).
 6. **Readiness Assessment Alignment:** Satisfied all **32 competencies** at **Level 3 (Proficient)** in the CPSE-to-FDE evaluation framework.
 
@@ -33,17 +33,17 @@ graph TB
         Client[Institutional Web UI / Terminal]
         WAF[Cloud Armor WAF]
         FastAPI[FastAPI Application Gateway]
-        DLP[Cloud DLP Redaction Layer]
+        DLP[PII Masking Layer]
         Guard[InputGuardrail Pre-Execution Classifier]
     end
 
     subgraph AgenticCore [Vertex AI Multi-Agent Core - Google ADK]
-        Root[Root Coordinator Agent<br/>Gemini 2.5 Pro + 2k Thinking Budget]
+        Root[Root Coordinator Agent<br/>Gemini 2.5 Pro]
 
         subgraph SubAgents [Concurrent Domain Sub-Agents]
             SEC[SEC Filing Specialist<br/>MCP EDGAR / XBRL Tables]
             Trans[Transcript Specialist<br/>Executive Remarks vs Q&A]
-            Macro[Macro News Specialist<br/>Vertex AI Search Grounding]
+            Macro[Macro Context<br/>Curated Macro Corpus]
         end
 
         subgraph DeterministicEngines [Engines & Tools]

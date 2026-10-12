@@ -19,7 +19,7 @@ We must decide on the agent orchestration topology: Should we utilize a **Monoli
 ### Decision Drivers
 1. **Context Window Pollution & Distraction:** Flooding a single prompt with 150-page 10-K tables, 25-page transcripts, and news articles leads to attention degradation and hallucinated metrics.
 2. **Execution Latency:** A monolithic sequential ReAct loop calls tools one by one, resulting in total query latency exceeding 120–180 seconds, violating our $\le 60\text{s}$ P95 SLA.
-3. **Model Cost & Tier Optimization:** Different tasks require different model tiers. Extracting tabular numbers requires high throughput and low cost (Gemini 2.5 Flash), while multi-source synthesis requires deep reasoning and thinking budget (Gemini 2.5 Pro).
+3. **Model Cost & Tier Optimization:** Different tasks require different model tiers. Extracting tabular numbers requires high throughput and low cost (Gemini 2.5 Flash), while multi-source synthesis requires deep reasoning (Gemini 2.5 Pro).
 4. **Modularity & Maintainability:** Independent sub-agents allow isolated unit testing, independent prompt versioning, and distinct failure recovery policies.
 
 ---
@@ -35,28 +35,28 @@ We must decide on the agent orchestration topology: Should we utilize a **Monoli
 **Chosen Option:** **Option 3: Hierarchical Multi-Agent Architecture using Google ADK**.
 
 #### Architecture Overview:
-- **Root Coordinator Agent:** Powered by **Gemini 2.5 Pro** with explicit thought budgeting. Formulates a decomposed execution plan and orchestrates task delegation.
+- **Root Coordinator Agent:** Powered by **Gemini 2.5 Pro** (built-in thinking). Formulates a decomposed execution plan and orchestrates task delegation.
 - **Specialized Sub-Agents (Domain Specialists):**
-  1. *SEC Filing Specialist:* Dedicated to Form 10-K/10-Q XBRL parsing and table extraction.
-  2. *Earnings Transcript Specialist:* Dedicated to transcript segmentation and executive quote extraction.
-  3. *Macro & News Specialist:* Dedicated to Vertex AI Search grounding and real-time macroeconomic indicators.
+  1. *Filing Extraction Specialist (Gemini 2.5 Flash, via `AgentTool`):* Retrieves SEC 10-K/10-Q sections and XBRL facts over MCP, and earnings call transcripts. Reports verbatim; never computes.
+  2. *Macro context tool:* A function tool on the coordinator returning curated macroeconomic context.
+  3. *Deterministic calculator tool:* A function tool on the coordinator; every ratio is computed in Python `Decimal`, never by a model.
 - **Synthesis Engine:** Cross-verifies evidence against deterministic calculator outputs and generates the schema-validated brief.
 
 ```mermaid
 graph TD
-    Root[Root Coordinator Agent<br/>Gemini 2.5 Pro + Thinking Budget]
+    Root[Root Coordinator Agent<br/>Gemini 2.5 Pro]
 
-    subgraph ParallelExecution [Concurrent Asynchronous Dispatch]
-        SEC[SEC Filing Specialist<br/>Gemini 2.5 Flash]
-        Trans[Earnings Transcript Specialist<br/>Gemini 2.5 Flash]
-        Macro[Macro & News Specialist<br/>Vertex AI Search]
+    subgraph ParallelExecution [Coordinator Delegation & Tools]
+        SEC[Filing Extraction Specialist<br/>Gemini 2.5 Flash - SEC via MCP + transcripts]
+        Trans[Deterministic Calculator<br/>Python Decimal tool]
+        Macro[Macro Context<br/>Curated corpus tool]
     end
 
     Synth[Financial Synthesis & Verification Engine]
 
     Root -->|Dispatch Plan| ParallelExecution
-    SEC -->|Parsed Tables| Synth
-    Trans -->|Segmented Quotes| Synth
+    SEC -->|Filing Facts & Transcript Quotes| Synth
+    Trans -->|Computed Ratios| Synth
     Macro -->|Macro Context| Synth
     Synth -->|Verified Brief| Root
 ```

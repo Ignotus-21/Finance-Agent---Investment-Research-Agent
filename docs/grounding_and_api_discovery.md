@@ -5,7 +5,7 @@
 
 ### Document Control
 - **Document Version:** 1.0.0
-- **Protocols Covered:** Model Context Protocol (MCP), OpenAPI 3.1, Vertex AI Search Grounding, SEC EDGAR Submissions API
+- **Protocols Covered:** Model Context Protocol (MCP), OpenAPI 3.1, curated macro context, SEC EDGAR Submissions API
 - **Resilience Engineering:** Tenacity Exponential Backoff, Jitter, Circuit Breaker Pattern
 
 ---
@@ -25,18 +25,18 @@ graph LR
     subgraph ToolInterfaces [Standardized Tool & Protocol Layer]
         SECMCP[SEC EDGAR MCP Client<br/>stdio / sse Transport]
         TranscriptTool[Transcript REST Adapter<br/>Speaker Role JSON Parser]
-        SearchTool[Vertex AI Grounding Adapter<br/>Google Search Grounding]
+        SearchTool[Macro Context Client<br/>Curated Macro Corpus]
     end
 
     subgraph ExternalServices [Upstream External Providers]
         EDGAR[SEC.gov EDGAR Submissions API<br/>Rate: 10 req/s, User-Agent Header]
-        TranscriptAPI[Quarterly Transcript Repo]
-        GoogleSearch[Vertex AI Search Service]
+        TranscriptAPI[Earnings Transcript Corpus]
+        GoogleSearch[Curated Macro Corpus]
     end
 
     SECAgent -->|MCP JSON-RPC| SECMCP -->|HTTPS + Backoff| EDGAR
-    TranscriptAgent -->|OpenAPI Client| TranscriptTool -->|HTTPS| TranscriptAPI
-    MacroAgent -->|gRPC / REST| SearchTool -->|Google API| GoogleSearch
+    TranscriptAgent -->|in-process| TranscriptTool -->|lookup| TranscriptAPI
+    MacroAgent -->|in-process| SearchTool -->|lookup| GoogleSearch
 ```
 
 ---
@@ -100,12 +100,12 @@ graph LR
 
 ---
 
-### 2.3 Real-Time Search Grounding via Vertex AI
+### 2.3 Macroeconomic Context
 
 #### Protocol:
-- **Standard:** Google Vertex AI Gen AI SDK search grounding extension (`google.genai.types.GenerateContentConfig.tools`).
-- **Functionality:** Provides dynamic web grounding against trusted financial news domains (Reuters, Bloomberg, Wall Street Journal, Federal Reserve releases).
-- **Grounding Metadata Returned:** Web search queries, cited URLs, snippet text, and publication dates.
+- **Source:** A curated corpus in `src/tools/macro_context.py` drawn from trusted financial sources (Federal Reserve releases, Reuters, Bloomberg, Wall Street Journal, Financial Times).
+- **Functionality:** Returns a global macro backdrop plus company-specific items where the corpus has them. Tickers without company items receive the global backdrop only; nothing is generated.
+- **Metadata Returned:** Title, snippet, source domain, URL, and publication date for every item.
 
 ---
 

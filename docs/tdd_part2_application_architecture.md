@@ -19,7 +19,7 @@ graph TD
     subgraph PresentationLayer [1. Presentation & API Layer]
         FastAPIRoutes[FastAPI REST Endpoints<br/>/v1/research/equity, /healthz]
         AuthMiddleware[OAuth2 / IAM Token Validator]
-        DLPMiddleware[Cloud DLP Redaction Middleware]
+        DLPMiddleware[PII Masking Middleware]
     end
 
     subgraph SecurityLayer [2. Pre-Execution Guardrails Layer]
@@ -31,7 +31,7 @@ graph TD
         RootCoord[RootCoordinatorAgent: Gemini 2.5 Pro Planner]
         SECAgent[SECSubAgent: Form 10-K Specialist]
         TransAgent[TranscriptSubAgent: Speaker Segmenter]
-        MacroAgent[MacroSubAgent: Vertex Search Grounding]
+        MacroAgent[MacroSubAgent: Curated Macro Corpus]
     end
 
     subgraph DomainEngineLayer [4. Domain & Verification Engine Layer]
@@ -43,10 +43,10 @@ graph TD
     subgraph InfrastructureLayer [5. Infrastructure & Integration Adapters]
         SECMCPClient[SEC EDGAR MCP Client Adapter]
         TranscriptClient[Transcript REST Repository Adapter]
-        SearchClient[Vertex AI Search SDK Adapter]
-        ContextCacheMgr[Gemini Context Caching Manager]
+        SearchClient[Macro Context Client]
+        ContextCacheMgr[ADK ContextCacheConfig - Vertex CachedContent]
         TraceExporter[OpenTelemetry Cloud Trace Exporter]
-        BQAuditLogger[BigQuery Streaming Audit Logger]
+        BQAuditLogger[Structured Audit Logger - Logging sink to BigQuery]
     end
 
     PresentationLayer --> SecurityLayer
@@ -132,7 +132,7 @@ from src.config import Settings
 from src.tools.financial_calculator import FinancialCalculator
 from src.tools.sec_edgar_mcp import SECFilingClient
 from src.tools.transcript_parser import TranscriptClient
-from src.tools.search_grounding import VertexSearchClient
+from src.tools.macro_context import MacroContextClient
 from src.engine.synthesis_engine import SynthesisEngine
 from src.agents.root_coordinator import RootCoordinatorAgent
 from src.agents.sec_agent import SECSubAgent
@@ -150,7 +150,7 @@ class ApplicationContainer:
         self.calculator = FinancialCalculator()
         self.sec_client = SECFilingClient(settings=self.settings)
         self.transcript_client = TranscriptClient(settings=self.settings)
-        self.search_client = VertexSearchClient(settings=self.settings)
+        self.search_client = MacroContextClient(settings=self.settings)
 
         # Guardrails
         self.guardrail = InputGuardrail(settings=self.settings)

@@ -7,7 +7,7 @@
 - **Project Name:** Autonomous Investment Research Intelligence Agent (IRA)
 - **Document Version:** 1.0.0
 - **Classification:** Enterprise Confidential / Financial Systems Spec
-- **Target Platform:** Google Cloud Platform (Vertex AI, Google Agent Development Kit, Cloud Run, BigQuery, Cloud DLP, Cloud Trace)
+- **Target Platform:** Google Cloud Platform (Vertex AI, Google Agent Development Kit, Cloud Run, BigQuery, Cloud Trace)
 - **Evaluation Framework:** CPSE-to-FDE Readiness Assessment (AI Well-Architected Framework)
 
 ---
@@ -19,7 +19,7 @@ In institutional buy-side asset management firms, hedge funds, and investment ba
 1. Search regulatory portals (SEC EDGAR) for audited Form 10-K, 10-Q, and 8-K filings.
 2. Manually cross-reference dense financial statements (Income Statement, Balance Sheet, Cash Flow) across consecutive fiscal years.
 3. Review 20+ page quarterly earnings call transcripts to decipher executive sentiment, forward guidance, and analyst Q&A nuances.
-4. Monitor real-time macroeconomic news feeds and interest rate announcements.
+4. Track the macroeconomic backdrop and interest rate environment.
 
 ### 1.2 Operational Bottlenecks & Drag
 - **High Synthesis Latency:** Manually extracting and reconciling multi-page audited financial disclosures with qualitative commentary takes **3 to 6 hours per company per quarter**.
@@ -58,7 +58,7 @@ journey
 |---|---|---|---|
 | **Institutional Equity Analyst** | Performs deep fundamental analysis on coverage universe (20-30 tickers); builds financial models and quarterly previews. | Excessive time spent copying tables from SEC filings; manual transcript scouring. | Accelerates quarterly synthesis from 4 hours to <60 seconds with verified XBRL tables and quotes. |
 | **Portfolio Manager (PM)** | Allocates capital across portfolio strategies; evaluates analyst theses and requires rapid risk assessments. | Delayed synthesis means missed market reaction windows; skepticism toward unverified AI outputs. | High-conviction briefs with instant audit trails and line-item source links. |
-| **Risk & Compliance Officer** | Enforces regulatory compliance (FINRA, SEC, SOX); ensures research notes have verifiable audit trails and no non-public data leaks. | AI hallucinations create regulatory exposure; lack of tamper-evident query logging. | 100% evidentiary provenance, Cloud DLP redaction, and tamper-evident BigQuery audit logging. |
+| **Risk & Compliance Officer** | Enforces regulatory compliance (FINRA, SEC, SOX); ensures research notes have verifiable audit trails and no non-public data leaks. | AI hallucinations create regulatory exposure; lack of tamper-evident query logging. | 100% evidentiary provenance, PII redaction, and tamper-evident BigQuery audit logging. |
 
 ---
 
@@ -81,7 +81,7 @@ graph TD
     subgraph InScopeBoundary [In-Scope: Investment Research & Due Diligence]
         FilingData[SEC Forms 10-K, 10-Q, 8-K<br/>XBRL & Audited Markdown Tables]
         TranscriptData[Earnings Call Transcripts<br/>Executive Remarks vs Analyst Q&A]
-        MacroData[Live Macroeconomic Indicators<br/>Vertex AI Search & News Grounding]
+        MacroData[Macroeconomic Context<br/>Curated Macro Corpus]
         RatioEngine[Deterministic Ratio Verification<br/>YoY Growth, Margins, FCF, D/E]
         AuditLog[Tamper-Evident Audit Logging<br/>Cloud Logging & BigQuery]
     end
@@ -100,7 +100,7 @@ graph TD
 ### 4.1 In-Scope Capabilities
 - Ingestion, parsing, and normalization of SEC public EDGAR filings (10-K, 10-Q, 8-K) via Model Context Protocol (MCP).
 - Quarterly earnings call transcript segmentation distinguishing formal executive prepared remarks from analyst Q&A.
-- Real-time web search grounding for macroeconomic context (interest rates, central bank announcements, industry trends).
+- Curated macroeconomic context (interest rates, central bank announcements, industry trends) with dated source citations.
 - Deterministic calculation of fundamental financial ratios using Python numerical execution (zero LLM calculation).
 - Structured output rendering conforming strictly to Pydantic v2 schemas with line-item citations.
 - Pre-execution guardrails intercepting prompt injection, jailbreaks, and out-of-domain requests.
@@ -120,10 +120,10 @@ graph TD
 - The system shall inspect all incoming requests before dispatching to LLMs.
 - Queries containing adversarial prompt injection syntax (e.g., "ignore prior instructions", "system prompt override") must be rejected immediately with HTTP 400 and logged as security violations.
 - Queries outside financial equity research (e.g., creative writing, code generation, stock price gambling) must be rejected with an out-of-domain explanation.
-- Cloud DLP inspection shall mask client identifiers and proprietary portfolio metadata before runtime processing.
+- PII masking shall redact client identifiers and proprietary portfolio metadata before runtime processing.
 
 ### FR-2: Root Coordinator Reasoning & Dynamic Planning
-- The Root Coordinator Agent shall use Gemini 2.5 Pro with explicit thought budgeting to evaluate analyst queries.
+- The Root Coordinator Agent shall use Gemini 2.5 Pro to evaluate analyst queries.
 - The coordinator shall formulate a structured multi-step execution plan specifying required sub-agent tasks and dispatch them concurrently using asynchronous I/O.
 
 ### FR-3: SEC EDGAR Filing Retrieval & Parsing (MCP)
@@ -138,7 +138,7 @@ graph TD
 - Sentiment and qualitative tone must be extracted with speaker attribution and timestamp references.
 
 ### FR-5: Macroeconomic & Live News Grounding
-- The Macro Sub-Agent shall query Vertex AI Search and Google Search Grounding for real-time market updates, central bank policy announcements, and competitor developments.
+- The macro context tool shall return curated, dated market context (central bank policy, sector and competitor developments) with a source citation for every item.
 - All news snippets must include verifiable source domains and publication timestamps.
 
 ### FR-6: Deterministic Financial Ratio Verification

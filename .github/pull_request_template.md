@@ -28,7 +28,7 @@ Please check all relevant competencies addressed or impacted by this PR:
 ### 3. Security, Privacy & Compliance
 - [ ] **Authentication & Authorization**: OAuth2 / Bearer tokens, IAM least-privilege roles.
 - [ ] **Infrastructure & Network Security**: Dedicated VPC, private subnets, Serverless VPC Access.
-- [ ] **Data Protection & Privacy**: Cloud DLP PII & portfolio masking, Secret Manager, Cloud KMS.
+- [ ] **Data Protection & Privacy**: PII & portfolio-identifier masking, Secret Manager, Cloud KMS.
 - [ ] **AI-Specific Security**: Pre-execution prompt injection guardrails, jailbreak prevention.
 - [ ] **Compliance & Governance**: Structured audit logging in Cloud Logging & BigQuery.
 

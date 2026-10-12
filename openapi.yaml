@@ -24,7 +24,7 @@ paths:
       summary: Synthesize Comprehensive Equity Research Brief
       description: |
         Triggers the Root Coordinator Agent to execute a Plan-and-Execute multi-agent research workflow.
-        Decomposes query across SEC EDGAR filings, earnings call transcripts, and live macro news,
+        Decomposes query across SEC EDGAR filings, earnings call transcripts, and curated macro context,
         calculates deterministic financial ratios, and verifies line-item evidentiary citations.
       operationId: generateEquityResearchBrief
       tags:
@@ -200,7 +200,7 @@ components:
         include_macro_context:
           type: boolean
           default: true
-          description: Whether to trigger the Macro News sub-agent for live search grounding.
+          description: Whether to include the curated macroeconomic context.
 
     FilingResearchRequest:
       type: object

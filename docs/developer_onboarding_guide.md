@@ -59,7 +59,6 @@ GCP_PROJECT_ID=ira-capstone-finance-prod
 GCP_REGION=us-central1
 COORDINATOR_MODEL=gemini-2.5-pro
 EXTRACTION_MODEL=gemini-2.5-flash
-THINKING_BUDGET=2048
 SEC_EDGAR_USER_AGENT="SampleInstitutionalResearch AdminContact@samplecompany.com"
 SEC_RATE_LIMIT_PER_SEC=8.0
 CONTEXT_CACHE_TTL_MINUTES=60

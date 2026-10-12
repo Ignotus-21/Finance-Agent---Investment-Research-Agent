@@ -28,12 +28,12 @@ graph TB
     end
 
     subgraph AgentRuntime [Vertex AI Multi-Agent Runtime]
-        RootAgent[Root Coordinator Agent<br/>Gemini 2.5 Pro + Thinking Budget Planner]
+        RootAgent[Root Coordinator Agent<br/>Gemini 2.5 Pro]
 
         subgraph SpecializedAgents [Domain Specialized Sub-Agents]
             SECAgent[SEC Filing Specialist<br/>Form 10-K/10-Q XBRL Parser]
             TranscriptAgent[Earnings Transcript Specialist<br/>Executive Remarks vs Q&A Segmenter]
-            MacroAgent[Macro & News Specialist<br/>Vertex AI Search Grounding]
+            MacroAgent[Macro & News Specialist<br/>Curated Macro Corpus]
         end
 
         subgraph CoreEngines [Execution & Caching Engines]
@@ -88,7 +88,7 @@ sequenceDiagram
     autonumber
     actor Analyst as Equity Analyst
     participant API as FastAPI Gateway
-    participant DLP as Cloud DLP Engine
+    participant DLP as PII Masker
     participant Guard as Pre-Execution Guardrail
     participant Root as Root Coordinator (Gemini 2.5 Pro)
     participant SEC as SEC Filing Sub-Agent
@@ -107,7 +107,7 @@ sequenceDiagram
     Guard-->>API: Verdict: PASS (Security score 1.0)
 
     API->>Root: Dispatch sanitized research request
-    Note over Root: Plan-and-Execute reasoning loop with thinking budget
+    Note over Root: Plan-and-Execute reasoning loop
     Root->>Root: Formulate Decomposed Execution Plan
 
     par Concurrent Sub-Agent Data Gathering
@@ -120,7 +120,7 @@ sequenceDiagram
         Trans-->>Root: Return segmented quotes & sentiment tags
     and
         Root->>Macro: query_macro_news(ticker="AAPL", focus_areas)
-        Macro->>Macro: Vertex AI Search Grounding
+        Macro->>Macro: Curated macro corpus lookup
         Macro-->>Root: Return grounded market indicators & news
     end
 
@@ -147,18 +147,18 @@ sequenceDiagram
 
 ### 3.1 Ingress & Security Boundary (FastAPI Gateway)
 - **Authentication:** Validates incoming Bearer JWT tokens against Google Cloud IAM / OAuth2 provider.
-- **DLP Sanitization Middleware:** Invokes Cloud DLP REST API or local regex redaction filter to scrub customer account numbers, portfolio holdings, and analyst names.
+- **PII Masking Middleware:** Regex redaction (`pii_masker.py`) scrubbing emails, phone numbers, fund/account identifiers and position sizes.
 - **Input Guardrail:** Rejects prompt injection patterns (`ignore all prior instructions`, `act as DAN`, `drop table`) and enforces financial scope boundaries.
 
 ### 3.2 Root Coordinator Agent (Google ADK)
-- **Model:** `gemini-2.5-pro` with `thinking_budget` allocated for complex multi-part planning.
+- **Model:** `gemini-2.5-pro` (built-in thinking) for complex multi-part planning.
 - **State Management:** In-memory execution state maintaining sub-agent response bundles, verified calculation payloads, and execution latency timestamps.
 - **Concurrency:** Uses `asyncio.gather` for non-blocking parallel dispatch to sub-agents.
 
 ### 3.3 Domain Sub-Agents
 - **SEC Filing Specialist:** Connects via Model Context Protocol (MCP) to parse SEC EDGAR filings; normalizes XBRL tables into markdown representations.
 - **Earnings Transcript Specialist:** Parses quarterly call transcripts; separates prepared executive remarks (CFO guidance) from live analyst Q&A.
-- **Macro News Specialist:** Leverages Vertex AI Search grounding for live interest rate policies, trade tariffs, and sector sentiment.
+- **Macro News Specialist:** Returns curated, dated context on interest rate policy, trade, and sector sentiment.
 
 ### 3.4 Verification & Synthesis Engine
 - **Financial Calculator:** Pure Python tool computing metrics using standard formulas and `decimal.Decimal` arithmetic.
@@ -208,7 +208,7 @@ sequenceDiagram
     autonumber
     actor Attacker
     participant GW as FastAPI Gateway
-    participant DLP as Cloud DLP Masker
+    participant DLP as PII Masker
     participant IG as Injection Interceptor
     participant SC as Scope Classifier
     participant AL as Audit Logger
@@ -291,48 +291,38 @@ sequenceDiagram
     Note over CB: After 60s cooldown,<br/>transition to HALF_OPEN and probe
 ```
 
-### 5.3 Gemini Context Cache — Cold Miss vs. Warm Hit
+### 5.3 Gemini Context Cache — ADK `ContextCacheConfig`
 
-Specifies the ADR-003 optimisation that delivers the **75% cached-input token discount**
-underpinning the `< $0.25` per-brief cost target.
+Caching is configured once on the ADK `App` and performed by ADK's
+`GeminiContextCacheManager` against Vertex AI `CachedContent`. Each agent caches
+its own request prefix (system instruction, tool declarations, conversation so
+far). Cached input bills at a discount to standard input.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant RC as Root Coordinator
-    participant CM as Context Cache Manager
-    participant VX as Vertex AI Context Cache
-    participant SA as SEC Sub-Agent
-    participant SE as Synthesis Engine
+    participant U as Analyst
+    participant RC as Coordinator (Gemini 2.5 Pro)
+    participant CM as ADK GeminiContextCacheManager
+    participant VX as Vertex AI CachedContent
+    participant FS as Extraction Specialist (Gemini 2.5 Flash)
 
-    RC->>CM: get_or_create_cache(AAPL, FY2024)
+    U->>RC: Turn 1 - research request
+    RC->>CM: request with full prefix
+    CM-->>RC: no cache yet (prefix size recorded)
+    RC->>FS: AgentTool call - retrieve filings / transcripts
+    FS-->>RC: verbatim facts with sources
+    RC-->>U: brief
 
-    alt Cold miss — no live cache
-        CM->>VX: lookup(AAPL_FY2024)
-        VX-->>CM: not found
-        CM->>CM: Load and normalise 10-K (~150k tokens)
-        CM->>VX: create_cache(content, ttl=60min)
-        VX-->>CM: cache_id
-        Note over CM,VX: One-time ~10s setup.<br/>Billed at standard $1.25 / 1M.
-        CM-->>RC: {cache_hit: false, cache_id}
-    else Warm hit — cache live within TTL
-        CM->>VX: lookup(AAPL_FY2024)
-        VX-->>CM: cache_id (TTL remaining)
-        CM-->>RC: {cache_hit: true, cache_id}
-        Note over CM,VX: Zero ingestion cost.
+    U->>RC: Turn 2 - follow-up
+    RC->>CM: request with prefix
+    alt Prefix >= 2,048 tokens and unchanged
+        CM->>VX: create / reuse CachedContent (TTL from settings)
+        VX-->>CM: cache name
+        CM-->>RC: request references cached prefix
+        Note over RC,VX: Cached prefix tokens bill at the discounted rate
+    else Prefix changed or too small
+        CM-->>RC: full prefix sent; cache invalidated / not created
     end
-
-    par Sub-agent passes bound to the same cache
-        RC->>SA: extract statements (cache_id)
-        SA->>VX: query against cached tokens
-        VX-->>SA: Balance Sheet + MD&A
-    and
-        RC->>SE: cross-verify footnotes (cache_id)
-        SE->>VX: query against cached tokens
-        VX-->>SE: footnote linkages
-    end
-
-    Note over VX: Every cached read bills at<br/>$0.3125 / 1M — a 75% discount.<br/>Full table structure preserved.
-
-    SE-->>RC: verified brief (cache_hit recorded in metadata)
+    RC-->>U: answer
 ```

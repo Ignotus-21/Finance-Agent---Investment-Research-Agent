@@ -95,16 +95,16 @@ gantt
     dateFormat X
     axisFormat %s s
     section Security & DLP
-    Cloud DLP Redaction & Guardrail Inspection :0, 1
+    PII Masking & Guardrail Inspection         :0, 1
     section Multi-Agent Ingestion
     SEC EDGAR 10-K Context Cache Hit       :1, 6
     Earnings Transcript Speaker Parsing    :1, 5
-    Vertex AI Search Grounding             :1, 4
+    Macro Context Retrieval                :1, 4
     section Deterministic Math
     FinancialCalculator Decimal Execution  :6, 7
     section Synthesis & Provenance
     SynthesisEngine Cross-Verification     :7, 12
-    BigQuery Audit Stream & Pub/Sub Event  :12, 13
+    Audit Log (Logging sink) & Pub/Sub     :12, 13
 ```
 
 ### 3.1 Technology Sector (18 Scenarios)

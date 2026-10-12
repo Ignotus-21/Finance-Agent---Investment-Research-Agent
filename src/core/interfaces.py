@@ -60,13 +60,13 @@ class FilingRetrievalInterface(ABC):
 
 
 class MarketDataInterface(ABC):
-    """Abstract interface for macroeconomic and market news search grounding."""
+    """Abstract interface for macroeconomic and market news context."""
 
     @abstractmethod
     async def query_market_context(
         self, ticker: str, focus_areas: list[str]
     ) -> list[dict[str, Any]]:
-        """Retrieve live macroeconomic context and grounded news snippets."""
+        """Retrieve macroeconomic context and dated, sourced news snippets."""
         pass
 
 

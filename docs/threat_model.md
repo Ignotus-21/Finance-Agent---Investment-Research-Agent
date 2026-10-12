@@ -62,7 +62,7 @@ flowchart TB
 
     subgraph TB4["TB-4 · Upstream Third Parties"]
         EDGAR["SEC EDGAR"]
-        VSearch["Vertex AI Search"]
+        VSearch["Macro Context Corpus"]
         Gemini["Vertex AI Gemini"]
     end
 
@@ -148,7 +148,7 @@ flowchart TB
 | **T**ampering | Arithmetic hallucination producing a wrong financial figure | **All** maths routed to `financial_calculator.py` using `Decimal`; the LLM is forbidden from computing | Low |
 | **R**epudiation | No record of which tools an agent invoked | `tools_called` list captured per execution in `AuditLogEntry` | Low |
 | **I**nfo disclosure | System prompt / tool schema extraction | Instruction text contains no secrets; credentials resolved at runtime from Secret Manager | Low |
-| **D**oS | Runaway agent loop consuming budget | Bounded plan-and-execute (no open-ended ReAct recursion); explicit thinking budget; per-request timeouts | Low |
+| **D**oS | Runaway agent loop consuming budget | Bounded plan-and-execute (no open-ended ReAct recursion); per-request timeouts | Low |
 | **E**levation | Tool invoked with parameters outside its contract | Typed tool signatures (no `**kwargs` escape hatch — see ADR note in `interfaces.py`) | Low |
 
 ### 3.4 Upstream Integrations (TB-4)

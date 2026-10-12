@@ -51,8 +51,8 @@ async def test_adk_transcript_tool_emits_no_citation_when_unavailable():
 @pytest.mark.asyncio
 async def test_macro_client_does_not_invent_ticker_news():
     """Tickers outside the curated corpus get the global backdrop only, no generated headline."""
-    from src.tools.search_grounding import VertexSearchClient
+    from src.tools.macro_context import MacroContextClient
 
-    results = await VertexSearchClient().query_market_context("XYZ", ["rates"])
+    results = await MacroContextClient().query_market_context("XYZ", ["rates"])
     assert results, "global macro backdrop should still be returned"
     assert not any("XYZ" in (r.get("title", "") + r.get("url", "")) for r in results)

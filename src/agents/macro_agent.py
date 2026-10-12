@@ -1,6 +1,6 @@
 """
-Macroeconomic & Live News Specialist Sub-Agent.
-Queries Vertex AI Search Grounding to capture interest rate environment,
+Macroeconomic & News Specialist Sub-Agent.
+Reads the curated macro corpus to capture interest rate environment,
 regulatory backdrop, and competitor industry dynamics.
 """
 
@@ -8,15 +8,15 @@ from typing import Any
 
 from src.config import Settings
 from src.core.interfaces import BaseAgent
-from src.tools.search_grounding import VertexSearchClient
+from src.tools.macro_context import MacroContextClient
 
 
 class MacroSubAgent(BaseAgent):
     """
-    Sub-agent dedicated to real-time macroeconomic backdrop and financial news grounding.
+    Sub-agent dedicated to the macroeconomic backdrop and financial news context.
     """
 
-    def __init__(self, client: VertexSearchClient, settings: Settings | None = None) -> None:
+    def __init__(self, client: MacroContextClient, settings: Settings | None = None) -> None:
         self.client = client
         self.settings = settings or Settings()
 

@@ -64,7 +64,7 @@ class QualitativeSynthesis(BaseModel):
     )
     macro_market_context: str = Field(
         ...,
-        description="Real-time industry backdrop, interest rate environment, and competitive landscape."
+        description="Industry backdrop, interest rate environment, and competitive landscape."
     )
 
 

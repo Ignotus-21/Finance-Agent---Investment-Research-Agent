@@ -38,7 +38,6 @@ class Settings(BaseSettings):
     # Model Tier & Reasoning Settings
     coordinator_model: str = Field(default="gemini-2.5-pro", description="Model for root planner & synthesis")
     extraction_model: str = Field(default="gemini-2.5-flash", description="Model for high-throughput parsing")
-    thinking_budget: int = Field(default=2048, description="Thinking budget tokens for Gemini 2.5 Pro")
     temperature: float = Field(default=0.1, description="Low temperature for deterministic financial output")
 
     # Financial Ingestion & SEC Rate Limiting

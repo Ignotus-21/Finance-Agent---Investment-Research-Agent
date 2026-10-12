@@ -49,7 +49,7 @@ pie title Modelled Inference Cost per Brief, ADK path ($0.165 projected)
     "Gemini Context Caching Reads (10-K Input)" : 0.047
     "Gemini 2.5 Pro Synthesis & Planning" : 0.078
     "Gemini 2.5 Flash Sub-Agent Extraction" : 0.022
-    "Cloud Run Compute & BigQuery Streaming" : 0.018
+    "Cloud Run Compute & BigQuery Log Export" : 0.018
 ```
 
 ---
