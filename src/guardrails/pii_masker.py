@@ -1,13 +1,14 @@
 """
-Cloud DLP (Data Loss Prevention) Sanitization Layer.
-Redacts proprietary portfolio allocations, fund identifiers, and analyst PII
-prior to entering the LLM reasoning context or the audit logs.
+Regex-based PII masking layer.
+Redacts analyst PII (emails, phone numbers), institutional fund identifiers and
+internal position sizes from the prompt before it reaches any agent, tool or log.
+This is pattern matching in-process, not a call to the Google Cloud DLP API.
 """
 
 import re
 
 
-class CloudDLPMasker:
+class PIIMasker:
     """Sanitizes user input by masking PII and proprietary institutional portfolio codes."""
 
     # Regex patterns for proprietary portfolio references and analyst PII

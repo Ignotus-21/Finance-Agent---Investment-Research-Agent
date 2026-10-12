@@ -5,14 +5,14 @@ Unit tests for Pre-Execution Guardrails, DLP Masking, and Scope Classification.
 import pytest
 
 from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
-from src.guardrails.dlp_masker import CloudDLPMasker
 from src.guardrails.input_guardrail import InputGuardrail
+from src.guardrails.pii_masker import PIIMasker
 
 
-def test_dlp_masker_redactions():
+def test_pii_masker_redactions():
     """Verify email, phone, and institutional fund code redactions."""
     text = "Analyst john.doe@goldman.com from DESK-NYC44 reviewed portfolio holding 50,000 shares at (555) 123-4567."
-    sanitized, was_modified = CloudDLPMasker.sanitize_text(text)
+    sanitized, was_modified = PIIMasker.sanitize_text(text)
     assert was_modified is True
     assert "[REDACTED_EMAIL]" in sanitized
     assert "[REDACTED_FUND_ID]" in sanitized

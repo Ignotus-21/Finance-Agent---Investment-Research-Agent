@@ -83,3 +83,23 @@ def test_debt_to_equity_leverage():
         shareholders_equity=-500.0
     )
     assert de_neg is None
+
+
+def test_margin_pct_uses_decimal_half_up_not_float():
+    """1.005 / 100 is 1.00499... in binary float; Decimal half-up must give 1.01."""
+    assert FinancialCalculator.calculate_margin_pct(1.005, 100.0) == 1.01
+    assert FinancialCalculator.calculate_margin_pct(10.0, 0.0) is None
+
+
+def test_adk_ratio_tool_routes_through_decimal_engine():
+    """The ADK tool must agree with the Decimal engine, not with float arithmetic."""
+    import json
+
+    from src.agents.adk_agent import compute_financial_ratios
+
+    out = json.loads(compute_financial_ratios(revenue=100.0, net_income=1.005, operating_income=1.005))
+    assert out["operating_margin_pct"] == 1.01
+    assert out["net_margin_pct"] == 1.01
+
+    zero_rev = json.loads(compute_financial_ratios(revenue=0.0, net_income=1.0, operating_income=1.0))
+    assert zero_rev["operating_margin_pct"] is None

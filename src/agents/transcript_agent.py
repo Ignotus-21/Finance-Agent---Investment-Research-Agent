@@ -57,5 +57,5 @@ class TranscriptSubAgent(BaseAgent):
             "ceo_strategy": ceo_quotes,
             "analyst_qa": transcript_payload.get("analyst_qa", []),
             "all_remarks": transcript_payload.get("prepared_remarks", []),
-            "extraction_status": "SUCCESS"
+            "extraction_status": "SUCCESS" if transcript_payload.get("available") else "NOT_AVAILABLE"
         }

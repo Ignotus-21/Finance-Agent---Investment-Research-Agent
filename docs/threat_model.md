@@ -48,7 +48,7 @@ flowchart TB
     end
 
     subgraph TB2["TB-2 · Pre-Execution Guardrail Zone"]
-        DLP["Cloud DLP Masker<br/>dlp_masker.py"]
+        DLP["PII Masker (regex)<br/>pii_masker.py"]
         Injection["Prompt Injection Interceptor<br/>input_guardrail.py"]
         Scope["Domain Scope Classifier<br/>scope_classifier.py"]
     end
@@ -137,7 +137,7 @@ flowchart TB
 | STRIDE | Threat | Mitigation | Residual |
 |---|---|---|:---:|
 | **T**ampering | Prompt injection overriding system instructions | `input_guardrail.py` pattern + classifier interception pre-dispatch — see §4.1 | **Medium** |
-| **I**nfo disclosure | PII (email, SSN, card, API key) persisted into audit logs | `dlp_masker.py` redacts **before** any logging or model call | Low |
+| **I**nfo disclosure | PII (email, phone, fund IDs, position sizes) persisted into audit logs | `pii_masker.py` redacts **before** any logging or model call | Low |
 | **E**levation | Out-of-domain request coercing the agent into non-financial behaviour (code execution, price prediction) | `scope_classifier.py` rejects with `OutOfDomainQueryException` | Low |
 
 ### 3.3 Agent Execution Zone (TB-3)
@@ -230,7 +230,7 @@ hardest class to fully eliminate.
 
 | Vector | Control | Residual |
 |---|---|:---:|
-| PII leaking into logs or model context | `dlp_masker.py` redacts emails, SSNs, card numbers, and API keys **before** logging or inference | Low |
+| PII leaking into logs or model context | `pii_masker.py` redacts emails, phone numbers, fund identifiers and position sizes **before** logging or inference | Low |
 | Agent coaxed into echoing secrets | No credential material is ever placed in prompt context; secrets resolved from Secret Manager at call time | Low |
 | Unrestricted network egress from the agent container | Serverless VPC Connector with `all-traffic` egress routing; no public egress path | Low |
 | Bulk audit-data extraction from BigQuery | Least-privilege service account; dataset-level IAM; no broad `roles/bigquery.dataViewer` grant | Medium |
@@ -265,7 +265,7 @@ or an uncited narrative response — not a fabricated financial figure presented
 
 | Control | Implementation | Test |
 |---|---|---|
-| PII redaction | `src/guardrails/dlp_masker.py` | `tests/unit/test_guardrails.py` |
+| PII redaction | `src/guardrails/pii_masker.py` | `tests/unit/test_guardrails.py` |
 | Injection interception | `src/guardrails/input_guardrail.py` | `tests/unit/test_guardrails.py` + adversarial golden scenarios |
 | Domain scope enforcement | `src/guardrails/scope_classifier.py` | `tests/unit/test_guardrails.py` |
 | Deterministic arithmetic | `src/tools/financial_calculator.py` | `tests/unit/test_financial_calculator.py` |

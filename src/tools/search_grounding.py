@@ -81,18 +81,10 @@ class VertexSearchClient(MarketDataInterface, BaseTool):
         # Add general macro backdrop
         results.extend(self._macro_backdrop.get("GLOBAL_MACRO", []))
 
-        # Add ticker-specific news if present
+        # Add ticker-specific news only where the curated corpus has some.
+        # No fallback: a generated headline with a reuters.com URL is a citation
+        # to an article that does not exist.
         ticker_upper = ticker.upper()
-        if ticker_upper in self._macro_backdrop:
-            results.extend(self._macro_backdrop[ticker_upper])
-        else:
-            # Generic grounded fallback snippet
-            results.append({
-                "title": f"{ticker_upper} Market & Sector Trends",
-                "snippet": f"Industry sector conditions for {ticker_upper} remain influenced by interest rate expectations and consumer spending sentiment.",
-                "source_domain": "reuters.com",
-                "url": f"https://www.reuters.com/companies/{ticker_upper}",
-                "published_at": "2024-10-15"
-            })
+        results.extend(self._macro_backdrop.get(ticker_upper, []))
 
         return results

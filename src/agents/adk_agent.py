@@ -75,9 +75,20 @@ async def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") ->
     ticker_clean = ticker.strip().upper()
     transcript = await _transcript_client.get_transcript(ticker_clean, quarter)
 
+    if not transcript.get("available"):
+        # No citation key at all: nothing here is citable, and an empty
+        # citation string invites the model to fill one in.
+        return json.dumps({
+            "ticker": ticker_clean,
+            "quarter": quarter,
+            "available": False,
+            "message": f"No earnings call transcript is available for {ticker_clean} {quarter}. Do not quote or paraphrase management commentary for this period.",
+        })
+
     return json.dumps({
         "ticker": ticker_clean,
         "quarter": quarter,
+        "available": True,
         "event": transcript.get("event", f"{ticker_clean} Earnings Call"),
         "prepared_remarks_sample": transcript.get("prepared_remarks", [])[:2],
         "analyst_qa_sample": transcript.get("analyst_qa", [])[:2],
@@ -102,7 +113,7 @@ async def query_macro_market_news(query: str, ticker: str = "") -> str:
         "query": query,
         "ticker": ticker_clean,
         "results": results,
-        "citation": f"[Search Grounding: Google Enterprise Search - {query[:30]}]"
+        "citation": f"[Macro corpus: curated sources - {query[:30]}]"
     })
 
 
@@ -118,17 +129,16 @@ def compute_financial_ratios(revenue: float, net_income: float, operating_income
     Returns:
         JSON string with Net Margin, Operating Margin, YoY Growth, and computation provenance.
     """
+    # Every ratio goes through the Decimal engine - the same one the REST path
+    # uses - so the two paths cannot disagree on a margin by a float rounding.
     yoy_growth = _calculator.calculate_yoy_growth(revenue, prior_revenue) if prior_revenue else None
-
-    op_margin = (operating_income / revenue * 100.0) if revenue else 0.0
-    net_margin = (net_income / revenue * 100.0) if revenue else 0.0
 
     return json.dumps({
         "revenue_usd": revenue,
         "net_income_usd": net_income,
         "operating_income_usd": operating_income,
-        "operating_margin_pct": round(op_margin, 2),
-        "net_margin_pct": round(net_margin, 2),
+        "operating_margin_pct": _calculator.calculate_margin_pct(operating_income, revenue),
+        "net_margin_pct": _calculator.calculate_margin_pct(net_income, revenue),
         "yoy_revenue_growth_pct": yoy_growth.value if yoy_growth else None,
         "status": "deterministic_verified"
     })

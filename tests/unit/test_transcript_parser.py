@@ -25,9 +25,34 @@ async def test_transcript_parser_speaker_segmentation():
 
 
 @pytest.mark.asyncio
-async def test_transcript_parser_fallback():
-    """Verify generic transcript generation for arbitrary tickers."""
+async def test_transcript_parser_unknown_ticker_is_unavailable_not_invented():
+    """A ticker with no transcript must come back empty, never with a generated quote."""
     client = TranscriptClient()
     res = await client.get_transcript("XYZ", "Q3_2024")
     assert res["ticker"] == "XYZ"
-    assert len(res["prepared_remarks"]) >= 1
+    assert res["available"] is False
+    assert res["prepared_remarks"] == []
+    assert res["analyst_qa"] == []
+    assert res["provenance_signature"] is None
+
+
+@pytest.mark.asyncio
+async def test_adk_transcript_tool_emits_no_citation_when_unavailable():
+    """The ADK tool must give the model nothing to cite for a missing transcript."""
+    import json
+
+    from src.agents.adk_agent import get_earnings_call_transcript
+
+    payload = json.loads(await get_earnings_call_transcript("XYZ", "Q3_2024"))
+    assert payload["available"] is False
+    assert "citation" not in payload
+
+
+@pytest.mark.asyncio
+async def test_macro_client_does_not_invent_ticker_news():
+    """Tickers outside the curated corpus get the global backdrop only, no generated headline."""
+    from src.tools.search_grounding import VertexSearchClient
+
+    results = await VertexSearchClient().query_market_context("XYZ", ["rates"])
+    assert results, "global macro backdrop should still be returned"
+    assert not any("XYZ" in (r.get("title", "") + r.get("url", "")) for r in results)

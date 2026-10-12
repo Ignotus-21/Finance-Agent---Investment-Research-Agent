@@ -108,9 +108,14 @@ class SynthesisEngine:
         qa_texts = " ".join([f"{q.get('question')} Response: {q.get('executive_response')}" for q in transcript_data.get("analyst_qa", [])])
         macro_texts = " ".join([n.get("snippet", "") for n in macro_data.get("grounded_news", [])])
 
+        if ceo_texts or cfo_texts:
+            commentary = f"Executive Leadership Outlook: {ceo_texts[:300]}... Financial Guidance: {cfo_texts[:300]}..."
+        else:
+            commentary = f"No earnings call transcript is available for {ticker} {transcript_data.get('quarter', '')}; management commentary is omitted."
+
         qual_synthesis = QualitativeSynthesis(
-            executive_commentary_analysis=f"Executive Leadership Outlook: {ceo_texts[:300]}... Financial Guidance: {cfo_texts[:300]}...",
-            analyst_qa_highlights=qa_texts[:400] if qa_texts else "Analyst Q&A focused on capital allocation discipline and operating leverage.",
+            executive_commentary_analysis=commentary,
+            analyst_qa_highlights=qa_texts[:400] if qa_texts else "No analyst Q&A is available for this period.",
             macro_market_context=f"Macroeconomic Context: {macro_data.get('interest_rate_backdrop')}. {macro_texts[:300]}..."
         )
 
