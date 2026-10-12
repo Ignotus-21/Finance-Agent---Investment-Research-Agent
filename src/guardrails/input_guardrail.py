@@ -9,7 +9,7 @@ import re
 from src.config import Settings
 from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
 from src.core.interfaces import GuardrailInterface
-from src.guardrails.dlp_masker import CloudDLPMasker
+from src.guardrails.pii_masker import PIIMasker
 from src.guardrails.scope_classifier import ScopeClassifier
 
 
@@ -72,7 +72,7 @@ class InputGuardrail(GuardrailInterface):
 
     def inspect_and_sanitize(self, prompt: str) -> str:
         """
-        Runs validation and DLP sanitization.
+        Runs validation and PII sanitization.
         Raises SecurityViolationException or OutOfDomainQueryException on violation.
         """
         is_valid, msg = self.validate_input(prompt)
@@ -82,6 +82,6 @@ class InputGuardrail(GuardrailInterface):
             else:
                 raise OutOfDomainQueryException(message=msg)
 
-        # Apply Cloud DLP masking
-        sanitized_prompt, _ = CloudDLPMasker.sanitize_text(prompt)
+        # Apply PII masking
+        sanitized_prompt, _ = PIIMasker.sanitize_text(prompt)
         return sanitized_prompt

@@ -120,31 +120,24 @@ class TranscriptClient(BaseTool):
         transcript = self._transcripts.get(key)
 
         if not transcript:
-            # Fallback generic transcript structure
-            transcript = {
-                "event": f"{ticker.upper()} {quarter.upper()} Earnings Call",
-                "date": "2024-10-15",
-                "prepared_remarks": [
-                    {
-                        "speaker_name": "Executive Leadership",
-                        "speaker_role": "Chief Financial Officer",
-                        "text": f"{ticker.upper()} delivered strong operating results with margin resilience and disciplined capital allocation throughout {quarter}.",
-                        "sentiment": 0.60
-                    }
-                ],
-                "analyst_qa": [
-                    {
-                        "analyst_name": "Wall Street Research",
-                        "analyst_firm": "Equity Research Desk",
-                        "question": "What is your outlook for operating leverage in the next fiscal year?",
-                        "executive_response": "We expect operating margins to remain stable with targeted investments in strategic growth areas."
-                    }
-                ]
+            # No transcript in the corpus for this ticker/quarter. Say so
+            # rather than generating a plausible one: an invented CFO quote
+            # carrying a transcript citation is worse than no quote.
+            return {
+                "ticker": ticker.upper(),
+                "quarter": quarter.upper(),
+                "available": False,
+                "event": None,
+                "date": None,
+                "prepared_remarks": [],
+                "analyst_qa": [],
+                "provenance_signature": None,
             }
 
         return {
             "ticker": ticker.upper(),
             "quarter": quarter.upper(),
+            "available": True,
             "event": transcript["event"],
             "date": transcript["date"],
             "prepared_remarks": transcript["prepared_remarks"],

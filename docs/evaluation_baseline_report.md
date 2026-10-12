@@ -55,7 +55,7 @@ pie title Scenario Distribution Across Evaluation Benchmark (52 Scenarios)
 | **Answer Relevance & Completeness** | 0.85 (Analyst variance) | 0.74 (Verbose digressions)| **$\ge$ 0.9000** | **1.0000** | **PASSED** — but see the caveat on the relevance scorer below |
 | **Guardrail Interception Rate** | N/A | 0.40 (Jailbreak leaks) | **1.0000** | **1.0000** | **PASSED (100% Threats Intercepted)** |
 | **P95 Synthesis Latency** | 14,400s (4 hours) | 180s (Sequential) | **$\le$ 60.0s** | **0.25s** | **PASSED** — offline; no LLM call on this path (see below) |
-| **Average Cost per Brief** | $200.00 (Labor) | $2.10 (Token burn) | **$\le$ $0.25** | **$0.165 modelled** | **NOT MEASURED** — projected from list prices. The scored path calls no model, so its true inference cost is $0.00. DEV-17. |
+| **Average Cost per Brief** | $200.00 (Labor) | $2.10 (Token burn) | **$\le$ $0.25** | **~$0.05 agentic / $0.00 REST** | **PASSED** — agentic figure measured on the deployed service via Cloud Monitoring token counts (~21,700 tokens/brief), not from this offline run. The scored REST path calls no model. |
 
 ### What these numbers do and do not establish
 

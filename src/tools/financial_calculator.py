@@ -67,6 +67,19 @@ class FinancialCalculator(BaseTool):
         )
 
     @classmethod
+    def calculate_margin_pct(cls, numerator: float, revenue: float) -> float | None:
+        """
+        Computes a margin: (numerator / revenue) * 100, rounded half-up to 2dp.
+
+        Returns None rather than 0.0 when revenue is not positive: a margin on
+        zero revenue is undefined, and 0.0 would read as a real figure.
+        """
+        if revenue is None or revenue <= 0 or numerator is None:
+            return None
+        margin = (cls.to_decimal(numerator) / cls.to_decimal(revenue)) * Decimal("100.0")
+        return float(margin.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+    @classmethod
     def calculate_operating_margins(
         cls,
         operating_income_curr: float,

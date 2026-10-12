@@ -85,7 +85,7 @@ class Settings(BaseSettings):
             "validator below refuses to allow in production."
         ),
     )
-    enable_dlp_masking: bool = Field(default=True, description="Enable Cloud DLP redaction middleware")
+    enable_dlp_masking: bool = Field(default=True, description="Enable regex PII redaction on inbound prompts")
     enforce_guardrails: bool = Field(default=True, description="Enforce pre-execution prompt injection filter")
 
     # Observability & Audit Logging

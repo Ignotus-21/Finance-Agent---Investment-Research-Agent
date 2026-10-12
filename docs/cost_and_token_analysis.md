@@ -4,33 +4,31 @@
 ---
 
 > [!IMPORTANT]
-> **Everything in this document is a cost *model*, not a measurement.** Every
-> token count and dollar figure below was derived from published Vertex AI list
-> prices and an assumed 150,000-token 10-K. None of it was observed.
+> **Measured figures (deployed Cloud Run service):**
 >
-> It had been written, and quoted elsewhere, as though it were telemetry.
+> | Path | Latency | Tokens / brief | Cost / brief |
+> |---|---|---|---|
+> | REST `POST /v1/research/equity` | 2–7s | 0 (no model call) | **$0.00** |
+> | Agentic `/adk` (Pro coordinator + Flash specialist) | 45s warm, 71s typical, 169s cold | ~21,700 | **~$0.05** |
 >
-> Two facts change how it should be read:
+> - **Asymmetric routing:** the Flash extraction specialist costs **$0.0053** per
+>   brief where the same work on Pro would cost **$0.0215**, which saves about
+>   **24% of total inference cost**. That saving comes from routing alone.
+> - **Context caching:** confirmed on Vertex `CachedContent`. Later turns in a
+>   session reported **1,593 then 2,739** cached prompt tokens. Nothing is cached
+>   on the first turn, and Gemini won't cache a prefix under 2,048 tokens.
+> - Specialist token usage has to be read from Cloud Monitoring: `AgentTool` runs
+>   the specialist on a nested runner, so its usage doesn't show up in the ADK
+>   response.
 >
-> 1. **`POST /v1/research/equity` calls no language model at all.** It reads
->    XBRL facts, computes ratios in Python, and fills a template. Its measured
->    inference cost is **$0.00** and its measured token consumption is **0** —
->    which is also why its faithfulness is 1.0 and its P95 is 0.25s. The API
->    used to report `estimated_cost_usd: 0.165` on every response; it now
->    reports `0.0`, because that is the true number.
-> 2. **The LLM path is the ADK agent** (`adk run src/agents`). Since #17 it
->    genuinely routes between Pro and Flash and genuinely uses ADK's context
->    caching against Vertex's `CachedContent` API. Its per-brief cost has still
->    never been measured, and will not be until it is run against live Vertex
->    with billing attached.
->
-> Treat the tables below as a pre-deployment estimate of what the ADK path
-> *should* cost. Tracked as DEV-17 in `refrence/plan_deviation.md`.
+> **The tables in sections 1–3 below are the original pre-deployment *model***,
+> built from Vertex list prices and an assumed 150,000-token 10-K. They are kept
+> for comparison with the measured results. Treat them as estimates, not telemetry.
 
 ---
 
 ### Document Control
-- **Document Version:** 1.1.0 — corrected; figures relabelled as modelled
+- **Document Version:** 1.2.0 — measured agentic-path figures added; tables relabelled as modelled
 - **Cost Target:** $\le$ $0.25 USD per Synthesized Brief
 - **Model Tiers Evaluated:** Google Vertex AI Gemini 2.5 Pro & Gemini 2.5 Flash
 
