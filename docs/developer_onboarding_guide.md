@@ -193,7 +193,5 @@ The IRA repository enforces **Trunk-Based / GitFlow development** with strict Co
    Every PR must satisfy:
    - Zero linter or type-check warnings (`ruff`, `mypy`).
    - $\ge 80\%$ test coverage on new code.
-   - Golden Dataset thresholds for Relevance ($\ge 0.90$), Citation Precision (= 1.0) and Guardrail Rate (= 1.0) satisfied.
-   - Faithfulness reports **1.0000 at 51.8% figure coverage** and blocks the build again (the DEV-15 waiver has been removed). Expect `SUCCESS`.
-   - Coverage is enforced by a floor as well as the score, so you cannot make the number look better by asserting less ground truth.
+   - Golden Dataset thresholds for Faithfulness (= 1.0), Relevance ($\ge 0.90$), Citation Precision (= 1.0), and Guardrail Rate (= 1.0) satisfied with $\ge 50\%$ figure coverage floor enforced (`make eval`).
    - Completed checklist against the 32 CPSE-to-FDE competencies in `.github/pull_request_template.md`.

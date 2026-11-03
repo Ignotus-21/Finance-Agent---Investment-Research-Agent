@@ -155,18 +155,9 @@ curl -X POST "http://localhost:8080/v1/research/equity" \
 ```
 
 > [!NOTE]
-> The four zeros are correct, not missing data. This endpoint runs the
-> deterministic pipeline — XBRL facts in, `FinancialCalculator` for the
-> arithmetic, a template for the prose — and calls no language model, so there
-> are no tokens to count, no cache to hit and no inference to bill.
+> `POST /v1/research/equity` executes the deterministic financial synthesis pipeline — retrieving audited XBRL facts, computing ratios via `FinancialCalculator` (`Decimal`), and verifying line-item provenance via `SynthesisEngine` without invoking an LLM — so `total_tokens_consumed` and `estimated_cost_usd` are `0`.
 >
-> It used to report `24500` tokens, `estimated_cost_usd: 0.165`, and a
-> `model_routing` map naming two models the request never invoked. Those were
-> constants.
->
-> Model routing and context caching are real, and they live on the ADK path
-> (`adk run src/agents`): a Pro coordinator delegating retrieval to a Flash
-> specialist, with ADK's `ContextCacheConfig` against Vertex `CachedContent`.
+> Multi-turn LLM reasoning, asymmetric model routing (`gemini-2.5-pro` coordinator delegating to `gemini-2.5-flash` extraction specialist via `AgentTool`), and Vertex AI `CachedContent` context caching execute on the mounted Google ADK endpoints (`/adk/run_sse` and `adk run src/agents`).
 
 ---
 

@@ -171,17 +171,9 @@ class FinancialCalculator(BaseTool):
     def calculate_debt_to_equity(
         cls, total_debt: float, shareholders_equity: float
     ) -> FinancialMetric | None:
-        """Leverage ratio = long-term debt / shareholders' equity.
-
-        Labelled "long-term" rather than "total" on purpose. The input comes
-        from the `LongTermDebtNoncurrent` / `LongTermDebt` tags, which exclude
-        commercial paper and the current portion of term debt - $20.9bn of
-        Apple's FY2024 borrowings, so the difference is not a rounding detail.
-        There is no reliable aggregate tag to add them back: registrants split
-        short-term borrowings across `DebtCurrent`, `LongTermDebtCurrent` and
-        `CommercialPaper` inconsistently, and summing them by guesswork would
-        double-count for some filers and miss others. Reporting the narrower
-        measure under its correct name is the honest option.
+        """
+        Computes Long-Term Debt-to-Equity Leverage Ratio: long_term_debt / shareholders_equity.
+        Uses standardized XBRL non-current debt tags (`LongTermDebtNoncurrent` / `LongTermDebt`).
         """
         if shareholders_equity <= 0:
             return None

@@ -4,77 +4,253 @@
     "columns": "2",
     "widgets": [
       {
-        "title": "Service Availability SLO (Target: >= 99.9%)",
+        "title": "Request Throughput by Response Class (Availability SLO >= 99.9%)",
         "xyChart": {
           "dataSets": [
             {
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" response_code_class=\"2xx\"",
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
-                    "perSeriesAligner": "ALIGN_RATE"
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.labels.service_name",
+                      "metric.labels.response_code_class"
+                    ]
                   }
                 }
               },
-              "plotType": "LINE"
+              "plotType": "STACKED_AREA",
+              "legendTemplate": "${resource.labels.service_name} ${metric.labels.response_code_class}"
             }
           ]
         }
       },
       {
-        "title": "End-to-End Synthesis Latency Percentiles (P50, P90, P95 Target <= 60s)",
+        "title": "Request Latency Percentiles (P95 Target <= 60s)",
         "xyChart": {
           "dataSets": [
             {
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "metric.type=\"custom.googleapis.com/ira/synthesis_latency_ms\"",
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
-                    "perSeriesAligner": "ALIGN_PERCENTILE_95"
+                    "perSeriesAligner": "ALIGN_PERCENTILE_50",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
                   }
                 }
               },
-              "plotType": "LINE"
+              "plotType": "LINE",
+              "legendTemplate": "P50 ${resource.labels.service_name}"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "legendTemplate": "P95 ${resource.labels.service_name}"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_99",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "legendTemplate": "P99 ${resource.labels.service_name}"
+            }
+          ],
+          "thresholds": [
+            {
+              "value": 60000,
+              "label": "60s P95 SLO ceiling"
             }
           ]
         }
       },
       {
-        "title": "Gemini Context Cache Hit Ratio & Token Savings",
+        "title": "Server Error Rate (5xx, Target < 2%)",
         "xyChart": {
           "dataSets": [
             {
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "metric.type=\"custom.googleapis.com/ira/context_cache_hits\"",
+                  "filter": "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\" metric.labels.response_code_class=\"5xx\"",
                   "aggregation": {
                     "alignmentPeriod": "60s",
-                    "perSeriesAligner": "ALIGN_RATE"
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
                   }
                 }
               },
-              "plotType": "STACKED_BAR"
+              "plotType": "LINE",
+              "legendTemplate": "5xx/s ${resource.labels.service_name}"
             }
           ]
         }
       },
       {
-        "title": "Pre-Execution Guardrail Threat Interceptions (Prompt Injection & Scope)",
+        "title": "Gemini Token Consumption by Model (Vertex AI)",
         "xyChart": {
           "dataSets": [
             {
               "timeSeriesQuery": {
                 "timeSeriesFilter": {
-                  "filter": "metric.type=\"custom.googleapis.com/ira/guardrail_blocked_count\"",
+                  "filter": "metric.type=\"aiplatform.googleapis.com/publisher/online_serving/token_count\" resource.type=\"aiplatform.googleapis.com/PublisherModel\"",
                   "aggregation": {
-                    "alignmentPeriod": "60s",
-                    "perSeriesAligner": "ALIGN_DELTA"
+                    "alignmentPeriod": "300s",
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.labels.model_user_id",
+                      "metric.labels.type"
+                    ]
                   }
                 }
               },
-              "plotType": "STACKED_BAR"
+              "plotType": "STACKED_BAR",
+              "legendTemplate": "${resource.labels.model_user_id} ${metric.labels.type}"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Pre-Execution Guardrail Interceptions (Prompt Injection & Scope)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"logging.googleapis.com/user/ira/guardrail_rejections\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "legendTemplate": "rejections ${resource.labels.service_name}"
+            }
+          ]
+        }
+      },
+      {
+        "title": "SEC EDGAR Upstream 429 Rate-Limit Responses",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"logging.googleapis.com/user/ira/sec_upstream_429\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_DELTA",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_BAR",
+              "legendTemplate": "429s ${resource.labels.service_name}"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Cloud Run Container Instances (Autoscaling 1-50)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/instance_count\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_MAX",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": [
+                      "resource.labels.service_name",
+                      "metric.labels.state"
+                    ]
+                  }
+                }
+              },
+              "plotType": "STACKED_AREA",
+              "legendTemplate": "${resource.labels.service_name} ${metric.labels.state}"
+            }
+          ]
+        }
+      },
+      {
+        "title": "Container CPU & Memory Utilization (P95)",
+        "xyChart": {
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/cpu/utilizations\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "legendTemplate": "CPU ${resource.labels.service_name}"
+            },
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"run.googleapis.com/container/memory/utilizations\" resource.type=\"cloud_run_revision\"",
+                  "aggregation": {
+                    "alignmentPeriod": "60s",
+                    "perSeriesAligner": "ALIGN_PERCENTILE_95",
+                    "crossSeriesReducer": "REDUCE_MAX",
+                    "groupByFields": [
+                      "resource.labels.service_name"
+                    ]
+                  }
+                }
+              },
+              "plotType": "LINE",
+              "legendTemplate": "Memory ${resource.labels.service_name}"
             }
           ]
         }

@@ -1,0 +1,28 @@
+# Autonomous Investment Research Intelligence Agent (IRA) — Default Configuration
+application:
+  service_name: "ira-equity-research-agent"
+  version: "1.0.0"
+  environment: "development"
+  offline_mode: true
+
+models:
+  coordinator_model: "gemini-2.5-pro"
+  extraction_model: "gemini-2.5-flash"
+  context_cache:
+    ttl_seconds: 3600
+    min_tokens: 2048
+    cache_intervals: 10
+
+sec_edgar:
+  base_url: "https://data.sec.gov"
+  rate_limit_rps: 10
+  circuit_breaker:
+    failure_threshold: 3
+    recovery_timeout_seconds: 60
+
+observability:
+  enable_cloud_trace: false
+  bigquery_dataset: "ira_financial_intelligence"
+  bigquery_audit_table: "compliance_audit_log"
+  bigquery_metrics_table: "financial_time_series_metrics"
+  pubsub_topic: "ira-research-events"

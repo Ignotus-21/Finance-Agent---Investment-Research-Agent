@@ -1,39 +1,21 @@
 """
-Google ADK (Agent Development Kit) Integration for Investment Research Agent.
+Google ADK (Agent Development Kit) Multi-Agent Orchestration for IRA.
 
-Two agents, not one, and they run on different models.
-
-The coordinator plans and synthesises on ``coordinator_model``
-(Gemini 2.5 Pro). Retrieval - pulling 10-K sections and earnings-call
-transcripts and condensing them into facts - is delegated to a specialist on
-``extraction_model`` (Gemini 2.5 Flash), reached through ``AgentTool``.
-
-That split is the point. Retrieval is where the tokens are and where the
-reasoning is not: a 10-K section is tens of thousands of tokens of prose from
-which a handful of tagged figures need lifting. Paying Pro rates to read it is
-waste, and Pro is no better at it. Synthesis is the reverse - little input,
-and the judgement that the brief is actually for.
-
-``AgentTool`` rather than ``sub_agents`` deliberately. Transfer would hand the
-conversation to Flash and leave it there; the coordinator would never get to
-write the brief. As a tool, the specialist answers and control returns.
-
-Context caching is ADK's, configured on the App and performed by
-``GeminiContextCacheManager`` against Vertex's ``CachedContent`` API. This
-module previously carried a hand-rolled ``ContextCachingManager`` that kept an
-in-process dict, estimated token counts, and reported savings from a hardcoded
-price delta while never calling Vertex at all. It has been deleted.
-
-SEC tools are NOT defined in this module. They are served by
-:mod:`src.mcp_servers.sec_edgar_server` and reached over MCP, which is what
-ADR-002 specified. Defining local copies as well would create two paths to the
-same data that can silently drift apart.
+Implements asymmetric model routing and Vertex AI context caching:
+- Root Coordinator (`finance_investment_research_agent` on Gemini 2.5 Pro) handles
+  planning, delegation via `AgentTool`, macro grounding, deterministic financial
+  ratio verification, and final synthesis.
+- Filing Extraction Specialist (`filing_extraction_specialist` on Gemini 2.5 Flash)
+  retrieves SEC Form 10-K disclosures and XBRL facts over stdio MCP (`McpToolset`)
+  alongside earnings call transcripts.
 """
 
 import json
 import os
 import sys
+from pathlib import Path
 
+import yaml
 from google.adk.agents import Agent
 from google.adk.agents.context_cache_config import ContextCacheConfig
 from google.adk.apps import App
@@ -48,36 +30,42 @@ from src.tools.financial_calculator import FinancialCalculator
 from src.tools.macro_context import MacroContextClient
 from src.tools.transcript_parser import TranscriptClient
 
-# Gemini will not cache a prefix below this no matter what ADK is configured
-# with: 2048 tokens for the 2.5 family, 4096 for 3.x. Written down rather than
-# left to ADK's default of 0 because the number is the whole story - a single
-# short exchange is never cached, and a reader checking why the hit rate is
-# zero should not have to find that out from a blog post.
 _GEMINI_25_MIN_CACHEABLE_TOKENS = 2048
+_PROMPTS_DIR = Path(__file__).resolve().parents[2] / "configs" / "prompts"
 
-# Initialize tool dependencies for the natively-hosted tools. SEC retrieval has
-# no client here: it lives in the MCP server subprocess.
 _transcript_client = TranscriptClient()
 _search_client = MacroContextClient()
 _calculator = FinancialCalculator()
 
 
+def _load_prompt_instruction(filename: str, fallback: str) -> str:
+    """Load externalized system instruction from configs/prompts/<filename>."""
+    path = _PROMPTS_DIR / filename
+    if path.exists():
+        try:
+            with path.open(encoding="utf-8") as fh:
+                payload = yaml.safe_load(fh)
+                if isinstance(payload, dict) and isinstance(payload.get("system_instruction"), str):
+                    return payload["system_instruction"].strip()
+        except Exception:
+            pass
+    return fallback
+
+
 async def get_earnings_call_transcript(ticker: str, quarter: str = "Q4_2024") -> str:
-    """Retrieves and analyzes executive remarks and analyst Q&A from quarterly earnings calls.
+    """Retrieves executive remarks and analyst Q&A from quarterly earnings calls.
 
     Args:
         ticker: Equity stock ticker symbol.
         quarter: Target reporting quarter (e.g. 'Q4_2024', 'Q3_2024').
 
     Returns:
-        JSON string containing executive guidance, Q&A sentiment score, key quotes, and transcript citations.
+        JSON string containing executive guidance, Q&A excerpts, and transcript citations.
     """
     ticker_clean = ticker.strip().upper()
     transcript = await _transcript_client.get_transcript(ticker_clean, quarter)
 
     if not transcript.get("available"):
-        # No citation key at all: nothing here is citable, and an empty
-        # citation string invites the model to fill one in.
         return json.dumps({
             "ticker": ticker_clean,
             "quarter": quarter,
@@ -117,8 +105,13 @@ async def query_macro_market_news(query: str, ticker: str = "") -> str:
     })
 
 
-def compute_financial_ratios(revenue: float, net_income: float, operating_income: float, prior_revenue: float | None = None) -> str:
-    """Deterministically computes financial performance ratios and margins without hallucination.
+def compute_financial_ratios(
+    revenue: float,
+    net_income: float,
+    operating_income: float,
+    prior_revenue: float | None = None,
+) -> str:
+    """Deterministically computes financial performance ratios and margins using Decimal precision.
 
     Args:
         revenue: Current period total revenue in USD.
@@ -129,8 +122,6 @@ def compute_financial_ratios(revenue: float, net_income: float, operating_income
     Returns:
         JSON string with Net Margin, Operating Margin, YoY Growth, and computation provenance.
     """
-    # Every ratio goes through the Decimal engine - the same one the REST path
-    # uses - so the two paths cannot disagree on a margin by a float rounding.
     yoy_growth = _calculator.calculate_yoy_growth(revenue, prior_revenue) if prior_revenue else None
 
     return json.dumps({
@@ -144,7 +135,7 @@ def compute_financial_ratios(revenue: float, net_income: float, operating_income
     })
 
 
-EXTRACTION_AGENT_INSTRUCTION = """You are a filings extraction specialist. You retrieve source documents and report what they say. You do not analyse, recommend, or synthesise.
+_DEFAULT_EXTRACTION_INSTRUCTION = """You are a filings extraction specialist. You retrieve source documents and report what they say. You do not analyse, recommend, or synthesise.
 
 Your tools:
   - fetch_sec_filing_section and extract_xbrl_financial_facts for 10-K disclosures.
@@ -160,7 +151,7 @@ Rules:
 Return compact structured facts, not prose."""
 
 
-FINANCE_AGENT_INSTRUCTION = """You are the Senior Wall Street Equity Research Analyst Agent built with Google ADK and Gemini 2.5 Pro.
+_DEFAULT_FINANCE_AGENT_INSTRUCTION = """You are the Senior Wall Street Equity Research Analyst Agent built with Google ADK and Gemini 2.5 Pro.
 Your mission is to perform rigorous, institutional-grade equity research on publicly traded companies and synthesize executive-ready investment research briefs.
 
 Follow these strict operating procedures:
@@ -184,28 +175,21 @@ Follow these strict operating procedures:
 5. PROFESSIONALISM & OBJECTIVITY: Maintain balanced, dispassionate tone. Highlight both upside catalysts and downside risks.
 """
 
+EXTRACTION_AGENT_INSTRUCTION = _load_prompt_instruction(
+    "sec_filing_specialist.yaml", _DEFAULT_EXTRACTION_INSTRUCTION
+)
+FINANCE_AGENT_INSTRUCTION = _load_prompt_instruction(
+    "coordinator_agent.yaml", _DEFAULT_FINANCE_AGENT_INSTRUCTION
+)
+
 
 def create_sec_edgar_mcp_toolset() -> McpToolset:
-    """Connect to the in-repo SEC EDGAR MCP server.
-
-    The server runs as a stdio subprocess launched with the *current*
-    interpreter (``sys.executable``), so it inherits this virtualenv and its
-    configuration - including ``OFFLINE_MODE``. Hard-coding ``python`` would
-    silently pick up a different interpreter under Cloud Run.
-
-    stdio rather than SSE/HTTP: the agent and the server share a lifecycle and
-    a trust boundary, so there is no reason to open a listening port.
-
-    ADK establishes the connection lazily on first tool listing, which is why
-    constructing this is cheap and safe at import time.
-    """
+    """Create an ADK McpToolset connected over stdio to the in-repo SEC EDGAR MCP server."""
     return McpToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
                 command=sys.executable,
                 args=["-m", "src.mcp_servers.sec_edgar_server"],
-                # Inherit the parent environment so OFFLINE_MODE, the SEC
-                # User-Agent and GCP credentials reach the subprocess.
                 env=dict(os.environ),
             ),
         ),
@@ -213,12 +197,7 @@ def create_sec_edgar_mcp_toolset() -> McpToolset:
 
 
 def create_filing_extraction_agent(model_name: str | None = None) -> Agent:
-    """The retrieval half, on the cheap model.
-
-    Holds both high-volume tools: SEC over MCP, and earnings-call transcripts.
-    Between them they account for essentially all of the input tokens in a
-    brief, and none of the judgement.
-    """
+    """Create the high-throughput SEC and transcript extraction specialist on Gemini 2.5 Flash."""
     settings = Settings()
     return Agent(
         name="filing_extraction_specialist",
@@ -243,17 +222,7 @@ def create_financial_adk_agent(
     model_name: str | None = None,
     extraction_model_name: str | None = None,
 ) -> Agent:
-    """Creates the coordinator: planning, delegation, and synthesis.
-
-    Both models come from ``Settings`` rather than being hard-coded, so the
-    Cloud Run revision's ``COORDINATOR_MODEL`` and ``EXTRACTION_MODEL`` env vars
-    finally mean something. They were set by Terraform and read by nothing.
-
-    The calculator stays here rather than on the specialist. Arithmetic is the
-    one thing in this system that must not be done by a language model at all,
-    and keeping it beside the synthesis step is what makes "never guess a
-    margin" enforceable in one place.
-    """
+    """Create the Root Coordinator Agent on Gemini 2.5 Pro with specialist AgentTool delegation."""
     settings = Settings()
     return Agent(
         name="finance_investment_research_agent",
@@ -274,32 +243,12 @@ def create_financial_adk_app(
     agent: Agent | None = None,
     context_cache_config: ContextCacheConfig | None = None,
 ) -> App:
-    """Creates an ADK App wrapping the financial research agent.
-
-    Context caching is on, and it is ADK's real implementation - it calls
-    Vertex's ``CachedContent`` API through ``GeminiContextCacheManager``. Two
-    honest caveats, because the predecessor of this code reported savings it
-    had not made:
-
-    * Nothing is cached on the first turn of a session. ADK gates on the
-      *previous* request's measured token count, so a single-shot brief - which
-      is what most API traffic looks like - never benefits.
-    * Gemini will not cache a prefix under 2048 tokens for the 2.5 family
-      regardless of configuration.
-
-    Both agents get their own cache, which is the reason to configure this at
-    all once there are two of them: every hop between the coordinator and the
-    specialist swaps the system instruction and the tool set, so without a
-    cache each one re-sends its whole prefix.
-    """
+    """Create the Google ADK App with Vertex AI ContextCacheConfig enabled."""
     settings = Settings()
     root = agent or create_financial_adk_agent()
     return App(
         root_agent=root,
         name="finance_research_app",
-        # ContextCacheConfig is marked experimental in ADK 2.9. Accepted: the
-        # alternative is calling CachedContent.create by hand and reimplementing
-        # the invalidation ADK already does on every prefix change.
         context_cache_config=context_cache_config
         or ContextCacheConfig(
             ttl_seconds=settings.context_cache_ttl_minutes * 60,

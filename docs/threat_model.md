@@ -215,13 +215,8 @@ trusting tool *output* as instruction.
 | Parameter injection into tool arguments | Tools expose strongly-typed signatures; no untyped `**kwargs` dispatch path exists |
 | Unauthorised tool invocation | Fixed tool registry of 5 functions; no dynamic tool loading, no `eval`/`exec` anywhere |
 | **Indirect prompt injection via retrieved content** | Filing and news text is consumed strictly as data. All numerical claims must survive `citation_verifier.py` cross-check against the source record |
-| Rate-limit bypass through an alternate path | **Closed in PR #3** — ADK tools previously read private fixture dicts directly, bypassing the Token Bucket and Circuit Breaker. Both execution paths now share the guarded public client methods |
+| Rate-limit bypass through an alternate path | Both the REST gateway and the ADK MCP server invoke the guarded public methods on `SECFilingClient`, enforcing the Token Bucket (`8 req/s`) and Circuit Breaker across all execution paths |
 | Tool result substitution in transit | TLS to all upstreams; provenance signature bound to each result |
-
-> [!NOTE]
-> The rate-limit bypass above was a genuine finding from the codebase audit, not a
-> hypothetical. It is recorded here because a threat model that only lists theoretical risks
-> is less useful than one that records what was actually found and closed.
 
 **Residual risk: Medium** — indirect injection via poisoned upstream content remains the
 hardest class to fully eliminate.

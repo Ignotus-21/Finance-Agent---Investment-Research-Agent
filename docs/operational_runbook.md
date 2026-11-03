@@ -320,3 +320,54 @@ Every filing response carries a `data_source` field. Check it when a figure look
 
 Set `OFFLINE_MODE=true` and deploy. No code change and no data migration; the switch is read per
 request from settings, so the next revision picks it up immediately.
+
+---
+
+## 6. Infrastructure Lifecycle: Provision, Pause, and Kill Switch
+
+All cloud resources are declared in [`terraform/`](../terraform) and driven through
+[`scripts/infra.sh`](../scripts/infra.sh) (wrapped by `make infra-*`). Remote state lives in
+`gs://<project>-ira-tfstate` (versioned). Two gitignored files configure a target project:
+`terraform/backend.hcl` (state bucket) and `terraform/terraform.tfvars` (see the `.example` files).
+
+| Command | Effect | Steady-state cost impact |
+|---|---|---|
+| `make infra-plan` | Preview every change. | None |
+| `make infra-apply` | Converge the project to the declared state (idempotent). | Full footprint (section 6.2) |
+| `make infra-pause` | Re-apply with `min_instances=0`: the research service scales to zero between requests. | Removes the always-on Cloud Run charge; VPC connector and Cloud NAT keep billing |
+| `make infra-resume` | Restore the warm minimum instance. | Full footprint |
+| `make infra-destroy` | **Kill switch.** Deletes every Terraform-managed resource: Cloud Run services, VPC/connector/NAT, buckets (non-production only), BigQuery dataset and tables, Pub/Sub topics and subscriptions, Secret Manager secret, Artifact Registry repository and images, monitoring dashboard/SLOs/alerts, service accounts. | ≈ $0 |
+
+### 6.1 Adopting a Project Where Resources Already Exist
+
+`scripts/infra_import_existing.sh` imports the service accounts, dataset, topic, and Cloud Run
+services of a pre-existing `ira-*-<env>` deployment so the first `apply` updates them in place
+instead of failing with `already exists`. It is idempotent and safe to re-run.
+
+```bash
+PROJECT_ID=<project> REGION=us-central1 ENVIRONMENT=<env> make infra-import
+make infra-apply
+```
+
+Cloud Run must pull from the Terraform-managed CMEK repository, so on a fresh project apply in
+two steps: `scripts/infra.sh apply -target=module.secret_manager -target=module.artifact_registry`,
+push the images (`gcloud builds submit --tag <artifact_registry_url>/ira-service:<tag>`), then
+run the full `make infra-apply`.
+
+### 6.2 Residual Resources After `infra-destroy`
+
+| Resource | Why it remains | Action |
+|---|---|---|
+| Cloud KMS key ring `ira-keyring` | Key rings cannot be deleted by Google Cloud (key versions are scheduled for destruction). | Free. On re-apply, run `scripts/infra.sh import module.secret_manager.google_kms_key_ring.ira_keyring projects/<project>/locations/us-central1/keyRings/ira-keyring`. |
+| State bucket `gs://<project>-ira-tfstate` | Bootstrapped outside Terraform by design. | `gcloud storage rm -r gs://<project>-ira-tfstate` once the state is no longer needed. |
+| Enabled APIs | `disable_on_destroy = false` protects other workloads in the project. | None. |
+
+### 6.3 Browser Access Behind Cloud Run IAM
+
+Both services require `roles/run.invoker`; there is no `allUsers` binding. Open the interactive
+API docs or the Streamlit console through an authenticated local tunnel:
+
+```bash
+gcloud run services proxy ira-service-<env> --region=us-central1 --port=8081   # http://localhost:8081/docs
+gcloud run services proxy ira-ui-<env>      --region=us-central1 --port=8502   # http://localhost:8502
+```

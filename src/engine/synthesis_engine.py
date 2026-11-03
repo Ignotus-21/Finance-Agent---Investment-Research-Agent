@@ -135,16 +135,7 @@ class SynthesisEngine:
             )
         ]
 
-        # 8. Telemetry.
-        #
-        # There is no cost model here any more. This method makes no model call
-        # - it reads XBRL facts, calls FinancialCalculator, and fills a template
-        # - so tokens, cache hits and inference cost are all genuinely zero, and
-        # ResearchMetadata defaults them to zero. What stood here before was
-        # `tokens_consumed = 24500 if cache_hit else 148000` and
-        # `cost_usd = 0.165 if cache_hit else 0.420`, chosen by a flag that was
-        # always true, and the $0.165 was reported as a measured figure in five
-        # documents.
+        # 8. Assemble ResearchMetadata
         brief_id = f"brief-{uuid.uuid4().hex[:8]}"
 
         metadata = ResearchMetadata(

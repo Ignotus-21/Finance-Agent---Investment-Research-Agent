@@ -25,6 +25,11 @@ resource "google_vpc_access_connector" "serverless_connector" {
   min_instances = 2
   max_instances = 10
   machine_type  = "e2-micro"
+
+  # Throughput is derived by the API from instance counts (100 Mbps per
+  # e2-micro). Pinned explicitly so the provider defaults do not diff.
+  min_throughput = 200
+  max_throughput = 1000
 }
 
 # Cloud Router & NAT for secure external egress (e.g. SEC EDGAR API)

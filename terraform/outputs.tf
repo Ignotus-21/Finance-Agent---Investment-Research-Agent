@@ -54,7 +54,7 @@ output "research_events_topic" {
 }
 
 output "research_events_subscription" {
-  description = "Pull here to verify a deployment is actually emitting events: gcloud pubsub subscriptions pull <this> --auto-ack"
+  description = "Default pull subscription on the research events topic (gcloud pubsub subscriptions pull <this> --auto-ack)"
   value       = google_pubsub_subscription.research_events_default.name
 }
 

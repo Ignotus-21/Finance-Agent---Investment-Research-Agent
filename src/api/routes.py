@@ -31,20 +31,20 @@ start_server_time = time.monotonic()
     response_model=ResearchBriefResponse,
     status_code=status.HTTP_200_OK,
     summary="Synthesize Comprehensive Equity Research Brief",
-    tags=["Equity Research"]
+    tags=["Equity Research"],
 )
 async def generate_equity_research(
     request: EquityResearchRequest,
     user_id: str = Depends(verify_auth_token),
-    app_container: ApplicationContainer = Depends(get_container)
+    app_container: ApplicationContainer = Depends(get_container),
 ) -> ResearchBriefResponse:
     """
-    Executes the deterministic research pipeline (no model call on this path):
+    Executes the multi-source equity research synthesis pipeline:
     1. Pre-execution PII masking & security guardrail inspection.
     2. Concurrent sub-agent extraction (SEC EDGAR, transcripts, macro context).
     3. Deterministic financial ratio computation (Python Decimal).
     4. Synthesis of an audit-ready brief with line-item provenance.
-    5. Structured audit logging (exported to BigQuery by a log sink) and Pub/Sub event broadcast.
+    5. Structured compliance audit logging and Pub/Sub event broadcast.
     """
     req_start = time.monotonic()
 
@@ -62,7 +62,7 @@ async def generate_equity_research(
             latency_ms=int((time.monotonic() - req_start) * 1000),
             total_tokens=0,
             cost_usd=0.0,
-            guardrail_verdict="REJECT_INJECTION"
+            guardrail_verdict="REJECT_INJECTION",
         )
         raise HTTPException(status_code=400, detail=f"Security Violation: {e.message}") from e
     except OutOfDomainQueryException as e:
@@ -75,7 +75,7 @@ async def generate_equity_research(
             latency_ms=int((time.monotonic() - req_start) * 1000),
             total_tokens=0,
             cost_usd=0.0,
-            guardrail_verdict="REJECT_SCOPE"
+            guardrail_verdict="REJECT_SCOPE",
         )
         raise HTTPException(status_code=400, detail=f"Scope Violation: {e.message}") from e
 
@@ -83,10 +83,6 @@ async def generate_equity_research(
     try:
         brief = await app_container.root_coordinator.execute_research(request)
     except FinancialAgentException as e:
-        # Every domain exception already declares the status it means - 404 for
-        # a missing filing or a registrant mismatch, 422 for a provenance
-        # failure, 503 for an unreachable upstream. Honour that instead of
-        # re-deriving it here and collapsing the interesting ones into 500.
         raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Multi-agent execution failure: {str(e)}") from e
@@ -100,13 +96,16 @@ async def generate_equity_research(
         prompt=sanitized_prompt,
         user_id=user_id,
         tools_called=[
-            "fetch_sec_filing_section", "get_earnings_transcript", "query_macro_news", "financial_calculator"
+            "fetch_sec_filing_section",
+            "get_earnings_transcript",
+            "query_macro_news",
+            "financial_calculator",
         ],
         latency_ms=elapsed_ms,
         total_tokens=brief.metadata.total_tokens_consumed,
         cost_usd=brief.metadata.estimated_cost_usd,
         guardrail_verdict="PASS",
-        citations_count=len(brief.citations)
+        citations_count=len(brief.citations),
     )
 
     # Step 4: Asynchronous Pub/Sub Event Broadcast
@@ -116,7 +115,7 @@ async def generate_equity_research(
         fiscal_year=brief.fiscal_year,
         metrics_count=len(brief.key_financial_metrics),
         citations_count=len(brief.citations),
-        risk_categories=[r.risk_category for r in brief.risk_matrices]
+        risk_categories=[r.risk_category for r in brief.risk_matrices],
     )
 
     return brief
@@ -126,14 +125,14 @@ async def generate_equity_research(
     "/v1/research/filings",
     status_code=status.HTTP_200_OK,
     summary="Extract & Normalize SEC Filing Statements",
-    tags=["Regulatory Filings"]
+    tags=["Regulatory Filings"],
 )
 async def extract_filings(
     request: FilingResearchRequest,
     user_id: str = Depends(verify_auth_token),
-    app_container: ApplicationContainer = Depends(get_container)
+    app_container: ApplicationContainer = Depends(get_container),
 ) -> dict[str, Any]:
-    """Direct MCP extraction of SEC filing tables."""
+    """Direct MCP extraction of normalized SEC filing statement sections."""
     try:
         results = {}
         for sec in request.sections:
@@ -141,14 +140,14 @@ async def extract_filings(
                 ticker=request.ticker,
                 form=request.form,
                 fiscal_year=request.fiscal_year,
-                section=sec
+                section=sec,
             )
             results[sec] = data
         return {
             "ticker": request.ticker,
             "fiscal_year": request.fiscal_year,
             "form": request.form,
-            "sections": results
+            "sections": results,
         }
     except FilingNotFoundException as e:
         raise HTTPException(status_code=404, detail=e.message) from e
@@ -163,20 +162,7 @@ async def healthz() -> dict[str, Any]:
 
 @router.get("/readyz", tags=["Health & Diagnostics"])
 async def readyz(app_container: ApplicationContainer = Depends(get_container)) -> dict[str, Any]:
-    """
-    Cloud Run readiness probe.
-
-    Reports only what the process can establish without making a network call.
-    The `vertex_ai`, `bigquery` and `secret_manager` entries this used to return
-    were not checks - they were the string literal "CONNECTED", and would have
-    gone on saying CONNECTED through a total outage of all three. A probe that
-    cannot fail is not a probe.
-
-    `runtime` answers the question an operator actually has after a deploy: is
-    this revision reading sec.gov, or the recorded FY2024 corpus? Both paths
-    return HTTP 200 with an identical response shape, so short of inspecting the
-    provenance field on a generated brief there was no way to tell them apart.
-    """
+    """Cloud Run readiness probe reporting active runtime mode and circuit breaker state."""
     return {
         "status": "READY",
         "runtime": {
@@ -184,6 +170,6 @@ async def readyz(app_container: ApplicationContainer = Depends(get_container)) -
             "offline_mode": settings.offline_mode,
         },
         "dependencies": {
-            "circuit_breaker": app_container.sec_client.circuit_breaker.state
-        }
+            "circuit_breaker": app_container.sec_client.circuit_breaker.state,
+        },
     }

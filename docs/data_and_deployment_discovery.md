@@ -109,7 +109,7 @@ graph TB
 | **Memory Allocation** | **4 GiB RAM** | Sufficient to hold parsed 10-K HTML tables, transcript tokens, and in-memory caches without risking OOM errors. |
 | **Instance Concurrency** | **80 requests** | High concurrency per instance maximizes resource utilization; non-blocking HTTP and I/O tasks yield to event loop. |
 | **Autoscaling Policy** | **Min: 1, Max: 50 instances** | Min=1 avoids cold-start latency for institutional trading desks; Max=50 scales gracefully to 4,000 concurrent queries. |
-| **Execution Timeout** | **120 seconds** | Ample buffer for 60-second P95 SLA while enforcing hard circuit-breaking against hung network sockets. |
+| **Execution Timeout** | **300 seconds** (`request_timeout`) | Headroom for multi-turn ADK agentic sessions over Server-Sent Events while the 60-second P95 SLA is enforced by Cloud Monitoring alerting. |
 | **Network Egress** | **Private VPC Only (`all-traffic`)** | All egress routed through Serverless VPC Connector preventing external internet exposure except via Cloud NAT. |
 | **CPU Throttling** | **Always Allocated (`cpu-no-throttle`)** | Ensures low latency and consistent background event broadcasting to Cloud Pub/Sub. |
 

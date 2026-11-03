@@ -1,78 +1,90 @@
-.PHONY: help install install-ui hooks hooks-run test lint eval eval-vertex run ui adk-run adk-web docker-build docker-run clean
+.PHONY: help install install-ui hooks hooks-run lint typecheck test test-unit test-integration test-chaos eval eval-vertex run run-local ui adk-run adk-web docker-build docker-run clean infra-validate infra-plan infra-apply infra-output infra-pause infra-resume infra-destroy infra-import
+
+# Resolve the project virtualenv interpreter when present so every target works
+# whether or not `.venv` has been activated in the current shell.
+VENV ?= .venv
+PY   := $(if $(wildcard $(VENV)/bin/python),$(VENV)/bin/python,python3)
 
 help:
 	@echo "Available commands:"
-	@echo "  make install      Install application dependencies and activate Git pre-commit hooks"
+	@echo "  make install      Install application + dev dependencies and activate Git pre-commit hooks"
+	@echo "  make install-ui   Install the Streamlit console extra (.[dev,ui])"
 	@echo "  make hooks        Install the Git pre-commit hooks only"
 	@echo "  make hooks-run    Run every pre-commit hook against all files (CI parity check)"
+	@echo "  make lint         Run Ruff linter and MyPy static type checks"
 	@echo "  make test         Execute unit, integration, and chaos test suites (assert >=80% coverage)"
-	@echo "  make eval         Execute Golden Evaluation Benchmark regression gate"
+	@echo "  make eval         Execute the 52-scenario Golden Evaluation regression gate"
 	@echo "  make eval-vertex  Score with Vertex AI Gen AI Evaluation (billable, opt-in)"
-	@echo "  make lint         Run Ruff linter and static type checks"
-	@echo "  make run          Launch local FastAPI server on port 8080"
-	@echo "  make ui           Launch the Streamlit test console (needs make install-ui)"
-	@echo "  make adk-run      Run ADK agent in interactive terminal REPL"
-	@echo "  make adk-web      Launch ADK agent Web UI playground on port 8501"
-	@echo "  make docker-build Build production container image"
-	@echo "  make docker-run   Run containerized service locally"
+	@echo "  make run          Launch local FastAPI server on http://localhost:8080"
+	@echo "  make ui           Launch the Streamlit console on http://localhost:8502"
+	@echo "  make adk-run      Run the ADK agent in an interactive terminal REPL"
+	@echo "  make adk-web      Launch the ADK Web UI playground on http://localhost:8501"
+	@echo "  make docker-build Build the production container image"
+	@echo "  make docker-run   Run the containerized service locally"
 	@echo "  make clean        Remove cache and build artifacts"
 
 install:
-	pip install -e .[dev]
+	$(PY) -m pip install --upgrade pip
+	$(PY) -m pip install -e ".[dev]"
 	$(MAKE) hooks
 
-# Separate from `install` so Streamlit stays out of the default developer
-# environment and, more importantly, out of the container image.
 install-ui:
-	pip install -e ".[dev,ui]"
+	$(PY) -m pip install -e ".[dev,ui]"
 
-# Chained onto `install` so a fresh clone gets the hooks without a second,
-# easily-forgotten step. Hooks that nobody installs never run.
 hooks:
-	pre-commit install
+	$(PY) -m pre_commit install
 
 hooks-run:
-	pre-commit run --all-files
-
-test:
-	pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -v
-
-eval:
-	python -m eval.regression_gate
-
-eval-vertex:
-	@# Billable and non-deterministic, which is why it is a separate target and
-	@# not part of `make eval` or CI. Needs: pip install -e ".[dev,eval]"
-	python -m eval.evaluate_golden_dataset --backend=vertex --project=$${GCP_PROJECT_ID}
+	$(PY) -m pre_commit run --all-files
 
 lint:
-	@# Same paths CI checks. When these drifted apart, a lint error in scripts/
-	@# passed locally and failed the workflow.
-	ruff check src/ tests/ scripts/ eval/ ui/
-	mypy src/ --ignore-missing-imports
+	$(PY) -m ruff check src/ tests/ scripts/ eval/ ui/
+	$(PY) -m mypy src/
+
+typecheck:
+	$(PY) -m mypy src/
+
+test-unit:
+	$(PY) -m pytest tests/unit/ -v
+
+test-integration:
+	$(PY) -m pytest tests/integration/ -v
+
+test-chaos:
+	$(PY) -m pytest tests/chaos/ -v
+
+test:
+	$(PY) -m pytest --cov=src --cov-fail-under=80 --cov-report=term-missing
+
+eval:
+	$(PY) -m eval.regression_gate
+
+eval-vertex:
+	$(PY) -m eval.evaluate_golden_dataset --backend=vertex --project=$${GCP_PROJECT_ID}
 
 run:
-	uvicorn src.api.app:app --host 0.0.0.0 --port 8080 --reload
+	$(PY) -m uvicorn src.api.app:app --host 0.0.0.0 --port 8080 --reload
 
-# URL defaults to the local server started by `make run`. Point it at a
-# deployed revision with: make ui URL=https://ira-service-production-....run.app
-URL ?= http://localhost:8080
+run-local: run
+
+# URL defaults to the local server started by `make run`. Target a deployed
+# revision with:
+#   make ui URL=https://<service>.run.app SA=<caller-sa> AUDIENCE=<audience>
+URL      ?= http://localhost:8080
+SA       ?=
+AUDIENCE ?=
 ui:
-	@# SA and AUDIENCE prefill the sidebar. Against a deployed service both are
-	@# required: a user account cannot mint an ID token for a custom audience,
-	@# and a token whose aud is the run.app URL passes Cloud Run IAM and is then
-	@# rejected by the application. Neither is needed against localhost.
-	@#   make ui URL=https://... SA=ira-caller-test-sa@proj.iam.gserviceaccount.com AUDIENCE=ira-service-test
 	IRA_SERVICE_URL="$(URL)" \
 	IRA_IMPERSONATE_SA="$(SA)" \
 	IRA_AUDIENCE="$(AUDIENCE)" \
-	streamlit run ui/streamlit_app.py --server.port 8502
+	$(PY) -m streamlit run ui/streamlit_app.py --server.port 8502
 
 adk-run:
-	adk run src/agents
+	$(PY) -m google.adk.cli run src/agents
 
+ADK_PORT ?= 8501
 adk-web:
-	adk web src/agents --port 8501
+	$(PY) -m google.adk.cli web src --port $(ADK_PORT)
 
 docker-build:
 	docker build -t ira-service:latest .
@@ -81,4 +93,33 @@ docker-run:
 	docker run -p 8080:8080 --env-file .env ira-service:latest
 
 clean:
-	rm -rf .pytest_cache .coverage htmlcov .ruff_cache .mypy_cache build dist *.egg-info
+	rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage dist build *.egg-info
+
+# --- Infrastructure lifecycle (Terraform via scripts/infra.sh) -------------
+# Requires terraform/backend.hcl and terraform/terraform.tfvars.
+infra-validate:
+	scripts/infra.sh validate
+
+infra-plan:
+	scripts/infra.sh plan
+
+infra-apply:
+	scripts/infra.sh apply
+
+infra-output:
+	scripts/infra.sh output
+
+# Cost pause: scale the research service to zero warm instances.
+infra-pause:
+	scripts/infra.sh pause
+
+infra-resume:
+	scripts/infra.sh resume
+
+# Kill switch: destroy every Terraform-managed resource.
+infra-destroy:
+	scripts/infra.sh destroy
+
+# One-time adoption of pre-existing resources into Terraform state.
+infra-import:
+	PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) ENVIRONMENT=$(ENVIRONMENT) scripts/infra_import_existing.sh

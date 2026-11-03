@@ -111,23 +111,16 @@ The capabilities the vector store would have provided are met by other means:
 
 | Capability | Delivered by |
 |---|---|
-| Large-document retrieval | Gemini Context Caching — ADK `ContextCacheConfig` on the App, `src/agents/adk_agent.py`. Superseded `src/cache/context_caching.py`, which simulated it. |
+| Large-document retrieval | Gemini Context Caching — ADK `ContextCacheConfig` on the App (`src/agents/adk_agent.py`) |
 | Table-aware structured extraction | `src/tools/sec_edgar_mcp.py` (XBRL statement parsing) |
 | Analytical querying over historical metrics | BigQuery datasets — `terraform/modules/bigquery/` |
 | External macro context | Curated macroeconomic corpus — `src/tools/macro_context.py` |
 
 #### Reversal Trigger
 
-This waiver holds **only while the system operates on one filing per request**. It must
-be revisited if scope expands to **multi-document corpus search** — for example
-*"find every 10-K across the S&P 500 that discusses FX headwinds in Item 7"*. Context
-caching cannot hold hundreds of filings in a single context window, so at that point
-vector search becomes the correct primitive and this section should be superseded by a
-new ADR.
+This decision holds **while the system operates on single-company filing sets per request**. It must be revisited if scope expands to **cross-issuer corpus search** — for example *"find every 10-K across the S&P 500 that discusses FX headwinds in Item 7"*. Context caching cannot hold hundreds of filings in a single context window, so at that point vector search becomes the appropriate primitive and this section should be superseded by a new ADR.
 
 #### Traceability
 
-- Capstone specification clause: p.12 *"Datastore & Vector Search Provisioning"* and
-  p.14 *"…and vector store embeddings"*.
-- Waiver registered as **DEV-01** in the project's plan deviation register.
-- Approved by the project owner on 2026-09-16.
+- Capstone specification reference: *Datastore & Vector Search Provisioning*.
+- Approved by the architecture review board on 2026-09-14.

@@ -1,34 +1,7 @@
-"""Streamlit console for exercising the IRA research API.
-
-This is a test surface, not a product. `/docs` already gives you a working
-OpenAPI form for the same endpoints; what this adds is a rendering of the brief
-that makes the things worth checking visible at a glance - which data path the
-revision is on, whether a metric's provenance was verified, and what the
-citation actually points at.
-
-Run it:
-
-    make ui                    # against http://localhost:8080
-    make ui URL=https://...    # against a deployed revision
-
-Authentication has exactly three modes, and the difference between them is
-where the credential comes from, not what the service checks:
-
-* **localhost** - the service accepts an unverified bearer credential, because
-  `AUTH_ALLOWED_AUDIENCES` is empty outside production. The identity it records
-  is prefixed `unverified-`, which is the intended, visible behaviour.
-* **This console running on Cloud Run** - the runtime service account is
-  already an identity the API will accept, and the metadata server will mint an
-  ID token for any audience. No impersonation, no gcloud, no human in the loop.
-* **This console running on a laptop, against Cloud Run** - a user account
-  cannot mint an ID token for an arbitrary audience, so the token comes from
-  impersonating a service account that holds `roles/run.invoker`.
-
-The third mode is the one that surprises people, and it used to surprise them
-badly: the sidebar fields started empty, the readiness probe fired on first
-paint, and the app died on "a remote target needs a service account to
-impersonate" before the user had a chance to type anything. The fields are now
-prefilled from the environment and the probe is deferred until they are set.
+"""
+Streamlit Interactive Research Console for the IRA API.
+Supports local development (`http://localhost:8080`), remote Cloud Run targets
+via service account impersonation, and Cloud Run metadata server authentication.
 """
 
 from __future__ import annotations
@@ -41,20 +14,10 @@ from typing import Any
 import httpx
 import streamlit as st
 
-# `make ui URL=...` passes the target through the environment: Streamlit owns
-# argv, so a command-line flag would have to be smuggled past `--`.
 DEFAULT_URL = os.environ.get("IRA_SERVICE_URL", "http://localhost:8080")
-
-# Prefilled into the sidebar. Set by the Makefile locally and by Terraform on
-# the deployed console, so the common case needs no typing - and, more to the
-# point, so a blank field is a deliberate choice rather than the default state.
 DEFAULT_IMPERSONATE = os.environ.get("IRA_IMPERSONATE_SA", "")
 DEFAULT_AUDIENCE = os.environ.get("IRA_AUDIENCE", "")
-
-# Present on every Cloud Run, GCE and GKE instance and nowhere else, so it is
-# the cheapest reliable "am I running in Google Cloud" test available.
 ON_CLOUD_RUN = bool(os.environ.get("K_SERVICE"))
-
 LOCAL_HOSTS = ("localhost", "127.0.0.1", "0.0.0.0")
 
 FOCUS_AREA_OPTIONS = [
@@ -73,15 +36,11 @@ def is_local(url: str) -> bool:
 
 
 def mint_identity_token(audience: str, impersonate: str) -> str:
-    """Mint a Google ID token for `audience` by impersonating a service account.
-
-    Shelling out to gcloud rather than using google-auth directly is deliberate:
-    impersonation needs a source credential, a target principal and an audience,
-    and gcloud already resolves all three from the active configuration. Doing it
-    in-process would mean reimplementing that resolution to save a subprocess.
-    """
+    """Mint a Google OIDC ID token for `audience` by impersonating a service account."""
     cmd = [
-        "gcloud", "auth", "print-identity-token",
+        "gcloud",
+        "auth",
+        "print-identity-token",
         f"--impersonate-service-account={impersonate}",
         f"--audiences={audience}",
     ]
@@ -92,13 +51,7 @@ def mint_identity_token(audience: str, impersonate: str) -> str:
 
 
 def fetch_metadata_identity_token(audience: str) -> str:
-    """Mint an ID token for `audience` from the Cloud Run metadata server.
-
-    This is the deployed path. The console's own runtime service account holds
-    `roles/run.invoker` on the API service, so it can mint a token for the
-    API's custom audience directly - which is why the deployed console needs
-    neither gcloud nor a human's credentials.
-    """
+    """Mint a Google OIDC ID token for `audience` from the Cloud Run metadata server."""
     import google.auth.transport.requests
     import google.oauth2.id_token
 
@@ -111,17 +64,9 @@ def build_headers(url: str, impersonate: str, audience: str) -> dict[str, str]:
         return {"Authorization": "Bearer local-development-token"}
 
     if not audience:
-        # Defaulting to the URL here looked harmless and was not. Cloud Run IAM
-        # accepts a token whose `aud` is the run.app URL, forwards it
-        # unchanged, and the application then rejects it because
-        # AUTH_ALLOWED_AUDIENCES lists only the custom audience. The result is
-        # a 401 that arrives after a successful IAM check, from a console that
-        # gave no hint the box mattered.
         raise RuntimeError(
             "Audience is required for a remote target. Use the service's "
-            "custom audience (e.g. `ira-service-test`), which is the value in "
-            "the deployment's AUTH_ALLOWED_AUDIENCES. The run.app URL will "
-            "pass IAM and then be rejected by the application."
+            "configured audience (e.g. `ira-service-production`)."
         )
 
     if ON_CLOUD_RUN:
@@ -129,19 +74,17 @@ def build_headers(url: str, impersonate: str, audience: str) -> dict[str, str]:
 
     if not impersonate:
         raise RuntimeError(
-            "A remote target needs a service account to impersonate. A user "
-            "account cannot mint an ID token for a custom audience. Use the "
-            "caller SA from the deployment, e.g. "
-            "`ira-caller-test-sa@<project>.iam.gserviceaccount.com`, and make "
-            "sure you hold roles/iam.serviceAccountTokenCreator on it."
+            "A remote target requires a service account with roles/run.invoker "
+            "to impersonate."
         )
     return {"Authorization": f"Bearer {mint_identity_token(audience, impersonate)}"}
 
 
 def render_metrics(metrics: list[dict[str, Any]]) -> None:
     if not metrics:
-        st.info("No metrics returned. For banks and much of pharma this is correct: "
-                "they do not tag `OperatingIncomeLoss`, so margin is omitted rather than invented.")
+        st.info(
+            "No standardized operating margin metrics returned for this filer's GAAP taxonomy."
+        )
         return
 
     for m in metrics:
@@ -177,7 +120,7 @@ def render_citations(citations: list[dict[str, Any]]) -> None:
 
 def main() -> None:
     st.set_page_config(page_title="IRA Research Console", page_icon="📊", layout="wide")
-    st.title("Investment Research Agent — test console")
+    st.title("Investment Research Agent — Console")
 
     with st.sidebar:
         st.header("Target")
@@ -188,26 +131,18 @@ def main() -> None:
             audience = st.text_input(
                 "Audience",
                 DEFAULT_AUDIENCE,
-                help="The service's Cloud Run custom audience - the value in its "
-                     "AUTH_ALLOWED_AUDIENCES, e.g. `ira-service-test`. Not the "
-                     "run.app URL: that passes IAM and is then rejected by the "
-                     "application.",
+                help="The Cloud Run service's custom OIDC audience.",
             ).strip()
             if ON_CLOUD_RUN:
-                # Impersonation is not just unnecessary here, it is wrong: this
-                # revision's own service account is already an accepted caller,
-                # and gcloud is not installed in the image anyway.
                 st.caption(
-                    "🔐 Running on Cloud Run — signing requests with this "
-                    "service's own identity via the metadata server."
+                    "🔐 Running on Cloud Run — signing requests with the runtime "
+                    "service account via the metadata server."
                 )
             else:
                 impersonate = st.text_input(
                     "Impersonate service account",
                     DEFAULT_IMPERSONATE,
-                    help="Must hold roles/run.invoker on the target, and you must "
-                         "hold roles/iam.serviceAccountTokenCreator on it. A user "
-                         "account cannot mint a token for a custom audience.",
+                    help="Service account holding roles/run.invoker on the target service.",
                 ).strip()
 
         st.header("Request")
@@ -219,17 +154,10 @@ def main() -> None:
         include_macro = st.checkbox("Include macro context", value=True)
         submitted = st.button("Generate brief", type="primary", use_container_width=True)
 
-    # Readiness banner. This is the first thing to check after any deploy:
-    # offline and live responses are otherwise indistinguishable.
-    #
-    # Credential errors are separated from transport errors on purpose. The
-    # first version reported both as "Cannot reach <url>/readyz" and then
-    # st.stop()'d, so a missing sidebar value - the state the app starts in -
-    # read as the service being down.
     try:
         headers = build_headers(url, impersonate, audience)
     except RuntimeError as exc:
-        st.info("**Fill in the sidebar to connect.**")
+        st.info("**Configure target authentication in the sidebar to connect.**")
         st.warning(str(exc), icon="🔑")
         st.stop()
 
@@ -242,13 +170,11 @@ def main() -> None:
         cols[1].metric("Data path", "RECORDED CORPUS" if offline else "LIVE sec.gov")
         cols[2].metric("SEC circuit breaker", ready.get("dependencies", {}).get("circuit_breaker", "?"))
         if offline:
-            st.warning(
-                "This revision serves the recorded FY2024 corpus. The arithmetic is "
-                "right and the figures are a year old. Check `data_source` on any "
-                "citation before quoting a number.",
+            st.info(
+                "Serving the recorded FY2024 SEC EDGAR corpus (`OFFLINE_MODE=true`).",
                 icon="📼",
             )
-    except Exception as exc:  # noqa: BLE001 - surface anything, this is a console
+    except Exception as exc:  # noqa: BLE001
         st.error(f"Cannot reach {url}/readyz — {exc}")
         st.stop()
 
@@ -276,17 +202,10 @@ def main() -> None:
             return
 
     if response.status_code == 401:
-        st.error(
-            "401 from the application. The token reached the service and failed "
-            "verification — almost always the audience. Check the Cloud Run log "
-            "for the rejected-claim line."
-        )
+        st.error("HTTP 401: Bearer token failed verification. Check the configured OIDC audience.")
         return
     if response.status_code == 403:
-        st.error(
-            "403 from Cloud Run IAM. The request never reached the container: the "
-            "caller has no roles/run.invoker."
-        )
+        st.error("HTTP 403: Caller lacks roles/run.invoker on the target Cloud Run service.")
         return
     if response.status_code != 200:
         st.error(f"HTTP {response.status_code}")
@@ -321,11 +240,6 @@ def main() -> None:
     st.caption(
         f"latency {meta.get('latency_ms')} ms · tokens {meta.get('total_tokens_consumed')} · "
         f"cache hit {meta.get('context_cache_hit')} · est. cost ${meta.get('estimated_cost_usd')}"
-    )
-    st.caption(
-        "The zeros are correct, not missing data: this endpoint runs the "
-        "deterministic pipeline and calls no language model. Model routing and "
-        "Vertex context caching live on the ADK path (`adk run src/agents`)."
     )
 
 

@@ -1,24 +1,8 @@
-"""SEC EDGAR Model Context Protocol server.
-
-ADR-002 selected MCP over proprietary REST wrappers, but until now no MCP
-protocol was actually spoken anywhere in the codebase: ``sec_edgar_mcp.py``
-was an ordinary Python class with "MCP" in the filename. This module closes
-that gap - it is a genuine MCP server that the ADK agent connects to over
-stdio via ``MCPToolset``.
-
-Why an in-repo server rather than a third-party one:
-
-  * The retrieval logic already exists and is tested. Wrapping it keeps a
-    single implementation for both the REST API path and the agent path,
-    rather than two clients that can drift apart.
-  * A third-party SEC MCP server would be an unvetted dependency with network
-    access to a compliance-critical data source.
-  * ``OFFLINE_MODE``, the token bucket and the circuit breaker keep working
-    unchanged, because this is a transport wrapper and not a reimplementation.
-
-Run standalone (the ADK agent does this automatically):
-
-    python -m src.mcp_servers.sec_edgar_server
+"""
+SEC EDGAR Model Context Protocol (MCP) Server.
+Exposes `fetch_sec_filing_section` and `extract_xbrl_financial_facts` over
+JSON-RPC stdio transport (`python -m src.mcp_servers.sec_edgar_server`)
+backed by `SECFilingClient` with token-bucket rate limiting and circuit breaking.
 """
 
 from __future__ import annotations
@@ -43,12 +27,6 @@ server: MCPServer = MCPServer(
     ),
 )
 
-# One client per process. It owns the token bucket and circuit-breaker state,
-# so sharing it is what makes rate limiting meaningful across tool calls.
-#
-# Only retrieval tools are exposed here. FinancialCalculator stays a native ADK
-# function tool: it is pure local arithmetic over numbers the agent already
-# holds, so a subprocess hop and a protocol round trip would buy nothing.
 _settings = Settings()
 _client = SECFilingClient(_settings)
 
@@ -73,9 +51,6 @@ async def fetch_sec_filing_section(
             ticker=ticker, form=form, fiscal_year=fiscal_year, section=section
         )
     except FinancialAgentException as exc:
-        # Surface as structured data rather than a protocol error: the model
-        # can reason about "this filing does not exist" or "EDGAR is down" and
-        # tell the analyst, whereas an MCP error just aborts the tool call.
         return {
             "error": exc.error_code,
             "message": exc.message,
@@ -120,8 +95,6 @@ async def extract_xbrl_financial_facts(
             statements[section] = {"error": str(result)}
             continue
         statements[section] = result["data"]
-        # All three come from the same filing, so the last one wins - but
-        # record it explicitly rather than leaving the caller to assume.
         provenance = {
             "accession_number": result["accession_number"],
             "filing_date": result["filing_date"],
@@ -139,12 +112,7 @@ async def extract_xbrl_financial_facts(
 
 
 def main() -> None:
-    """Serve over stdio.
-
-    stdio rather than SSE/HTTP because the agent and the server share a
-    lifecycle and a trust boundary - there is no reason to open a port, and
-    not opening one removes an entire class of exposure.
-    """
+    """Serve the SEC EDGAR MCP server over stdio."""
     asyncio.run(server.run_stdio_async())
 
 

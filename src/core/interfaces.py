@@ -23,14 +23,7 @@ class BaseAgent(ABC):
 
 
 class BaseTool(ABC):
-    """Abstract base class for all deterministic and external tools.
-
-    Intentionally declares only LLM-facing metadata. There is no abstract
-    ``execute(**kwargs)``: no caller ever dispatches a tool polymorphically, and every
-    tool exposes a strongly-typed method instead (``fetch_filing_section``,
-    ``get_transcript``, ``query_market_context``). An untyped ``**kwargs`` escape hatch
-    would only erase those signatures.
-    """
+    """Abstract base class for deterministic and external retrieval tools."""
 
     @property
     @abstractmethod
@@ -45,9 +38,6 @@ class BaseTool(ABC):
         pass
 
 
-# The three interfaces below each have exactly one production implementation today.
-# They are retained deliberately: they are the documented swap points from ADR-002
-# (MCP vs REST filing backends) and they are what unit tests substitute fakes for.
 class FilingRetrievalInterface(ABC):
     """Abstract interface for SEC filing retrieval backends (MCP, REST, cached fallback)."""
 

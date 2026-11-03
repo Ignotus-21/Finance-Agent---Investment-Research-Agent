@@ -1,24 +1,8 @@
-# ---------------------------------------------------------------------------
-# Cloud Monitoring - dashboard, SLOs, log-based metrics and alert policies.
-#
-# configs/monitoring/cloud_monitoring_dashboard.json has existed since Phase 4
-# but nothing ever applied it, so the "observability dashboard" deliverable was
-# a file on disk rather than anything a responder could open during an
-# incident. This module applies it and adds the SLOs and alerts the runbook
-# already refers to by name.
-# ---------------------------------------------------------------------------
-
 resource "google_monitoring_dashboard" "ira_observability" {
   project        = var.project_id
   dashboard_json = file(var.dashboard_json_path)
 }
 
-# ---------------------------------------------------------------------------
-# Notification channel.
-#
-# Alerts with no destination are decoration. Created unconditionally so every
-# policy below has somewhere to send.
-# ---------------------------------------------------------------------------
 resource "google_monitoring_notification_channel" "oncall_email" {
   project      = var.project_id
   display_name = "IRA On-Call (${var.environment})"
@@ -29,13 +13,6 @@ resource "google_monitoring_notification_channel" "oncall_email" {
   }
 }
 
-# ---------------------------------------------------------------------------
-# SLO target service.
-#
-# A custom service is used rather than the auto-discovered Cloud Run service
-# because auto-discovered services are created asynchronously by Google and
-# are not addressable by Terraform at plan time.
-# ---------------------------------------------------------------------------
 resource "google_monitoring_custom_service" "ira" {
   project      = var.project_id
   service_id   = "ira-multiagent-${var.environment}"
@@ -43,16 +20,9 @@ resource "google_monitoring_custom_service" "ira" {
 }
 
 locals {
-  # Scopes every SLI to this service's Cloud Run revisions only, so a noisy
-  # neighbour in the same project cannot consume this service's error budget.
   cloud_run_filter = "resource.type=\"cloud_run_revision\" resource.labels.service_name=\"${var.cloud_run_service_name}\""
 }
 
-# --- SLO 1: Availability >= 99.9% -----------------------------------------
-# "Available" means the service produced a response that was not a server
-# fault. 4xx is excluded from the numerator's failure set on purpose: a
-# malformed client request is not an outage, and counting it as one lets
-# clients burn our error budget.
 resource "google_monitoring_slo" "availability" {
   project      = var.project_id
   service      = google_monitoring_custom_service.ira.service_id
@@ -70,11 +40,6 @@ resource "google_monitoring_slo" "availability" {
   }
 }
 
-# --- SLO 2: P95 latency <= 60s --------------------------------------------
-# Expressed as "95% of requests complete within 60s", which is the SLO form of
-# the DoD's P95 <= 60s threshold. distribution_cut reads the latency histogram
-# directly rather than an aligned percentile, so the error budget is computed
-# from every request instead of a sampled statistic.
 resource "google_monitoring_slo" "latency_p95" {
   project      = var.project_id
   service      = google_monitoring_custom_service.ira.service_id
@@ -94,10 +59,6 @@ resource "google_monitoring_slo" "latency_p95" {
   }
 }
 
-# --- SLO 3: Error rate < 2% ------------------------------------------------
-# Stricter than the availability SLO and measures a different thing: here only
-# a 2xx counts as good, so sustained 4xx (broken clients, guardrail rejections
-# surfacing as 400s) shows up even while availability looks perfect.
 resource "google_monitoring_slo" "error_rate" {
   project      = var.project_id
   service      = google_monitoring_custom_service.ira.service_id
@@ -116,18 +77,15 @@ resource "google_monitoring_slo" "error_rate" {
 }
 
 # ---------------------------------------------------------------------------
-# Log-based metrics.
-#
-# The runbook triages GuardrailBlockedRate and SEC_429_SPIKE, but neither
-# metric existed - the alerts it told responders to expect could never fire.
+# Log-based metrics backing the guardrail-spike and SEC-429 alert policies.
 # ---------------------------------------------------------------------------
 resource "google_logging_metric" "guardrail_rejections" {
   project = var.project_id
   name    = "ira/guardrail_rejections"
   filter  = <<-EOT
-    resource.type                 = "cloud_run_revision"
-    resource.labels.service_name  = "${var.cloud_run_service_name}"
-    jsonPayload.guardrail_verdict = ~"REJECT_.*"
+    resource.type                                     = "cloud_run_revision"
+    resource.labels.service_name                      = "${var.cloud_run_service_name}"
+    jsonPayload.compliance_metadata.guardrail_verdict =~ "REJECT_.*"
   EOT
 
   description = "Count of requests rejected by the pre-execution guardrail classifier."
@@ -145,7 +103,7 @@ resource "google_logging_metric" "sec_upstream_rate_limit" {
   filter  = <<-EOT
     resource.type                = "cloud_run_revision"
     resource.labels.service_name = "${var.cloud_run_service_name}"
-    textPayload                  = ~"UPSTREAM_RATE_LIMIT|429"
+    jsonPayload.message          =~ "UPSTREAM_RATE_LIMIT|429"
   EOT
 
   description = "Count of SEC EDGAR upstream rate-limit responses."
@@ -161,8 +119,6 @@ resource "google_logging_metric" "sec_upstream_rate_limit" {
 # Alert policies.
 # ---------------------------------------------------------------------------
 
-# Fast-burn on the availability error budget. A 10x burn rate over one hour
-# means the full 30-day budget is gone in ~3 days - page now.
 resource "google_monitoring_alert_policy" "availability_fast_burn" {
   project      = var.project_id
   display_name = "IRA Availability SLO - fast burn (10x over 1h)"
@@ -191,8 +147,6 @@ resource "google_monitoring_alert_policy" "availability_fast_burn" {
   }
 }
 
-# Slow-burn catches a persistent low-grade failure that never trips fast-burn
-# but still exhausts the budget by month end.
 resource "google_monitoring_alert_policy" "availability_slow_burn" {
   project      = var.project_id
   display_name = "IRA Availability SLO - slow burn (2x over 6h)"
@@ -221,8 +175,6 @@ resource "google_monitoring_alert_policy" "availability_slow_burn" {
   }
 }
 
-# Direct latency alert. Complements the latency SLO: the SLO tracks budget
-# consumption over 30 days, this fires on an acute regression.
 resource "google_monitoring_alert_policy" "latency_regression" {
   project      = var.project_id
   display_name = "IRA P95 Latency > 60s (DoD threshold breach)"

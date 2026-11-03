@@ -89,3 +89,9 @@ variable "enable_adk_web" {
     deployment behind IAM, not on one serving analysts.
   EOT
 }
+
+variable "request_timeout" {
+  description = "Maximum request duration for the Cloud Run service. 300s accommodates multi-turn ADK agentic reasoning over Server-Sent Events."
+  type        = string
+  default     = "300s"
+}

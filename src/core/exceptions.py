@@ -60,13 +60,7 @@ class FilingNotFoundException(FinancialAgentException):
 
 
 class RegistrantMismatchException(FinancialAgentException):
-    """The entity holding the ticker today is not the one that filed the report.
-
-    Distinct from FilingNotFoundException on purpose. "This company has no
-    FY2024 10-K" and "you are looking at the wrong company" need different
-    answers, and conflating them sent a reader hunting for a missing filing
-    when the filing exists under another CIK.
-    """
+    """Raised when a ticker resolves to a successor CIK with no historical filings for the target form."""
 
     def __init__(
         self, ticker: str, cik: str, entity_name: str, form: str, fiscal_year: int
@@ -74,12 +68,9 @@ class RegistrantMismatchException(FinancialAgentException):
         super().__init__(
             message=(
                 f"Ticker '{ticker}' currently resolves to '{entity_name}' (CIK {cik}), "
-                f"which has never filed a {form}. The ticker has most likely moved "
-                f"registrant - a reorganisation, merger or holding-company insertion - "
-                f"so the FY{fiscal_year} {form} belongs to a predecessor entity under a "
-                f"different CIK. SEC publishes no reverse index from ticker to former "
-                f"registrant; map it explicitly in TICKER_CIK_OVERRIDES "
-                f"(src/tools/sec_edgar_http.py)."
+                f"which has never filed a {form}. The FY{fiscal_year} {form} belongs to "
+                f"a predecessor registrant under a different CIK; map it in "
+                f"TICKER_CIK_OVERRIDES (src/tools/sec_edgar_http.py)."
             ),
             error_code="REGISTRANT_MISMATCH",
             status_code=404,
@@ -94,18 +85,7 @@ class RegistrantMismatchException(FinancialAgentException):
 
 
 class UpstreamUnavailableException(FinancialAgentException):
-    """Raised when an upstream source is unreachable and no real data is cached.
-
-    Deliberately distinct from FilingNotFoundException (404, "this does not
-    exist"). This one means "the filing exists, we just cannot reach it right
-    now" - a 503. SEC 429s land here too: sec_edgar_http backs off and retries,
-    and an exhausted retry budget is an unreachable upstream like any other.
-
-    It exists because the alternative was worse. The degraded path used to fall
-    through to generated placeholder figures, which meant an EDGAR outage
-    produced a brief full of confident, fabricated numbers rather than an
-    error. An analyst can act on an error; they cannot detect a plausible lie.
-    """
+    """Raised when an upstream regulatory data source is unreachable and no verified local fixture exists."""
 
     def __init__(self, service: str, ticker: str, form: str, fiscal_year: int) -> None:
         super().__init__(

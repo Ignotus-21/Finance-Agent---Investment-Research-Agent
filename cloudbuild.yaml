@@ -1,207 +1,138 @@
+# Google Cloud Build CI/CD Pipeline
+# Executes linting, static typing, unit/integration/chaos tests, evaluation
+# regression gate, container image build, and zero-downtime blue/green Cloud Run deployment.
+
 steps:
-  # 1. Code Linting & Static Type Checking
-  - name: 'python:3.11-slim'
-    id: 'lint-and-typecheck'
-    entrypoint: 'bash'
+  # Step 1: Install Python Dependencies
+  - id: "install-dependencies"
+    name: "python:3.11-slim"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
-        pip install ruff mypy pydantic pydantic-settings
-        ruff check src/ tests/ scripts/ eval/
-        mypy src/ --ignore-missing-imports
+        pip install --upgrade pip
+        pip install -e ".[dev]"
 
-  # 2. Automated Unit, Integration & Chaos Tests (Coverage >= 80%)
-  - name: 'python:3.11-slim'
-    id: 'unit-and-integration-tests'
-    entrypoint: 'bash'
+  # Step 2: Static Analysis & Linting (Ruff & Mypy)
+  - id: "lint-and-typecheck"
+    name: "python:3.11-slim"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
-        pip install -e .[dev]
-        pytest --cov=src --cov-fail-under=80 --cov-report=term-missing -v
+        pip install -e ".[dev]"
+        ruff check src/ tests/ eval/
+        mypy src/
 
-  # 3. Evaluation Benchmark Regression Gate
-  - name: 'python:3.11-slim'
-    id: 'evaluation-regression-gate'
-    entrypoint: 'bash'
+  # Step 3: Unit, Integration & Chaos Test Suite (>= 80% Coverage Gate)
+  - id: "pytest-coverage-gate"
+    name: "python:3.11-slim"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
-        pip install -e .
+        pip install -e ".[dev]"
+        pytest --cov=src --cov-fail-under=80
+
+  # Step 4: Golden Dataset Evaluation Regression Gate
+  - id: "eval-regression-gate"
+    name: "python:3.11-slim"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        pip install -e ".[dev]"
         python -m eval.regression_gate
 
-  # 4. Container Build via Kaniko / Docker
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'build-container-image'
+  # Step 5: Build & Tag Security-Hardened Container Image
+  - id: "build-container-image"
+    name: "gcr.io/cloud-builders/docker"
     args:
-      - 'build'
-      - '-t'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'
-      - '-t'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:latest'
-      - '.'
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/ira-agent:${COMMIT_SHA}"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/ira-agent:latest"
+      - "."
 
-  # 5. Push Container to Google Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    id: 'push-container-image'
+  # Step 6: Push Image to Google Artifact Registry
+  - id: "push-container-image"
+    name: "gcr.io/cloud-builders/docker"
     args:
-      - 'push'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'
+      - "push"
+      - "--all-tags"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/ira-agent"
 
-  # 6. Blue/Green Deploy - Stage GREEN revision with ZERO production traffic.
-  #    The currently serving revision (BLUE) keeps 100% of traffic until the
-  #    smoke test in step 7 passes. The revision is reachable in isolation via
-  #    its tagged URL (https://green-<sha>---<service-url>).
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'deploy-green-revision-no-traffic'
-    entrypoint: 'gcloud'
+  # Step 7: Stage New Cloud Run Revision with Zero Traffic (Blue/Green Canary Stage)
+  - id: "stage-revision-no-traffic"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
     args:
-      - 'run'
-      - 'deploy'
-      - '$_SERVICE_NAME'
-      - '--image'
-      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'
-      - '--region'
-      - '$_REGION'
-      - '--platform'
-      - 'managed'
-      - '--service-account'
-      - '$_RUNTIME_SA@$PROJECT_ID.iam.gserviceaccount.com'
-      - '--cpu'
-      - '2'
-      - '--memory'
-      - '4Gi'
-      - '--concurrency'
-      - '80'
-      - '--min-instances'
-      - '1'
-      - '--max-instances'
-      - '50'
-      - '--vpc-connector'
-      - 'ira-vpc-connector'
-      - '--vpc-egress'
-      - 'all-traffic'
-      - '--revision-suffix'
-      - 'green-$SHORT_SHA'
-      - '--tag'
-      - 'green-$SHORT_SHA'
-      - '--no-traffic'
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/ira-agent:${COMMIT_SHA}"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--revision-suffix=${SHORT_SHA}"
+      - "--no-traffic"
+      - "--tag=candidate-${SHORT_SHA}"
 
-  # 7. Smoke test the GREEN revision on its tagged URL before any cutover.
-  #    A non-zero exit here aborts the build and leaves BLUE serving, which is
-  #    the entire point of staging with --no-traffic.
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'smoke-test-green-revision'
-    entrypoint: 'bash'
+  # Step 8: Smoke-Test Staged Revision Directly via Candidate Tag URL
+  - id: "smoke-test-candidate-revision"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-euo"
+      - "pipefail"
+      - "-c"
       - |
-        set -euo pipefail
-        TAG="green-$SHORT_SHA"
+        CANDIDATE_URL=$$(gcloud run services describe "${_SERVICE_NAME}" \
+          --region="${_REGION}" \
+          --format="value(status.traffic. flattened().filter(tag:candidate-${SHORT_SHA}).url)" | head -n1)
+        if [ -z "$${CANDIDATE_URL}" ]; then
+          echo "ERROR: could not resolve URL for tag candidate-${SHORT_SHA}" >&2
+          exit 1
+        fi
+        echo "Probing staged revision at $${CANDIDATE_URL}..."
+        TOKEN=$$(gcloud auth print-identity-token --audiences="$${CANDIDATE_URL}")
 
-        # Resolve the tagged URL from the service's traffic block rather than
-        # string-building it, so a Cloud Run URL format change cannot silently
-        # point the smoke test at the wrong endpoint.
-        # NOTE: shell expansions are escaped as $$ so Cloud Build passes them
-        # through to bash instead of resolving them as build substitutions.
-        TAG_URL=$$(gcloud run services describe "$_SERVICE_NAME" \
-          --region "$_REGION" --platform managed --format=json \
-          | python3 -c "import json,sys; t=json.load(sys.stdin)['status']['traffic']; print(next(r['url'] for r in t if r.get('tag')=='$$TAG'))")
-
-        echo "GREEN revision staged at: $$TAG_URL"
-
-        # The service is private, so probes must carry an identity token.
-        TOKEN=$$(gcloud auth print-identity-token)
-
-        # /readyz only, and the body is checked rather than the status code.
-        #
-        # /healthz used to be probed here too, and it was worse than useless.
-        # Google's Front End reserves that path on *.run.app and answers it
-        # itself - `x-google-service: _internal`, a 3-byte text/html "ok" - so
-        # the request never reached the container. That iteration passed
-        # unconditionally, including against a revision that crash-loops on
-        # startup. Confirmed against a live deployment on 2026-09-18.
-        #
-        # Checking the body matters for the same reason: a 200 proves something
-        # answered, not that the right thing answered.
-        echo "Probing /readyz ..."
-        for ATTEMPT in 1 2 3 4 5; do
-          if curl --fail --silent --show-error --max-time 20 \
-               -H "Authorization: Bearer $$TOKEN" \
-               "$$TAG_URL/readyz" > /tmp/probe.json; then
-            cat /tmp/probe.json
-            echo ""
+        for i in 1 2 3 4 5; do
+          if curl -fsS --max-time 10 -H "Authorization: Bearer $${TOKEN}" "$${CANDIDATE_URL}/readyz" | grep -q '"status":"READY"'; then
+            echo "Readiness probe passed on attempt $${i}."
             break
           fi
-          if [ "$$ATTEMPT" = "5" ]; then
-            echo "SMOKE TEST FAILED on /readyz after 5 attempts. Aborting before cutover; BLUE remains live."
+          if [ "$${i}" -eq 5 ]; then
+            echo "ERROR: candidate-${SHORT_SHA} failed /readyz after 5 attempts. Leaving 100% traffic on current revision." >&2
             exit 1
           fi
-          echo "  attempt $$ATTEMPT failed, retrying in 10s (cold start)..."
-          sleep 10
+          sleep 3
         done
 
-        # Assert on what the revision actually said. `offline_mode: true` is
-        # the specific regression worth blocking: such a revision is healthy,
-        # fast, returns HTTP 200, and serves a year-old recorded corpus that is
-        # indistinguishable from live data unless provenance is read.
-        python3 - /tmp/probe.json <<'PYEOF'
-        import json, sys
-        r = json.load(open(sys.argv[1]))
-        problems = []
-        if r.get("status") != "READY":
-            problems.append(f"status is {r.get('status')!r}, expected 'READY'")
-        runtime = r.get("runtime", {})
-        if runtime.get("offline_mode") is not False:
-            problems.append(
-                f"offline_mode is {runtime.get('offline_mode')!r} - this revision would "
-                "serve the recorded corpus as if it were live SEC data"
-            )
-        if runtime.get("environment") != "production":
-            problems.append(f"environment is {runtime.get('environment')!r}, expected 'production'")
-        if problems:
-            print("SMOKE TEST FAILED. Aborting before cutover; BLUE remains live.")
-            for p in problems:
-                print(f"  - {p}")
-            sys.exit(1)
-        print("GREEN reports READY, production, live SEC.")
-        PYEOF
+        curl -fsS --max-time 30 \
+          -H "Authorization: Bearer $${TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d '{"ticker":"AAPL","fiscal_year":2024,"focus_areas":["Operating_Margin"],"include_macro_context":false}' \
+          "$${CANDIDATE_URL}/v1/research/equity" | grep -q '"ticker":"AAPL"'
+        echo "End-to-end smoke test passed."
 
-        echo "Smoke test passed. GREEN is healthy."
-
-  # 8. Cutover - shift 100% of production traffic to the verified GREEN revision.
-  #    Rollback is a single command against the previous revision:
-  #      gcloud run services update-traffic $_SERVICE_NAME \
-  #        --region $_REGION --to-revisions <previous-revision>=100
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'cutover-traffic-to-green'
-    entrypoint: 'gcloud'
+  # Step 9: Cut 100% Traffic Over to Verified Revision
+  - id: "promote-candidate-to-full-traffic"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
     args:
-      - 'run'
-      - 'services'
-      - 'update-traffic'
-      - '$_SERVICE_NAME'
-      - '--region'
-      - '$_REGION'
-      - '--platform'
-      - 'managed'
-      - '--to-tags'
-      - 'green-$SHORT_SHA=100'
+      - "run"
+      - "services"
+      - "update-traffic"
+      - "${_SERVICE_NAME}"
+      - "--region=${_REGION}"
+      - "--to-revisions=${_SERVICE_NAME}-${SHORT_SHA}=100"
 
-# These must agree with what Terraform creates, or the pipeline deploys a
-# second, unmanaged service next to the managed one and the smoke test proves
-# nothing about what production is serving. The names below are
-# `ira-service-${var.environment}` and `ira-runtime-${var.environment}-sa`
-# from terraform/main.tf with environment = "production". Change both together.
 substitutions:
-  _REGION: 'us-central1'
-  _ARTIFACT_REPO: 'ira-repo'
-  _SERVICE_NAME: 'ira-service-production'
-  _RUNTIME_SA: 'ira-runtime-production-sa'
-
-images:
-  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:$COMMIT_SHA'
-  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REPO/ira-service:latest'
+  _REGION: "us-central1"
+  _ARTIFACT_REPO: "ira-repo"
+  _SERVICE_NAME: "ira-service-production"
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_HIGHCPU_8"

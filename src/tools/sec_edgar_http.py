@@ -213,17 +213,6 @@ class SECEdgarHTTPClient:
             if match:
                 return {"company_name": company_name, **match}
 
-        # Nothing matched. Before reporting a missing fiscal year, establish
-        # whether this entity files this form at all.
-        #
-        # An entity with no 10-K in its entire history is not a company having
-        # a quiet year - it is almost always a successor shell that has
-        # inherited the ticker, and the report being asked for was filed by its
-        # predecessor. Reporting that as "no FY2024 filing" sends the reader
-        # looking for a document that exists, under a CIK they were never told
-        # about. The previous message additionally printed the CIK in the
-        # ticker slot, which made it look like the caller had asked for
-        # something nonsensical.
         if not self._files_form_at_all(payload, form):
             raise RegistrantMismatchException(
                 ticker=ticker or cik,

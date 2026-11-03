@@ -1,18 +1,11 @@
-# Upload exclusions for `gcloud builds submit`.
-#
-# This file must exist. Without it gcloud falls back to .gitignore semantics,
-# which happens to work today but is implicit behaviour we should not rely on
-# for two things that must never leave the machine:
-#
-#   * .venv/    - 870 MB, turning a seconds-long upload into a multi-minute one
-#   * refrence/ - local reference material, including source PDFs. Gitignored
-#                 deliberately; it has no business in a build context either.
-
+# Cloud Build upload exclusions
 .git/
 .gitignore
 
-# Local reference material - never upload
+# Local reference material
 refrence/
+reference/
+DO_NOT_COMMIT/
 
 # Virtual environments
 .venv/
@@ -24,7 +17,7 @@ env/
 *.pem
 *.key
 
-# Caches and build artefacts
+# Caches and build artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -36,18 +29,13 @@ htmlcov/
 dist/
 build/
 
-# Editor / OS noise
+# Editor / OS metadata
 .vscode/
 .idea/
 .DS_Store
 
-# Not needed to build or run the service image
+# Non-runtime directories
 tests/
 docs/
 terraform/
 .github/
-# `ui/` is deliberately NOT excluded. It used to be, on the grounds that
-# Streamlit must not reach the runtime image - which is true, and is enforced
-# where it belongs: the API Dockerfile simply does not COPY it. Excluding it
-# from the shared build context instead broke `Dockerfile.ui`, which needs it.
-# The directory is ~15KB; bounding context size was never the real motive.
