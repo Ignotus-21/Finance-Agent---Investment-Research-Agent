@@ -150,3 +150,8 @@ $$\text{Sleep Time} = \text{random}(0, \, \min(M, \, B \times 2^{\text{attempt}}
 - **Failure Threshold:** 5 consecutive failures trips the breaker to `OPEN`.
 - **Reset Timeout:** 60 seconds before entering `HALF-OPEN` probe state.
 - **Graceful Degradation Fallback:** When the breaker is `OPEN`, the system returns the most recently cached filing snapshot from Cloud Storage / local store with a metadata flag `data_source: CACHED_FALLBACK_STALE_TOLERANT`, allowing the user request to complete successfully without dropping.
+
+#### Live Grounding (ADK Path)
+- **Mechanism:** `macro_news_specialist` — a Gemini 2.5 Flash agent whose only tool is the Gemini built-in `google_search` grounding tool, attached to the Root Coordinator through `AgentTool` (`ENABLE_LIVE_NEWS_GROUNDING=true`). Built-in tools cannot share an agent with function tools, which is why grounding runs in a dedicated specialist.
+- **Output Contract:** headline, one-sentence summary, publisher, publication date, and URL drawn from grounding metadata; no price forecasts or recommendations.
+- **REST Path:** remains on the curated corpus so the regression gate stays deterministic.

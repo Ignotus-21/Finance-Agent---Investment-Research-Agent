@@ -129,3 +129,16 @@ To satisfy the target cost threshold of **$\le$ $0.25 per synthesized research b
 - **Filing Extraction Specialist (SEC + Transcripts):** Routed to **Gemini 2.5 Flash** ($0.075 / 1M input tokens).
 - **Reasoning, Planning & Final Synthesis:** Routed to **Gemini 2.5 Pro** for deep multi-source cross-verification.
 - **Net Cost per Research Brief:** **~$0.14 to $0.18**, safely under the **$0.25 cap**.
+
+### 2.3 Cloud DLP Inspection Configuration
+The production masker (`DLP_BACKEND=cloud_dlp`, [`src/guardrails/dlp_masker.py`](../src/guardrails/dlp_masker.py)) calls the Cloud DLP `deidentifyContent` API with the inspection rules below and applies the regex rules in 2.2 as a second pass. PERSON_NAME is excluded so executive names in legitimate research questions are preserved.
+
+| Inspection Rule | Type | Transformation |
+|---|---|---|
+| `EMAIL_ADDRESS`, `PHONE_NUMBER`, `US_SOCIAL_SECURITY_NUMBER`, `CREDIT_CARD_NUMBER`, `IBAN_CODE`, `IP_ADDRESS` | Built-in infoTypes | `replace_with_info_type_config` → `[EMAIL_ADDRESS]` … |
+| `INSTITUTIONAL_FUND_ID` (`FUND-`, `ACCT-`, `PORTFOLIO-`, `DESK-` codes) | Custom regex infoType | `[INSTITUTIONAL_FUND_ID]` |
+| `INTERNAL_POSITION_SIZE` ("we hold 450,000 shares") | Custom regex infoType | `[INTERNAL_POSITION_SIZE]` |
+
+- **Minimum likelihood:** `POSSIBLE`; **timeout:** 5 s; failure falls back to the regex masker and is logged.
+- **IAM:** runtime service account holds `roles/dlp.user`; `dlp.googleapis.com` is enabled by Terraform.
+- **Telemetry:** each request logs a PII-free event `{"event": "pii_masking", "dlp_backend": "cloud_dlp", "redaction_applied": true|false}`.

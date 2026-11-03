@@ -109,6 +109,8 @@ module "cloud_run" {
   ingress              = var.ingress
   pubsub_topic_id      = google_pubsub_topic.research_events.name
   enable_adk_web       = var.enable_adk_web
+  dlp_backend                = var.dlp_backend
+  enable_live_news_grounding = var.enable_live_news_grounding
 
   invoker_members = concat(
     var.invoker_members,

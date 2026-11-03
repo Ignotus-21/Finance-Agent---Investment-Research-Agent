@@ -1,16 +1,4 @@
-"""Tests for ADK model routing and context caching.
-
-Both features were claimed by the documentation and absent from the code.
-
-``extraction_model`` was declared in ``src/config.py``, set on the Cloud Run
-revision by Terraform as ``EXTRACTION_MODEL``, and referenced nowhere - the ADK
-agent was a single flat agent hard-coded to ``gemini-2.5-pro``.
-
-Context caching was a module in ``src/cache/`` that kept an in-process dict,
-estimated tokens as ``max(35000, len // 4)``, and returned a "cost saved" figure
-computed from a hardcoded price delta against a ``cache_id`` naming a Vertex
-resource that had never been created. It called no Google API of any kind.
-"""
+"""Tests for ADK model routing, topology, and context caching configuration."""
 
 import pytest
 from google.adk.agents.context_cache_config import ContextCacheConfig
@@ -30,7 +18,7 @@ from src.config import Settings
 
 
 def test_the_two_agents_run_on_different_models() -> None:
-    """The whole point. One model for both is the state this PR fixes."""
+    """Coordinator and extraction specialist must run on different model tiers."""
     settings = Settings()
     coordinator = create_financial_adk_agent()
     extractor = coordinator.tools[0].agent
@@ -41,12 +29,7 @@ def test_the_two_agents_run_on_different_models() -> None:
 
 
 def test_models_come_from_settings_not_literals(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`COORDINATOR_MODEL` and `EXTRACTION_MODEL` on the revision must reach the agents.
-
-    Terraform has been setting both env vars since #13. Until now the extraction
-    one changed nothing at all, and the coordinator one changed nothing either -
-    the model name was a default argument in the factory.
-    """
+    """`COORDINATOR_MODEL` and `EXTRACTION_MODEL` environment variables must reach the agents."""
     monkeypatch.setenv("COORDINATOR_MODEL", "gemini-3-pro-preview")
     monkeypatch.setenv("EXTRACTION_MODEL", "gemini-2.0-flash")
 
@@ -70,7 +53,7 @@ def test_explicit_arguments_still_win() -> None:
 
 
 def test_retrieval_tools_live_on_the_specialist_and_not_on_both() -> None:
-    """Two paths to the same data drift apart; this asserts there is one."""
+    """Retrieval tools belong to the specialist only."""
     coordinator = create_financial_adk_agent()
     extractor = coordinator.tools[0].agent
 
@@ -82,12 +65,7 @@ def test_retrieval_tools_live_on_the_specialist_and_not_on_both() -> None:
 
 
 def test_the_calculator_stays_with_the_coordinator() -> None:
-    """Arithmetic must not be delegated to the model that reads the filing.
-
-    ``compute_financial_ratios`` is deterministic Python. Keeping it beside the
-    synthesis step is what makes "never guess a margin" enforceable in one
-    place rather than asserted in two system prompts.
-    """
+    """Deterministic arithmetic stays with the coordinator, not the extraction model."""
     coordinator = create_financial_adk_agent()
     names = {getattr(t, "__name__", type(t).__name__) for t in coordinator.tools}
 
@@ -101,12 +79,7 @@ def test_the_calculator_stays_with_the_coordinator() -> None:
 
 
 def test_delegation_is_a_tool_call_not_a_transfer() -> None:
-    """`sub_agents` would hand the conversation to Flash and never get it back.
-
-    The coordinator has to regain control to write the brief, so the specialist
-    is an ``AgentTool``. If this ever becomes a transfer, the synthesis step
-    silently starts running on the extraction model.
-    """
+    """The specialist is invoked as an AgentTool so the coordinator retains control for synthesis."""
     coordinator = create_financial_adk_agent()
 
     assert isinstance(coordinator.tools[0], AgentTool)
@@ -131,12 +104,7 @@ def test_app_enables_adk_context_caching() -> None:
 
 
 def test_min_tokens_states_geminis_real_floor() -> None:
-    """ADK defaults this to 0, which reads as "cache everything" and is not true.
-
-    Gemini will not cache a prefix below 2048 tokens for the 2.5 family no
-    matter what is configured. Writing it down is the difference between a
-    reader concluding the cache is broken and concluding the request was small.
-    """
+    """min_tokens reflects the Gemini 2.5 minimum cacheable prefix (2,048 tokens)."""
     assert create_financial_adk_app().context_cache_config.min_tokens == 2048
 
 
@@ -146,6 +114,6 @@ def test_context_cache_config_is_overridable() -> None:
 
 
 def test_the_simulated_cache_module_is_gone() -> None:
-    """`src/cache/context_caching.py` reported savings it had not made."""
+    """The legacy simulated cache module must not exist."""
     with pytest.raises(ModuleNotFoundError):
         __import__("src.cache.context_caching")

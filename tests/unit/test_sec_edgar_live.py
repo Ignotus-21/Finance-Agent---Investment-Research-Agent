@@ -634,8 +634,6 @@ async def test_successor_shell_raises_registrant_mismatch_not_not_found() -> Non
     assert exc.error_code == "REGISTRANT_MISMATCH"
     assert exc.details["resolved_entity"] == "ExxonMobil Holdings Corp"
     assert exc.details["resolved_cik"] == "0002115436"
-    # The ticker slot holds a ticker. It used to hold the CIK, which read as
-    # though the caller had asked for something nonsensical.
     assert exc.details["ticker"] == "XOM"
 
 
@@ -654,11 +652,6 @@ async def test_a_real_filer_missing_one_year_is_still_not_found() -> None:
 # ---------------------------------------------------------------------------
 # Degraded-mode provenance.
 #
-# The circuit-breaker fallback used to omit ``data_source`` entirely, which
-# crashed the MCP tool with KeyError at exactly the moment the agent most
-# needed an answer, and - worse - served invented figures for any ticker
-# without a curated fixture.
-# ---------------------------------------------------------------------------
 
 
 async def test_breaker_open_fallback_still_stamps_provenance() -> None:

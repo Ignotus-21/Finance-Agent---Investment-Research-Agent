@@ -51,7 +51,7 @@ async def generate_equity_research(
     # Step 1: Pre-execution Guardrail & DLP Sanitization
     try:
         combined_prompt = f"Analyze {request.ticker} for FY{request.fiscal_year} focus: {', '.join(request.focus_areas)}"
-        sanitized_prompt = app_container.guardrail.inspect_and_sanitize(combined_prompt)
+        sanitized_prompt = await app_container.guardrail.inspect_and_sanitize_async(combined_prompt)
     except SecurityViolationException as e:
         await audit_logger.log_research_execution(
             ticker=request.ticker,

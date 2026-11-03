@@ -83,6 +83,16 @@ resource "google_cloud_run_v2_service" "ira_service" {
       }
 
       env {
+        name  = "DLP_BACKEND"
+        value = var.dlp_backend
+      }
+
+      env {
+        name  = "ENABLE_LIVE_NEWS_GROUNDING"
+        value = tostring(var.enable_live_news_grounding)
+      }
+
+      env {
         name  = "GOOGLE_GENAI_USE_VERTEXAI"
         value = "TRUE"
       }

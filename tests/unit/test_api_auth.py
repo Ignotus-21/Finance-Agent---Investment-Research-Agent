@@ -1,12 +1,4 @@
-"""Tests for API bearer-token authentication.
-
-What these guard against is a specific regression. ``verify_auth_token`` used to
-accept any bearer string of five characters or more and return
-``f"analyst-user-{token[:6]}"`` as the caller's identity, so ``Bearer hunter2``
-was recorded in the audit log as ``analyst-user-hunter``. Nothing in the suite
-noticed, because every test sent a well-formed-looking token and every
-well-formed-looking token was accepted.
-"""
+"""Tests for OIDC bearer-token verification and production startup guards."""
 
 import pytest
 from fastapi import HTTPException
@@ -128,7 +120,7 @@ async def test_failed_verification_is_rejected(
 
 
 async def test_arbitrary_string_is_rejected_when_verifying(verifying: None) -> None:
-    """The regression itself. This used to return 'analyst-user-hunter'."""
+    """A verified token yields the email claim as the audit identity."""
     with pytest.raises(HTTPException) as exc:
         await dependencies.verify_auth_token("Bearer hunter2")
     assert exc.value.status_code == 401

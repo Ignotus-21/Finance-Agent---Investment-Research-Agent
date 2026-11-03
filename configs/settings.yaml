@@ -1,4 +1,6 @@
-# Autonomous Investment Research Intelligence Agent (IRA) — Default Configuration
+# Autonomous Investment Research Intelligence Agent (IRA) — Versioned Runtime Configuration
+# Values here are defaults; any key can be overridden by the matching environment variable
+# (see .env.example and src/config.py).
 application:
   service_name: "ira-equity-research-agent"
   version: "1.0.0"
@@ -8,16 +10,30 @@ application:
 models:
   coordinator_model: "gemini-2.5-pro"
   extraction_model: "gemini-2.5-flash"
+  generation:
+    temperature: 0.1              # TEMPERATURE
+    top_p: 0.95                   # TOP_P
+    max_output_tokens: 8192       # MAX_OUTPUT_TOKENS
+    coordinator_thinking_budget: 2048   # COORDINATOR_THINKING_BUDGET (Gemini 2.5 Pro thinking tokens)
+  safety:
+    harm_block_threshold: "BLOCK_MEDIUM_AND_ABOVE"   # SAFETY_HARM_BLOCK_THRESHOLD
   context_cache:
     ttl_seconds: 3600
     min_tokens: 2048
     cache_intervals: 10
 
-sec_edgar:
-  base_url: "https://data.sec.gov"
-  rate_limit_rps: 10
+guardrails:
+  dlp_backend: "regex"            # DLP_BACKEND: regex | cloud_dlp
+  max_prompt_chars: 8000          # MAX_PROMPT_CHARS
+  enable_live_news_grounding: false   # ENABLE_LIVE_NEWS_GROUNDING (ADK path, Google Search grounding)
+
+resilience:
+  subagent_timeout_seconds: 45    # SUBAGENT_TIMEOUT_SECONDS
+  sec_rate_limit_per_sec: 8.0
+  sec_http_timeout_seconds: 20.0
+  sec_http_max_retries: 3
   circuit_breaker:
-    failure_threshold: 3
+    failure_threshold: 5
     recovery_timeout_seconds: 60
 
 observability:

@@ -2,7 +2,6 @@
 .git/
 refrence/
 reference/
-DO_NOT_COMMIT/
 
 .venv/
 venv/

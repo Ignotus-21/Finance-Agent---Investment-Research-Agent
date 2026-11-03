@@ -1,13 +1,4 @@
-"""
-Unit tests for `PubSubBroadcaster`.
-
-The class these cover used to append a dict to a list and return it, so there
-was nothing to assert beyond the dict's own shape - which is exactly why the
-missing publish went unnoticed. These tests pin the three behaviours that
-matter now: offline mode must not touch the network, a real publish must go to
-the configured topic, and a publish failure must not propagate into the request
-that produced the brief.
-"""
+"""Tests for the Cloud Pub/Sub research-event broadcaster."""
 
 import asyncio
 import json

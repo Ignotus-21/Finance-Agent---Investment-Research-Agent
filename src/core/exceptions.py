@@ -115,3 +115,18 @@ class VerificationFailedException(FinancialAgentException):
             status_code=422,
             details={"metric_name": metric_name, "reason": reason},
         )
+
+
+class UpstreamTimeoutException(FinancialAgentException):
+    """Raised when a required sub-agent exceeds its execution deadline."""
+
+    def __init__(self, agent: str, timeout_seconds: float) -> None:
+        super().__init__(
+            message=(
+                f"Sub-agent '{agent}' exceeded its {timeout_seconds:.0f}s execution deadline; "
+                "the research brief cannot be synthesised without its evidence."
+            ),
+            error_code="UPSTREAM_TIMEOUT",
+            status_code=504,
+            details={"agent": agent, "timeout_seconds": timeout_seconds},
+        )

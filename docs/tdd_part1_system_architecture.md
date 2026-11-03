@@ -158,7 +158,7 @@ sequenceDiagram
 ### 3.3 Domain Sub-Agents
 - **SEC Filing Specialist:** Connects via Model Context Protocol (MCP) to parse SEC EDGAR filings; normalizes XBRL tables into markdown representations.
 - **Earnings Transcript Specialist:** Parses quarterly call transcripts; separates prepared executive remarks (CFO guidance) from live analyst Q&A.
-- **Macro News Specialist:** Returns curated, dated context on interest rate policy, trade, and sector sentiment.
+- **Macro News Specialist:** On the ADK path, a Gemini 2.5 Flash agent with Google Search grounding (`macro_news_specialist`, exposed to the coordinator via `AgentTool`) returns dated, URL-bearing interest-rate and sector context; the deterministic REST path uses a curated, dated corpus.
 
 ### 3.4 Verification & Synthesis Engine
 - **Financial Calculator:** Pure Python tool computing metrics using standard formulas and `decimal.Decimal` arithmetic.

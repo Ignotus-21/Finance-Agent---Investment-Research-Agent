@@ -5,7 +5,6 @@
 # Local reference material
 refrence/
 reference/
-DO_NOT_COMMIT/
 
 # Virtual environments
 .venv/

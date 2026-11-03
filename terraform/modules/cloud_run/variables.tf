@@ -95,3 +95,15 @@ variable "request_timeout" {
   type        = string
   default     = "300s"
 }
+
+variable "dlp_backend" {
+  description = "PII redaction backend for inbound prompts: regex (in-process) or cloud_dlp (Cloud DLP de-identification)."
+  type        = string
+  default     = "regex"
+}
+
+variable "enable_live_news_grounding" {
+  description = "Attach the Google Search grounded macro news specialist to the ADK coordinator."
+  type        = bool
+  default     = false
+}

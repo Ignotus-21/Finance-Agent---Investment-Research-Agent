@@ -1,21 +1,27 @@
 """
 Pre-Execution Security Guardrails.
 Intercepts adversarial jailbreak attempts, prompt injections, and scope violations
-before dispatching queries to downstream LLM reasoning loops.
+before dispatching queries to downstream LLM reasoning loops, then redacts PII
+through the configured masking backend (regex or Cloud DLP).
 """
 
+import logging
 import re
+
+from starlette.concurrency import run_in_threadpool
 
 from src.config import Settings
 from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
 from src.core.interfaces import GuardrailInterface
-from src.guardrails.pii_masker import PIIMasker
+from src.guardrails.dlp_masker import PIIMaskerProtocol, build_pii_masker
 from src.guardrails.scope_classifier import ScopeClassifier
+
+logger = logging.getLogger(__name__)
 
 
 class InputGuardrail(GuardrailInterface):
     """
-    Pre-execution security classifier enforcing domain scope, DLP redaction,
+    Pre-execution security classifier enforcing domain scope, PII redaction,
     and blocking adversarial prompt injections.
     """
 
@@ -44,8 +50,16 @@ class InputGuardrail(GuardrailInterface):
         r"(?i)rm\s+-rf\s+/",
     ]
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        masker: PIIMaskerProtocol | None = None,
+    ) -> None:
         self.settings = settings or Settings()
+        self.masker: PIIMaskerProtocol = masker or build_pii_masker(
+            backend=self.settings.dlp_backend,
+            project_id=self.settings.gcp_project_id,
+        )
 
     def validate_input(self, prompt: str) -> tuple[bool, str]:
         """
@@ -55,8 +69,11 @@ class InputGuardrail(GuardrailInterface):
         if not prompt or not prompt.strip():
             return False, "Prompt cannot be empty."
 
-        if len(prompt) > 8000:
-            return False, "Prompt exceeds maximum allowed character length (8000)."
+        if len(prompt) > self.settings.max_prompt_chars:
+            return (
+                False,
+                f"Prompt exceeds maximum allowed character length ({self.settings.max_prompt_chars}).",
+            )
 
         # 1. Inspect for Adversarial Prompt Injection & Jailbreak patterns
         for pattern in self.ADVERSARIAL_PATTERNS:
@@ -70,18 +87,39 @@ class InputGuardrail(GuardrailInterface):
 
         return True, "Passed security and scope inspection."
 
-    def inspect_and_sanitize(self, prompt: str) -> str:
-        """
-        Runs validation and PII sanitization.
-        Raises SecurityViolationException or OutOfDomainQueryException on violation.
-        """
+    def _enforce(self, prompt: str) -> None:
         is_valid, msg = self.validate_input(prompt)
         if not is_valid:
             if "Adversarial security" in msg or "signature" in msg:
                 raise SecurityViolationException(message=msg)
-            else:
-                raise OutOfDomainQueryException(message=msg)
+            raise OutOfDomainQueryException(message=msg)
 
-        # Apply PII masking
-        sanitized_prompt, _ = PIIMasker.sanitize_text(prompt)
-        return sanitized_prompt
+    def _mask(self, prompt: str) -> str:
+        if not self.settings.enable_dlp_masking:
+            return prompt
+        sanitized, modified = self.masker.sanitize_text(prompt)
+        logger.info(
+            "Inbound prompt sanitised.",
+            extra={
+                "event": "pii_masking",
+                "dlp_backend": self.masker.backend_name,
+                "redaction_applied": modified,
+            },
+        )
+        return sanitized
+
+    def inspect_and_sanitize(self, prompt: str) -> str:
+        """
+        Runs validation and PII sanitization synchronously.
+        Raises SecurityViolationException or OutOfDomainQueryException on violation.
+        """
+        self._enforce(prompt)
+        return self._mask(prompt)
+
+    async def inspect_and_sanitize_async(self, prompt: str) -> str:
+        """
+        Async variant for request handlers: validation runs inline, masking runs on a
+        worker thread so a Cloud DLP round trip never blocks the event loop.
+        """
+        self._enforce(prompt)
+        return await run_in_threadpool(self._mask, prompt)

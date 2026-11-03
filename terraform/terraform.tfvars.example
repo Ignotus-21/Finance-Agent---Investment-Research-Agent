@@ -48,3 +48,7 @@ enable_cloudbuild_trigger = false
 github_owner              = "delta-fde"
 github_repo               = "itsadi-finance-investment-research-agent"
 cloudbuild_trigger_branch = "^develop$"
+
+# Guardrail and grounding runtime flags
+dlp_backend                = "cloud_dlp"
+enable_live_news_grounding = true

@@ -2,24 +2,32 @@
 Google ADK (Agent Development Kit) Multi-Agent Orchestration for IRA.
 
 Implements asymmetric model routing and Vertex AI context caching:
-- Root Coordinator (`finance_investment_research_agent` on Gemini 2.5 Pro) handles
-  planning, delegation via `AgentTool`, macro grounding, deterministic financial
-  ratio verification, and final synthesis.
+- Root Coordinator (`finance_investment_research_agent` on Gemini 2.5 Pro with a
+  configurable thinking budget) handles planning, delegation via `AgentTool`,
+  deterministic financial ratio verification, and final synthesis.
 - Filing Extraction Specialist (`filing_extraction_specialist` on Gemini 2.5 Flash)
   retrieves SEC Form 10-K disclosures and XBRL facts over stdio MCP (`McpToolset`)
   alongside earnings call transcripts.
+- Macro News Specialist (`macro_news_specialist` on Gemini 2.5 Flash, optional)
+  performs Google Search grounded retrieval of current macroeconomic context.
+
+Generation parameters (temperature, top_p, max output tokens) and safety thresholds
+are externalized in configs/settings.yaml and environment variables.
 """
 
 import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import yaml
 from google.adk.agents import Agent
 from google.adk.agents.context_cache_config import ContextCacheConfig
 from google.adk.apps import App
 from google.adk.models import Gemini
+from google.adk.planners import BuiltInPlanner
+from google.adk.tools import google_search
 from google.adk.tools.agent_tool import AgentTool
 from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
 from google.genai import types
@@ -182,6 +190,47 @@ FINANCE_AGENT_INSTRUCTION = _load_prompt_instruction(
     "coordinator_agent.yaml", _DEFAULT_FINANCE_AGENT_INSTRUCTION
 )
 
+_DEFAULT_MACRO_NEWS_INSTRUCTION = """You are a macroeconomic and industry news specialist. Use Google Search grounding to retrieve
+current, dated facts: central bank rate decisions, inflation prints, sector regulation, and
+company-specific competitive developments relevant to the requested ticker.
+
+Rules:
+1. Search for every factual claim; never answer from memory.
+2. Return a compact list of items, each with headline, one-sentence summary, publisher, publication
+   date, and URL taken from the grounding results.
+3. Do not forecast prices, recommend trades, or editorialise."""
+
+MACRO_NEWS_AGENT_INSTRUCTION = _load_prompt_instruction(
+    "macro_news_specialist.yaml", _DEFAULT_MACRO_NEWS_INSTRUCTION
+)
+
+_LIVE_GROUNDING_ADDENDUM = """
+6. LIVE MACRO GROUNDING: Call macro_news_specialist for current interest-rate decisions and
+   dated industry news (it performs Google Search grounding). Use query_macro_market_news only
+   as a curated fallback when the specialist returns nothing."""
+
+_SAFETY_CATEGORIES = (
+    types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+    types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+)
+
+
+def build_generate_content_config(settings: Settings | None = None) -> types.GenerateContentConfig:
+    """Translate externalized generation and safety settings into a GenerateContentConfig."""
+    settings = settings or Settings()
+    threshold = types.HarmBlockThreshold(settings.safety_harm_block_threshold)
+    return types.GenerateContentConfig(
+        temperature=settings.temperature,
+        top_p=settings.top_p,
+        max_output_tokens=settings.max_output_tokens,
+        safety_settings=[
+            types.SafetySetting(category=category, threshold=threshold)
+            for category in _SAFETY_CATEGORIES
+        ],
+    )
+
 
 def create_sec_edgar_mcp_toolset() -> McpToolset:
     """Create an ADK McpToolset connected over stdio to the in-repo SEC EDGAR MCP server."""
@@ -211,6 +260,7 @@ def create_filing_extraction_agent(model_name: str | None = None) -> Agent:
             "analyse or calculate."
         ),
         instruction=EXTRACTION_AGENT_INSTRUCTION,
+        generate_content_config=build_generate_content_config(settings),
         tools=[
             create_sec_edgar_mcp_toolset(),
             get_earnings_call_transcript,
@@ -218,24 +268,66 @@ def create_filing_extraction_agent(model_name: str | None = None) -> Agent:
     )
 
 
+def create_macro_news_agent(model_name: str | None = None) -> Agent:
+    """Create the Google Search grounded macro news specialist on Gemini 2.5 Flash.
+
+    Gemini built-in tools cannot share an agent with function tools, so grounding
+    lives in its own agent and is exposed to the coordinator through AgentTool.
+    """
+    settings = Settings()
+    return Agent(
+        name="macro_news_specialist",
+        model=Gemini(
+            model=model_name or settings.extraction_model,
+            retry_options=types.HttpRetryOptions(attempts=3),
+        ),
+        description=(
+            "Performs Google Search grounded retrieval of current macroeconomic "
+            "indicators, central bank decisions and dated industry news for a ticker."
+        ),
+        instruction=MACRO_NEWS_AGENT_INSTRUCTION,
+        generate_content_config=build_generate_content_config(settings),
+        tools=[google_search],
+    )
+
+
 def create_financial_adk_agent(
     model_name: str | None = None,
     extraction_model_name: str | None = None,
+    enable_live_news_grounding: bool | None = None,
 ) -> Agent:
     """Create the Root Coordinator Agent on Gemini 2.5 Pro with specialist AgentTool delegation."""
     settings = Settings()
+    live_grounding = (
+        settings.enable_live_news_grounding
+        if enable_live_news_grounding is None
+        else enable_live_news_grounding
+    )
+
+    tools: list[Any] = [
+        AgentTool(agent=create_filing_extraction_agent(extraction_model_name)),
+        query_macro_market_news,
+        compute_financial_ratios,
+    ]
+    instruction = FINANCE_AGENT_INSTRUCTION
+    if live_grounding:
+        tools.append(AgentTool(agent=create_macro_news_agent(extraction_model_name)))
+        instruction = f"{instruction.rstrip()}\n{_LIVE_GROUNDING_ADDENDUM}"
+
     return Agent(
         name="finance_investment_research_agent",
         model=Gemini(
             model=model_name or settings.coordinator_model,
             retry_options=types.HttpRetryOptions(attempts=3),
         ),
-        instruction=FINANCE_AGENT_INSTRUCTION,
-        tools=[
-            AgentTool(agent=create_filing_extraction_agent(extraction_model_name)),
-            query_macro_market_news,
-            compute_financial_ratios,
-        ],
+        instruction=instruction,
+        generate_content_config=build_generate_content_config(settings),
+        planner=BuiltInPlanner(
+            thinking_config=types.ThinkingConfig(
+                thinking_budget=settings.coordinator_thinking_budget,
+            )
+        ),
+        tools=tools,
     )
 
 
