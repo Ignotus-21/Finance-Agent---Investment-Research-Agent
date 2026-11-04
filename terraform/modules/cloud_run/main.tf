@@ -93,6 +93,16 @@ resource "google_cloud_run_v2_service" "ira_service" {
       }
 
       env {
+        name  = "ENABLE_MODEL_ARMOR"
+        value = tostring(var.enable_model_armor)
+      }
+
+      env {
+        name  = "MODEL_ARMOR_TEMPLATE"
+        value = var.model_armor_template
+      }
+
+      env {
         name  = "GOOGLE_GENAI_USE_VERTEXAI"
         value = "TRUE"
       }

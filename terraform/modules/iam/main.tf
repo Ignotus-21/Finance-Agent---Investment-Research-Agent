@@ -12,7 +12,8 @@ locals {
     "roles/logging.logWriter",            # Tamper-evident structured Cloud Logging
     "roles/cloudtrace.agent",             # OpenTelemetry distributed trace export
     "roles/secretmanager.secretAccessor", # Access to encrypted API credentials
-    "roles/dlp.user"                      # Data Loss Prevention inspection and redaction
+    "roles/dlp.user",                     # Data Loss Prevention inspection and redaction
+    "roles/modelarmor.user"               # Model Armor prompt screening (SanitizeUserPrompt)
   ]
 
 }

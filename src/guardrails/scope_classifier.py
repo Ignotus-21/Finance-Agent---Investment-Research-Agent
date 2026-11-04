@@ -36,7 +36,7 @@ class ScopeClassifier:
     ]
 
     @classmethod
-    def evaluate_scope(cls, prompt: str) -> tuple[bool, str]:
+    def evaluate_scope(cls, prompt: str, require_anchor: bool = True) -> tuple[bool, str]:
         """
         Evaluates whether the prompt is strictly within financial equity research scope.
         Returns: (is_in_scope, message)
@@ -47,8 +47,9 @@ class ScopeClassifier:
                 return False, explanation
 
         # 2. Check for at least one financial domain anchor term
-        prompt_lower = prompt.lower()
-        if not any(term in prompt_lower for term in cls.FINANCIAL_ANCHOR_TERMS):
-            return False, "Query lacks financial domain context. The IRA system only processes corporate fundamental research."
+        if require_anchor:
+            prompt_lower = prompt.lower()
+            if not any(term in prompt_lower for term in cls.FINANCIAL_ANCHOR_TERMS):
+                return False, "Query lacks financial domain context. The IRA system only processes corporate fundamental research."
 
         return True, "Query is within financial equity research scope."

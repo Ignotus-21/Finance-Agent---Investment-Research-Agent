@@ -134,6 +134,22 @@ class Settings(BaseSettings):
         default=bool(_GUARDRAILS_CFG.get("enable_live_news_grounding", False)),
         description="Attach a Google Search grounded macro news specialist to the ADK coordinator",
     )
+    enable_model_armor: bool = Field(
+        default=bool(_GUARDRAILS_CFG.get("enable_model_armor", False)),
+        description="Screen prompts with a Model Armor template in addition to the in-process guardrails",
+    )
+    model_armor_template: str = Field(
+        default="",
+        description="Model Armor template resource name: projects/<p>/locations/<l>/templates/<id>",
+    )
+    model_armor_timeout_seconds: float = Field(
+        default=float(_GUARDRAILS_CFG.get("model_armor_timeout_seconds", 3.0)),
+        description="Per-call timeout for Model Armor screening",
+    )
+    model_armor_fail_closed: bool = Field(
+        default=bool(_GUARDRAILS_CFG.get("model_armor_fail_closed", False)),
+        description="Reject prompts when Model Armor is unavailable (default: continue with in-process guardrails)",
+    )
 
     # Observability & Audit Logging
     log_level: str = Field(
@@ -210,6 +226,11 @@ class Settings(BaseSettings):
             raise ValueError(
                 "SAFETY_HARM_BLOCK_THRESHOLD must be one of "
                 f"{sorted(allowed_thresholds)}, got {self.safety_harm_block_threshold!r}."
+            )
+        if self.enable_model_armor and self.model_armor_template.count("/") < 5:
+            raise ValueError(
+                "ENABLE_MODEL_ARMOR=true requires MODEL_ARMOR_TEMPLATE set to "
+                "'projects/<project>/locations/<location>/templates/<id>'."
             )
         return self
 

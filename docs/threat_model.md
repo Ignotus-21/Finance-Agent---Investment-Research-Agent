@@ -48,9 +48,10 @@ flowchart TB
     end
 
     subgraph TB2["TB-2 · Pre-Execution Guardrail Zone"]
-        DLP["PII Masker (regex)<br/>pii_masker.py"]
         Injection["Prompt Injection Interceptor<br/>input_guardrail.py"]
         Scope["Domain Scope Classifier<br/>scope_classifier.py"]
+        Armor["Model Armor Screening<br/>model_armor.py"]
+        DLP["PII Masker (regex / Cloud DLP)<br/>dlp_masker.py"]
     end
 
     subgraph TB3["TB-3 · Agent Execution Zone (VPC, no public egress)"]
@@ -76,19 +77,20 @@ flowchart TB
     Analyst -->|"1 · HTTPS + Bearer"| Auth
     Attacker -.->|"injection / jailbreak"| Auth
     Auth --> Gateway
-    Gateway -->|"2 · raw prompt"| DLP
-    DLP -->|"3 · PII redacted"| Injection
-    Injection -->|"4 · injection-free"| Scope
-    Scope -->|"5 · in-domain only"| Root
+    Gateway -->|"2 · raw prompt"| Injection
+    Injection -->|"3 · signature-free"| Scope
+    Scope -->|"4 · in-domain only"| Armor
+    Armor -->|"5 · no filter match"| DLP
+    DLP -->|"6 · PII redacted"| Root
 
     Root --> Subs
-    Subs -->|"6 · rate-limited + circuit-broken"| EDGAR
+    Subs -->|"7 · rate-limited + circuit-broken"| EDGAR
     Subs --> VSearch
     Root --> Gemini
     Subs --> Calc
     Calc --> Synth
-    Synth -->|"7 · verified brief"| Gateway
-    Gateway -->|"8 · structured JSON"| Analyst
+    Synth -->|"8 · verified brief"| Gateway
+    Gateway -->|"9 · structured JSON"| Analyst
 
     Root -.->|audit| BQ
     Root -.->|audit| CLog
@@ -98,7 +100,7 @@ flowchart TB
     classDef danger fill:#ffe6e6,stroke:#cc0000
     classDef guard fill:#e6f7e6,stroke:#2d7a2d
     class Attacker danger
-    class DLP,Injection,Scope guard
+    class DLP,Injection,Scope,Armor guard
 ```
 
 ### 2.1 Boundary Crossings
@@ -106,7 +108,7 @@ flowchart TB
 | Crossing | From → To | Control enforced |
 |:---:|---|---|
 | **X1** | TB-0 → TB-1 | Two independent checks on the same credential: Cloud Run IAM (`roles/run.invoker`, no `allUsers` binding exists) and, in the application, RS256 signature + issuer + expiry + audience verification of the Google ID token — `src/api/dependencies.py`. TLS throughout |
-| **X2** | TB-1 → TB-2 | **All** prompts traverse the guardrail chain — no bypass path exists |
+| **X2** | TB-1 → TB-2 | **All** prompts traverse the guardrail chain — REST via `InputGuardrail.inspect_and_sanitize_async`, ADK via the coordinator's `before_model_callback` (`adk_callbacks.py`). No bypass path exists |
 | **X3** | TB-2 → TB-3 | Only sanitised, in-domain prompts reach any model or tool |
 | **X4** | TB-3 → TB-4 | Egress via Serverless VPC Connector; Token Bucket rate limiting; Circuit Breaker |
 | **X5** | TB-3 → TB-5 | Least-privilege service account; append-only audit semantics |
@@ -136,8 +138,9 @@ flowchart TB
 
 | STRIDE | Threat | Mitigation | Residual |
 |---|---|---|:---:|
-| **T**ampering | Prompt injection overriding system instructions | `input_guardrail.py` pattern + classifier interception pre-dispatch — see §4.1 | **Medium** |
-| **I**nfo disclosure | PII (email, phone, fund IDs, position sizes) persisted into audit logs | `pii_masker.py` redacts **before** any logging or model call | Low |
+| **T**ampering | Prompt injection overriding system instructions | `input_guardrail.py` pattern + classifier interception pre-dispatch — see §4.1 | Low |
+| **T**ampering | Novel injection / jailbreak phrasing that matches no signature | Model Armor `SanitizeUserPrompt` (`model_armor.py`): prompt-injection & jailbreak, Responsible AI and malicious-URI filters at medium confidence; match → `SecurityViolationException`. API failure degrades to fail-open with a `model_armor_degraded` log event unless `MODEL_ARMOR_FAIL_CLOSED=true` | Low |
+| **I**nfo disclosure | PII (email, phone, fund IDs, position sizes) persisted into audit logs | `dlp_masker.py` (Cloud DLP `deidentifyContent` + regex second pass) redacts **before** any logging or model call | Low |
 | **E**levation | Out-of-domain request coercing the agent into non-financial behaviour (code execution, price prediction) | `scope_classifier.py` rejects with `OutOfDomainQueryException` | Low |
 
 ### 3.3 Agent Execution Zone (TB-3)
@@ -191,19 +194,31 @@ but it is fully attacker-controlled.
 
 **Controls**
 
-1. `input_guardrail.py` — pre-execution interception **before** any model or tool call (X2).
+1. `input_guardrail.py` — signature interception (17 injection / RCE / SQLi patterns) **before**
+   any model or tool call (X2). Deterministic, offline, zero latency.
 2. `scope_classifier.py` — independent domain-boundary check; rejects non-financial intent.
-3. The agent instruction mandates tool-sourced facts only, so a successful override still
+3. `model_armor.py` — Model Armor `SanitizeUserPrompt` against a template with prompt-injection &
+   jailbreak, Responsible AI (hate, harassment, dangerous, sexually explicit) and malicious-URI
+   filters. Catches paraphrased attacks that match no signature; runs only on prompts that
+   already passed 1–2, so the network call is never spent on trivially rejected input.
+4. The agent instruction mandates tool-sourced facts only, so a successful override still
    cannot manufacture a cited figure without a tool result.
-4. `citation_verifier.py` — claims failing source cross-verification are dropped.
+5. `citation_verifier.py` — claims failing source cross-verification are dropped.
+
+The same chain protects the ADK surface: `adk_callbacks.py` runs 1–3 as the coordinator's
+`before_model_callback` and returns a refusal `LlmResponse` instead of calling Gemini.
 
 **Verification.** The 52-scenario golden dataset includes a dedicated adversarial category;
 the regression gate asserts a **100% Guardrail Interception Rate** and fails the build below it.
+`tests/unit/test_model_armor.py` covers filter-match blocking, fail-open / fail-closed
+degradation, layer ordering and the ADK callback.
 
-**Residual risk: Medium.** Pattern- and classifier-based detection is inherently incomplete
-against novel phrasings. The compensating control is architectural rather than detective: the
-agent cannot assert a number it did not obtain from a tool, so injection success degrades to a
-refusal or an uncited response rather than a fabricated figure.
+**Residual risk: Low.** Signature detection is incomplete against novel phrasings; Model Armor
+closes most of that gap but is itself probabilistic, and the default fail-open posture trades
+strictness for availability (`MODEL_ARMOR_FAIL_CLOSED=true` reverses it). The compensating
+control is architectural rather than detective: the agent cannot assert a number it did not
+obtain from a tool, so injection success degrades to a refusal or an uncited response rather
+than a fabricated figure.
 
 ### 4.2 Tool Tampering
 
@@ -225,7 +240,7 @@ hardest class to fully eliminate.
 
 | Vector | Control | Residual |
 |---|---|:---:|
-| PII leaking into logs or model context | `pii_masker.py` redacts emails, phone numbers, fund identifiers and position sizes **before** logging or inference | Low |
+| PII leaking into logs or model context | `dlp_masker.py` (Cloud DLP + regex) redacts emails, phone numbers, fund identifiers and position sizes **before** logging or inference | Low |
 | Agent coaxed into echoing secrets | No credential material is ever placed in prompt context; secrets resolved from Secret Manager at call time | Low |
 | Unrestricted network egress from the agent container | Serverless VPC Connector with `all-traffic` egress routing; no public egress path | Low |
 | Bulk audit-data extraction from BigQuery | Least-privilege service account; dataset-level IAM; no broad `roles/bigquery.dataViewer` grant | Medium |
@@ -238,21 +253,24 @@ hardest class to fully eliminate.
 
 | ID | Risk | Likelihood | Impact | Residual | Owner |
 |:---:|---|:---:|:---:|:---:|---|
-| **R1** | Novel prompt-injection phrasing evades the classifier | Medium | Medium | **Medium** | Guardrails |
+| **R1** | Novel prompt-injection phrasing evades both the signature layer and Model Armor | Low | Medium | **Low** | Guardrails |
 | **R2** | Indirect injection via poisoned upstream filing/news content | Low | High | **Medium** | Sub-agents |
 | **R3** | Denial-of-wallet through authenticated request flooding | Medium | Medium | **Medium** | Gateway |
 | **R4** | Over-broad BigQuery read grant enabling bulk audit extraction | Low | High | **Medium** | IAM |
 | **R5** | Pub/Sub subscriber misconfiguration exposing brief events | Low | Medium | **Medium** | IaC |
 | **R6** | Arithmetic hallucination in a published figure | Very Low | Critical | **Low** | Calculator |
 | **R7** | Upstream SEC outage degrading service | Medium | Low | **Low** | Circuit Breaker |
+| **R8** | Model Armor outage silently reduces coverage to the signature layer (fail-open default) | Low | Low | **Low** | Guardrails |
 
 ### Accepted Risks
 
-**R1** and **R2** are accepted. Complete prevention of adversarial prompting is not an
+**R1**, **R2** and **R8** are accepted. Complete prevention of adversarial prompting is not an
 achievable engineering goal. The system is designed so that injection success does not
 translate into integrity failure: because every numerical claim must originate from a
 deterministic tool and survive citation verification, the realistic worst case is a refusal
 or an uncited narrative response — not a fabricated financial figure presented as sourced.
+R8 is observable (`model_armor_degraded` log event) and reversible per environment via
+`MODEL_ARMOR_FAIL_CLOSED=true`.
 
 ---
 
@@ -260,8 +278,9 @@ or an uncited narrative response — not a fabricated financial figure presented
 
 | Control | Implementation | Test |
 |---|---|---|
-| PII redaction | `src/guardrails/pii_masker.py` | `tests/unit/test_guardrails.py` |
+| PII redaction | `src/guardrails/dlp_masker.py`, `src/guardrails/pii_masker.py` | `tests/unit/test_dlp_masker.py`, `tests/unit/test_guardrails.py` |
 | Injection interception | `src/guardrails/input_guardrail.py` | `tests/unit/test_guardrails.py` + adversarial golden scenarios |
+| Model Armor screening (REST + ADK) | `src/guardrails/model_armor.py`, `src/guardrails/adk_callbacks.py` | `tests/unit/test_model_armor.py` |
 | Domain scope enforcement | `src/guardrails/scope_classifier.py` | `tests/unit/test_guardrails.py` |
 | Deterministic arithmetic | `src/tools/financial_calculator.py` | `tests/unit/test_financial_calculator.py` |
 | Citation cross-verification | `src/engine/citation_verifier.py` | `tests/integration/test_multi_agent_flow.py` |

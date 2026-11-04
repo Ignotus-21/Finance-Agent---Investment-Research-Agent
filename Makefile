@@ -1,4 +1,4 @@
-.PHONY: help install install-ui hooks hooks-run lint typecheck test test-unit test-integration test-chaos eval eval-vertex run run-local ui adk-run adk-web docker-build docker-run clean infra-validate infra-plan infra-apply infra-output infra-pause infra-resume infra-destroy infra-import
+.PHONY: help install install-ui hooks hooks-run lint typecheck test test-unit test-integration test-chaos eval eval-vertex run run-local ui adk-run adk-web docker-build docker-run clean infra-validate infra-plan infra-apply infra-output infra-pause infra-resume infra-destroy infra-import model-armor-create model-armor-delete
 
 # Resolve the project virtualenv interpreter when present so every target works
 # whether or not `.venv` has been activated in the current shell.
@@ -123,3 +123,11 @@ infra-destroy:
 # One-time adoption of pre-existing resources into Terraform state.
 infra-import:
 	PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) ENVIRONMENT=$(ENVIRONMENT) scripts/infra_import_existing.sh
+
+# Model Armor template (not managed by the pinned Terraform provider). Run
+# model-armor-create before infra-apply; model-armor-delete after infra-destroy.
+model-armor-create:
+	scripts/model_armor_template.sh create $(PROJECT_ID) $(REGION)
+
+model-armor-delete:
+	scripts/model_armor_template.sh delete $(PROJECT_ID) $(REGION)

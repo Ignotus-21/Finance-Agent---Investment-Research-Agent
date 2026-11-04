@@ -25,6 +25,7 @@ graph TD
     subgraph SecurityLayer [2. Pre-Execution Guardrails Layer]
         InputGuard[InputGuardrail: Injection & Jailbreak Classifier]
         ScopeGuard[ScopeClassifier: Out-of-Domain Filter]
+        ArmorGuard[ModelArmorScreen: Semantic Injection / RAI Screening]
     end
 
     subgraph OrchestrationLayer [3. Agent Orchestration Layer - ADK]

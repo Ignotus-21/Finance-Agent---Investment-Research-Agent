@@ -107,3 +107,15 @@ variable "enable_live_news_grounding" {
   type        = bool
   default     = false
 }
+
+variable "enable_model_armor" {
+  description = "Screen inbound prompts with a Model Armor template before agent execution."
+  type        = bool
+  default     = false
+}
+
+variable "model_armor_template" {
+  description = "Model Armor template resource name (projects/<project>/locations/<region>/templates/<id>). Required when enable_model_armor is true."
+  type        = string
+  default     = ""
+}

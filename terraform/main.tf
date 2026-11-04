@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.9.0"
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -31,6 +31,7 @@ resource "google_project_service" "required" {
     "dlp.googleapis.com",              # PII inspection and redaction
     "iam.googleapis.com",              # Runtime service account
     "logging.googleapis.com",          # Structured logs, log-based metrics
+    "modelarmor.googleapis.com",       # Prompt injection and jailbreak screening
     "monitoring.googleapis.com",       # Dashboard, SLOs, alert policies
     "pubsub.googleapis.com",           # Research completion events
     "run.googleapis.com",              # The service itself
@@ -103,14 +104,16 @@ module "cloud_run" {
   container_concurrency = var.container_concurrency
   request_timeout       = var.request_timeout
 
-  offline_mode         = var.offline_mode
-  sec_edgar_user_agent = var.sec_edgar_user_agent
-  custom_audiences     = var.custom_audiences
-  ingress              = var.ingress
-  pubsub_topic_id      = google_pubsub_topic.research_events.name
-  enable_adk_web       = var.enable_adk_web
+  offline_mode               = var.offline_mode
+  sec_edgar_user_agent       = var.sec_edgar_user_agent
+  custom_audiences           = var.custom_audiences
+  ingress                    = var.ingress
+  pubsub_topic_id            = google_pubsub_topic.research_events.name
+  enable_adk_web             = var.enable_adk_web
   dlp_backend                = var.dlp_backend
   enable_live_news_grounding = var.enable_live_news_grounding
+  enable_model_armor         = var.enable_model_armor
+  model_armor_template       = var.model_armor_template
 
   invoker_members = concat(
     var.invoker_members,

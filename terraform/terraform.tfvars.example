@@ -52,3 +52,8 @@ cloudbuild_trigger_branch = "^develop$"
 # Guardrail and grounding runtime flags
 dlp_backend                = "cloud_dlp"
 enable_live_news_grounding = true
+
+# Model Armor prompt screening. Create the template first (it is not managed by
+# this provider version): scripts/model_armor_template.sh <project> <region> <template-id>
+enable_model_armor   = true
+model_armor_template = "projects/ira-capstone-finance-prod/locations/us-central1/templates/ira-prompt-guard-production"

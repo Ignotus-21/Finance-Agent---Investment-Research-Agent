@@ -12,7 +12,9 @@ Implements asymmetric model routing and Vertex AI context caching:
   performs Google Search grounded retrieval of current macroeconomic context.
 
 Generation parameters (temperature, top_p, max output tokens) and safety thresholds
-are externalized in configs/settings.yaml and environment variables.
+are externalized in configs/settings.yaml and environment variables. The coordinator
+runs the shared input guardrail stack (adversarial patterns, topic blocklist, Model
+Armor) as a `before_model_callback` on every new user turn.
 """
 
 import json
@@ -34,6 +36,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from src.config import Settings
+from src.guardrails.adk_callbacks import build_before_model_guardrail
 from src.tools.financial_calculator import FinancialCalculator
 from src.tools.macro_context import MacroContextClient
 from src.tools.transcript_parser import TranscriptClient
@@ -328,6 +331,7 @@ def create_financial_adk_agent(
             )
         ),
         tools=tools,
+        before_model_callback=build_before_model_guardrail(),
     )
 
 

@@ -158,3 +158,20 @@ variable "enable_live_news_grounding" {
   type        = bool
   default     = true
 }
+
+variable "enable_model_armor" {
+  description = "Screen inbound prompts with a Model Armor template before agent execution (requires roles/modelarmor.user on the runtime service account)."
+  type        = bool
+  default     = true
+}
+
+variable "model_armor_template" {
+  description = "Model Armor template resource name created by scripts/model_armor_template.sh (projects/<project>/locations/<region>/templates/<id>)."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.enable_model_armor || can(regex("^projects/[^/]+/locations/[^/]+/templates/[^/]+$", var.model_armor_template))
+    error_message = "model_armor_template must be projects/<project>/locations/<region>/templates/<id> when enable_model_armor is true."
+  }
+}

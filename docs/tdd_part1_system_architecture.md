@@ -24,6 +24,7 @@ graph TB
 
     subgraph SecurityBoundary [Pre-Execution Security Boundary]
         InputGuard[InputGuardrail: Injection & Scope Classifier]
+        ModelArmor[Model Armor: Semantic Injection / Jailbreak Screening]
         RateLimiter[Token Bucket Rate Limiter: SEC 8 req/s cap]
     end
 
@@ -88,8 +89,9 @@ sequenceDiagram
     autonumber
     actor Analyst as Equity Analyst
     participant API as FastAPI Gateway
-    participant DLP as PII Masker
     participant Guard as Pre-Execution Guardrail
+    participant Armor as Model Armor
+    participant DLP as PII Masker (Cloud DLP)
     participant Root as Root Coordinator (Gemini 2.5 Pro)
     participant SEC as SEC Filing Sub-Agent
     participant Trans as Transcript Sub-Agent
@@ -101,10 +103,12 @@ sequenceDiagram
 
     Analyst->>API: POST /v1/research/equity {ticker: "AAPL", fiscal_year: 2024, focus_areas: ["Services_Margin", "China"]}
     API->>API: Validate OAuth2 Bearer Token
-    API->>DLP: Redact proprietary portfolio metadata & analyst PII
-    DLP-->>API: Sanitized request payload
-    API->>Guard: Inspect prompt for injection & domain scope
-    Guard-->>API: Verdict: PASS (Security score 1.0)
+    API->>Guard: Inspect prompt for injection signatures & domain scope
+    Guard->>Armor: SanitizeUserPrompt (PI/jailbreak, RAI, malicious URI)
+    Armor-->>Guard: NO_MATCH_FOUND
+    Guard->>DLP: Redact proprietary portfolio metadata & analyst PII
+    DLP-->>Guard: Sanitized prompt
+    Guard-->>API: Verdict: PASS
 
     API->>Root: Dispatch sanitized research request
     Note over Root: Plan-and-Execute reasoning loop

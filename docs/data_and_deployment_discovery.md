@@ -142,3 +142,18 @@ The production masker (`DLP_BACKEND=cloud_dlp`, [`src/guardrails/dlp_masker.py`]
 - **Minimum likelihood:** `POSSIBLE`; **timeout:** 5 s; failure falls back to the regex masker and is logged.
 - **IAM:** runtime service account holds `roles/dlp.user`; `dlp.googleapis.com` is enabled by Terraform.
 - **Telemetry:** each request logs a PII-free event `{"event": "pii_masking", "dlp_backend": "cloud_dlp", "redaction_applied": true|false}`.
+
+### 2.4 Model Armor Template Configuration
+Prompts that pass the in-process signature and scope checks are screened by Model Armor (`ENABLE_MODEL_ARMOR=true`, [`src/guardrails/model_armor.py`](../src/guardrails/model_armor.py)) via `SanitizeUserPrompt` against a regional template created by [`scripts/model_armor_template.sh`](../scripts/model_armor_template.sh). Sensitive Data Protection is deliberately not enabled on the template; PII redaction stays with the Cloud DLP layer in 2.3.
+
+| Filter | Setting | On match |
+|---|---|---|
+| Prompt injection & jailbreak | enabled, `MEDIUM_AND_ABOVE` | `SecurityViolationException` → HTTP 400 `SECURITY_VIOLATION`, audit `REJECT_INJECTION` |
+| Responsible AI (`HATE_SPEECH`, `HARASSMENT`, `DANGEROUS`, `SEXUALLY_EXPLICIT`) | `MEDIUM_AND_ABOVE` | as above |
+| Malicious URI | enabled | as above |
+
+- **Endpoint:** `modelarmor.<region>.rep.googleapis.com`; **timeout:** `MODEL_ARMOR_TIMEOUT_SECONDS` (3 s).
+- **Degradation:** API failure is fail-open by default (`model_armor_degraded` log event, in-process layers remain active); `MODEL_ARMOR_FAIL_CLOSED=true` rejects instead.
+- **IAM:** runtime service account holds `roles/modelarmor.user`; `modelarmor.googleapis.com` is enabled by Terraform. The template itself is created outside Terraform (`make model-armor-create`) because provider `~> 5.38` has no Model Armor resource.
+- **Telemetry:** each screened request logs `{"event": "model_armor_screen", "blocked": true|false, "matched_filters": [...]}`; the prompt text is never logged.
+- **ADK path:** the coordinator's `before_model_callback` ([`src/guardrails/adk_callbacks.py`](../src/guardrails/adk_callbacks.py)) applies the same screen to every new user turn in `adk web` / `/adk`.
