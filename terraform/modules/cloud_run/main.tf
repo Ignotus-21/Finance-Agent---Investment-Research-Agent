@@ -103,6 +103,21 @@ resource "google_cloud_run_v2_service" "ira_service" {
       }
 
       env {
+        name  = "MODEL_ARMOR_FAIL_CLOSED"
+        value = tostring(var.model_armor_fail_closed)
+      }
+
+      env {
+        name  = "MODEL_ARMOR_SCREEN_TOOL_OUTPUT"
+        value = tostring(var.model_armor_screen_tool_output)
+      }
+
+      env {
+        name  = "MODEL_ARMOR_SCREEN_RESPONSES"
+        value = tostring(var.model_armor_screen_responses)
+      }
+
+      env {
         name  = "GOOGLE_GENAI_USE_VERTEXAI"
         value = "TRUE"
       }

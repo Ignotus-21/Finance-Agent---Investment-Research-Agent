@@ -12,9 +12,11 @@ Implements asymmetric model routing and Vertex AI context caching:
   performs Google Search grounded retrieval of current macroeconomic context.
 
 Generation parameters (temperature, top_p, max output tokens) and safety thresholds
-are externalized in configs/settings.yaml and environment variables. The coordinator
-runs the shared input guardrail stack (adversarial patterns, topic blocklist, Model
-Armor) as a `before_model_callback` on every new user turn.
+are externalized in configs/settings.yaml and environment variables. The shared
+guardrail stack is attached as ADK callbacks: the coordinator screens every new user
+turn (`before_model_callback`) and its final answer (`after_model_callback`); the
+coordinator and the filing specialist screen tool and sub-agent output before the
+model reads it (`after_tool_callback`).
 """
 
 import json
@@ -36,7 +38,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from src.config import Settings
-from src.guardrails.adk_callbacks import build_before_model_guardrail
+from src.guardrails.adk_callbacks import AdkGuardrails, AfterToolGuardrail, build_adk_guardrails
 from src.tools.financial_calculator import FinancialCalculator
 from src.tools.macro_context import MacroContextClient
 from src.tools.transcript_parser import TranscriptClient
@@ -248,7 +250,10 @@ def create_sec_edgar_mcp_toolset() -> McpToolset:
     )
 
 
-def create_filing_extraction_agent(model_name: str | None = None) -> Agent:
+def create_filing_extraction_agent(
+    model_name: str | None = None,
+    after_tool_callback: AfterToolGuardrail | None = None,
+) -> Agent:
     """Create the high-throughput SEC and transcript extraction specialist on Gemini 2.5 Flash."""
     settings = Settings()
     return Agent(
@@ -268,6 +273,7 @@ def create_filing_extraction_agent(model_name: str | None = None) -> Agent:
             create_sec_edgar_mcp_toolset(),
             get_earnings_call_transcript,
         ],
+        after_tool_callback=after_tool_callback,
     )
 
 
@@ -298,6 +304,7 @@ def create_financial_adk_agent(
     model_name: str | None = None,
     extraction_model_name: str | None = None,
     enable_live_news_grounding: bool | None = None,
+    guardrails: AdkGuardrails | None = None,
 ) -> Agent:
     """Create the Root Coordinator Agent on Gemini 2.5 Pro with specialist AgentTool delegation."""
     settings = Settings()
@@ -306,9 +313,14 @@ def create_financial_adk_agent(
         if enable_live_news_grounding is None
         else enable_live_news_grounding
     )
+    guards = guardrails or build_adk_guardrails()
 
     tools: list[Any] = [
-        AgentTool(agent=create_filing_extraction_agent(extraction_model_name)),
+        AgentTool(
+            agent=create_filing_extraction_agent(
+                extraction_model_name, after_tool_callback=guards.after_tool
+            )
+        ),
         query_macro_market_news,
         compute_financial_ratios,
     ]
@@ -331,7 +343,9 @@ def create_financial_adk_agent(
             )
         ),
         tools=tools,
-        before_model_callback=build_before_model_guardrail(),
+        before_model_callback=guards.before_model,
+        after_tool_callback=guards.after_tool,
+        after_model_callback=guards.after_model,
     )
 
 

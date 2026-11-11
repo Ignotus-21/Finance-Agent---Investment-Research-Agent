@@ -130,3 +130,19 @@ class UpstreamTimeoutException(FinancialAgentException):
             status_code=504,
             details={"agent": agent, "timeout_seconds": timeout_seconds},
         )
+
+
+class ResponseBlockedException(FinancialAgentException):
+    """Raised when outbound content fails egress screening and is withheld."""
+
+    def __init__(self, reason: str, matched_filters: list[str] | None = None) -> None:
+        super().__init__(
+            message=f"The generated response was withheld by egress screening: {reason}",
+            error_code="RESPONSE_BLOCKED",
+            status_code=422,
+            details={
+                "guardrail": "model_armor",
+                "stage": "response",
+                "matched_filters": matched_filters or [],
+            },
+        )

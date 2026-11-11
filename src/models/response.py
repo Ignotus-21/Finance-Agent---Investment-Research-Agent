@@ -105,6 +105,20 @@ class ResearchBriefResponse(BaseModel):
     citations: list[EvidentiaryCitation] = Field(default_factory=list)
     metadata: ResearchMetadata
 
+    def narrative_text(self) -> str:
+        """Free-text surfaces of the brief (prose, quotes, URLs) for egress screening."""
+        parts: list[str] = [
+            self.executive_summary,
+            self.qualitative_synthesis.executive_commentary_analysis,
+            self.qualitative_synthesis.analyst_qa_highlights,
+            self.qualitative_synthesis.macro_market_context,
+        ]
+        parts.extend(f"{r.risk_category}: {r.description} {r.source_disclosure}" for r in self.risk_matrices)
+        parts.extend(
+            " ".join(filter(None, (c.verbatim_quote, c.source_url))) for c in self.citations
+        )
+        return "\n".join(p for p in parts if p and p.strip())
+
 
 class ErrorResponse(BaseModel):
     """RFC 7807 compliant structured error response."""

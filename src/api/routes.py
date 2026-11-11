@@ -15,6 +15,7 @@ from src.core.exceptions import (
     FilingNotFoundException,
     FinancialAgentException,
     OutOfDomainQueryException,
+    ResponseBlockedException,
     SecurityViolationException,
 )
 from src.models.request import EquityResearchRequest, FilingResearchRequest
@@ -40,11 +41,12 @@ async def generate_equity_research(
 ) -> ResearchBriefResponse:
     """
     Executes the multi-source equity research synthesis pipeline:
-    1. Pre-execution PII masking & security guardrail inspection.
+    1. Pre-execution security guardrail inspection & PII masking.
     2. Concurrent sub-agent extraction (SEC EDGAR, transcripts, macro context).
     3. Deterministic financial ratio computation (Python Decimal).
     4. Synthesis of an audit-ready brief with line-item provenance.
-    5. Structured compliance audit logging and Pub/Sub event broadcast.
+    5. Egress screening of the brief's narrative text (Model Armor).
+    6. Structured compliance audit logging and Pub/Sub event broadcast.
     """
     req_start = time.monotonic()
 
@@ -86,6 +88,25 @@ async def generate_equity_research(
         raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Multi-agent execution failure: {str(e)}") from e
+
+    # Step 2b: Egress screening of the brief's narrative surfaces
+    try:
+        await app_container.guardrail.screen_response_async(
+            brief.narrative_text(), user_prompt=sanitized_prompt
+        )
+    except ResponseBlockedException as e:
+        await audit_logger.log_research_execution(
+            ticker=request.ticker,
+            fiscal_year=request.fiscal_year,
+            prompt=sanitized_prompt,
+            user_id=user_id,
+            tools_called=[],
+            latency_ms=int((time.monotonic() - req_start) * 1000),
+            total_tokens=brief.metadata.total_tokens_consumed,
+            cost_usd=brief.metadata.estimated_cost_usd,
+            guardrail_verdict="REJECT_RESPONSE",
+        )
+        raise HTTPException(status_code=e.status_code, detail=f"Response Blocked: {e.message}") from e
 
     elapsed_ms = int((time.monotonic() - req_start) * 1000)
 

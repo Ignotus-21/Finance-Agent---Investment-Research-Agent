@@ -57,3 +57,7 @@ enable_live_news_grounding = true
 # this provider version): scripts/model_armor_template.sh <project> <region> <template-id>
 enable_model_armor   = true
 model_armor_template = "projects/ira-capstone-finance-prod/locations/us-central1/templates/ira-prompt-guard-production"
+# Operational switches (defaults shown; see docs/operational_runbook.md Incident 3.4)
+# model_armor_fail_closed        = false
+# model_armor_screen_tool_output = true
+# model_armor_screen_responses   = true

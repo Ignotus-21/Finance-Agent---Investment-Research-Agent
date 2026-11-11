@@ -150,6 +150,18 @@ class Settings(BaseSettings):
         default=bool(_GUARDRAILS_CFG.get("model_armor_fail_closed", False)),
         description="Reject prompts when Model Armor is unavailable (default: continue with in-process guardrails)",
     )
+    model_armor_screen_tool_output: bool = Field(
+        default=bool(_GUARDRAILS_CFG.get("model_armor_screen_tool_output", True)),
+        description="Screen tool and sub-agent output for indirect prompt injection before the model reads it (ADK path)",
+    )
+    model_armor_screen_responses: bool = Field(
+        default=bool(_GUARDRAILS_CFG.get("model_armor_screen_responses", True)),
+        description="Screen outbound model responses and synthesised briefs before they are returned (egress)",
+    )
+    model_armor_max_chunk_chars: int = Field(
+        default=int(_GUARDRAILS_CFG.get("model_armor_max_chunk_chars", 100_000)),
+        description="Maximum characters per Model Armor request; longer text is screened in sequential chunks",
+    )
 
     # Observability & Audit Logging
     log_level: str = Field(

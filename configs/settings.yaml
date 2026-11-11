@@ -29,6 +29,9 @@ guardrails:
   enable_model_armor: false       # ENABLE_MODEL_ARMOR (requires MODEL_ARMOR_TEMPLATE)
   model_armor_timeout_seconds: 3.0    # MODEL_ARMOR_TIMEOUT_SECONDS
   model_armor_fail_closed: false  # MODEL_ARMOR_FAIL_CLOSED: reject prompts when Model Armor is unavailable
+  model_armor_screen_tool_output: true   # MODEL_ARMOR_SCREEN_TOOL_OUTPUT: screen tool / sub-agent output (indirect injection)
+  model_armor_screen_responses: true     # MODEL_ARMOR_SCREEN_RESPONSES: screen outbound responses and briefs (egress)
+  model_armor_max_chunk_chars: 100000    # MODEL_ARMOR_MAX_CHUNK_CHARS: per-request size; longer text is chunked
 
 resilience:
   subagent_timeout_seconds: 45    # SUBAGENT_TIMEOUT_SECONDS

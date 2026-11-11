@@ -8,7 +8,7 @@
 | **System** | Autonomous Equity Investment Research Agent |
 | **Methodology** | STRIDE per-element, with AI-specific extensions (OWASP LLM Top 10) |
 | **Status** | Accepted |
-| **Related** | `tdd_part1_system_architecture.md`, `ADR-002`, `data_and_deployment_discovery.md` |
+| **Related** | `tdd_part1_system_architecture.md`, `ADR-002`, `ADR-004`, `data_and_deployment_discovery.md` |
 
 ---
 
@@ -147,7 +147,8 @@ flowchart TB
 
 | STRIDE | Threat | Mitigation | Residual |
 |---|---|---|:---:|
-| **T**ampering | Poisoned upstream content steering sub-agent reasoning (indirect injection) | Retrieved content treated as data, never instruction; citation verifier cross-checks claims against source — see §4.2 | **Medium** |
+| **T**ampering | Poisoned upstream content steering sub-agent reasoning (indirect injection) | Model Armor screens every tool and sub-agent result before a model reads it (`after_tool_callback`, `adk_callbacks.py`); flagged evidence is withheld with a structured notice. Retrieved content is treated as data, never instruction; citation verifier cross-checks claims against source — see §4.2 | Low |
+| **I**nfo disclosure / **T**ampering | Model output carrying regurgitated injection, harmful content or malicious links | Model Armor `SanitizeModelResponse` on the final ADK answer (`after_model_callback`) and on the REST brief's narrative (`screen_response_async`, `422 RESPONSE_BLOCKED`) | Low |
 | **T**ampering | Arithmetic hallucination producing a wrong financial figure | **All** maths routed to `financial_calculator.py` using `Decimal`; the LLM is forbidden from computing | Low |
 | **R**epudiation | No record of which tools an agent invoked | `tools_called` list captured per execution in `AuditLogEntry` | Low |
 | **I**nfo disclosure | System prompt / tool schema extraction | Instruction text contains no secrets; credentials resolved at runtime from Secret Manager | Low |
@@ -204,9 +205,12 @@ but it is fully attacker-controlled.
 4. The agent instruction mandates tool-sourced facts only, so a successful override still
    cannot manufacture a cited figure without a tool result.
 5. `citation_verifier.py` — claims failing source cross-verification are dropped.
+6. Egress — Model Armor `SanitizeModelResponse` on the final answer (ADK `after_model_callback`)
+   and on the REST brief's narrative text before it is returned.
 
 The same chain protects the ADK surface: `adk_callbacks.py` runs 1–3 as the coordinator's
-`before_model_callback` and returns a refusal `LlmResponse` instead of calling Gemini.
+`before_model_callback` and returns a refusal `LlmResponse` instead of calling Gemini; tool and
+sub-agent output is screened by `after_tool_callback` (§4.2); the final answer by `after_model_callback`.
 
 **Verification.** The 52-scenario golden dataset includes a dedicated adversarial category;
 the regression gate asserts a **100% Guardrail Interception Rate** and fails the build below it.
@@ -229,12 +233,13 @@ trusting tool *output* as instruction.
 |---|---|
 | Parameter injection into tool arguments | Tools expose strongly-typed signatures; no untyped `**kwargs` dispatch path exists |
 | Unauthorised tool invocation | Fixed tool registry of 5 functions; no dynamic tool loading, no `eval`/`exec` anywhere |
-| **Indirect prompt injection via retrieved content** | Filing and news text is consumed strictly as data. All numerical claims must survive `citation_verifier.py` cross-check against the source record |
+| **Indirect prompt injection via retrieved content** | Every tool and sub-agent result (SEC sections, XBRL facts, transcripts, grounded news) is screened by Model Armor before the model reads it (`after_tool_callback` on the coordinator and the filing specialist; `compute_financial_ratios` is allow-listed as argument-derived). Injection, malicious-URI, SDP and CSAM matches withhold the evidence and tell the model it is unavailable; Responsible-AI matches on filing text are logged only. Filing and news text is otherwise consumed strictly as data, and all numerical claims must survive `citation_verifier.py` cross-check against the source record |
 | Rate-limit bypass through an alternate path | Both the REST gateway and the ADK MCP server invoke the guarded public methods on `SECFilingClient`, enforcing the Token Bucket (`8 req/s`) and Circuit Breaker across all execution paths |
 | Tool result substitution in transit | TLS to all upstreams; provenance signature bound to each result |
 
-**Residual risk: Medium** — indirect injection via poisoned upstream content remains the
-hardest class to fully eliminate.
+**Residual risk: Low** — tool-output screening is probabilistic and fail-open, so a poisoned
+source could still reach the model during a Model Armor outage; the architectural backstop
+(tool-sourced facts, deterministic arithmetic, citation verification) bounds the impact.
 
 ### 4.3 Data Exfiltration
 
@@ -254,7 +259,7 @@ hardest class to fully eliminate.
 | ID | Risk | Likelihood | Impact | Residual | Owner |
 |:---:|---|:---:|:---:|:---:|---|
 | **R1** | Novel prompt-injection phrasing evades both the signature layer and Model Armor | Low | Medium | **Low** | Guardrails |
-| **R2** | Indirect injection via poisoned upstream filing/news content | Low | High | **Medium** | Sub-agents |
+| **R2** | Indirect injection via poisoned upstream filing/news content evades tool-output screening | Low | Medium | **Low** | Sub-agents |
 | **R3** | Denial-of-wallet through authenticated request flooding | Medium | Medium | **Medium** | Gateway |
 | **R4** | Over-broad BigQuery read grant enabling bulk audit extraction | Low | High | **Medium** | IAM |
 | **R5** | Pub/Sub subscriber misconfiguration exposing brief events | Low | Medium | **Medium** | IaC |
@@ -264,7 +269,7 @@ hardest class to fully eliminate.
 
 ### Accepted Risks
 
-**R1**, **R2** and **R8** are accepted. Complete prevention of adversarial prompting is not an
+**R1**, **R2** and **R8** are accepted (see ADR-004 for the alternatives considered). Complete prevention of adversarial prompting is not an
 achievable engineering goal. The system is designed so that injection success does not
 translate into integrity failure: because every numerical claim must originate from a
 deterministic tool and survive citation verification, the realistic worst case is a refusal
@@ -280,7 +285,9 @@ R8 is observable (`model_armor_degraded` log event) and reversible per environme
 |---|---|---|
 | PII redaction | `src/guardrails/dlp_masker.py`, `src/guardrails/pii_masker.py` | `tests/unit/test_dlp_masker.py`, `tests/unit/test_guardrails.py` |
 | Injection interception | `src/guardrails/input_guardrail.py` | `tests/unit/test_guardrails.py` + adversarial golden scenarios |
-| Model Armor screening (REST + ADK) | `src/guardrails/model_armor.py`, `src/guardrails/adk_callbacks.py` | `tests/unit/test_model_armor.py` |
+| Model Armor ingress screening (REST + ADK) | `src/guardrails/model_armor.py`, `src/guardrails/adk_callbacks.py` | `tests/unit/test_model_armor.py` |
+| Model Armor tool-output screening (indirect injection) | `after_tool_callback` in `src/guardrails/adk_callbacks.py` | `tests/unit/test_model_armor.py` |
+| Model Armor egress screening | `after_model_callback`; `screen_response_async` in `src/api/routes.py` | `tests/unit/test_model_armor.py`, `tests/integration/test_api_routes.py` |
 | Domain scope enforcement | `src/guardrails/scope_classifier.py` | `tests/unit/test_guardrails.py` |
 | Deterministic arithmetic | `src/tools/financial_calculator.py` | `tests/unit/test_financial_calculator.py` |
 | Citation cross-verification | `src/engine/citation_verifier.py` | `tests/integration/test_multi_agent_flow.py` |

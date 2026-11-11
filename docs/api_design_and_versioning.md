@@ -83,6 +83,7 @@ All domain errors derive from
 | `FILING_NOT_FOUND` | 404 | No audited filing for ticker / form / fiscal year |
 | `REGISTRANT_MISMATCH` | 404 | Ticker resolves to a successor CIK without the requested form |
 | `VERIFICATION_FAILED` | 422 | Line-item provenance assertion failed |
+| `RESPONSE_BLOCKED` | 422 | Synthesised brief withheld by Model Armor egress screening (audit verdict `REJECT_RESPONSE`) |
 | `UPSTREAM_UNAVAILABLE` | 503 | SEC EDGAR unreachable and no verified fixture exists |
 | `UPSTREAM_TIMEOUT` | 504 | Required sub-agent exceeded `SUBAGENT_TIMEOUT_SECONDS` |
 

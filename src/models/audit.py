@@ -37,6 +37,6 @@ class AuditLogEntry(BaseModel):
     latency_ms: int = Field(..., description="Total end-to-end execution latency in milliseconds.")
     total_tokens: int = Field(..., description="Total prompt and completion tokens consumed.")
     cost_usd: float = Field(..., description="Estimated inference cost in USD.")
-    guardrail_verdict: str = Field(default="PASS", description="PASS, REJECT_INJECTION, REJECT_SCOPE.")
+    guardrail_verdict: str = Field(default="PASS", description="PASS, REJECT_INJECTION, REJECT_SCOPE, REJECT_RESPONSE.")
     citations_count: int = Field(default=0, description="Total evidentiary citations generated.")
     spans: list[ExecutionSpan] = Field(default_factory=list, description="Nested OpenTelemetry spans.")

@@ -175,3 +175,21 @@ variable "model_armor_template" {
     error_message = "model_armor_template must be projects/<project>/locations/<region>/templates/<id> when enable_model_armor is true."
   }
 }
+
+variable "model_armor_fail_closed" {
+  description = "Reject requests when Model Armor is unavailable instead of falling back to the in-process guardrails (runbook Incident 3.4)."
+  type        = bool
+  default     = false
+}
+
+variable "model_armor_screen_tool_output" {
+  description = "Screen tool and sub-agent output with Model Armor before the model reads it (indirect prompt injection). Emergency switch only."
+  type        = bool
+  default     = true
+}
+
+variable "model_armor_screen_responses" {
+  description = "Screen outbound model responses and synthesised briefs with Model Armor (egress). Emergency switch only."
+  type        = bool
+  default     = true
+}

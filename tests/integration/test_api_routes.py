@@ -70,3 +70,50 @@ async def test_extract_filings_success(async_client: AsyncClient):
     data = res.json()
     assert "INCOME_STATEMENT" in data["sections"]
     assert "BALANCE_SHEET" in data["sections"]
+
+
+@pytest.mark.asyncio
+async def test_egress_screening_blocks_brief_with_422(monkeypatch: pytest.MonkeyPatch):
+    """A brief whose narrative fails Model Armor egress screening is withheld, not returned."""
+    from src.api import routes
+    from src.core.exceptions import ResponseBlockedException
+
+    screened: dict[str, str] = {}
+
+    async def _blocking_screen(text: str, user_prompt: str | None = None) -> None:
+        screened["text"] = text
+        screened["prompt"] = user_prompt or ""
+        raise ResponseBlockedException(reason="Model Armor matched filters: malicious_uris", matched_filters=["malicious_uris"])
+
+    verdicts: list[str] = []
+    original_log = routes.audit_logger.log_research_execution
+
+    async def _capture(**kwargs):
+        verdicts.append(kwargs["guardrail_verdict"])
+        return await original_log(**kwargs)
+
+    container = await routes.get_container()
+    monkeypatch.setattr(container.guardrail, "screen_response_async", _blocking_screen)
+    monkeypatch.setattr(routes.audit_logger, "log_research_execution", _capture)
+
+    headers = {"Authorization": "Bearer test-valid-analyst-token"}
+    res = await async_client_for(headers)
+
+    assert res.status_code == 422
+    assert res.json()["detail"].startswith("Response Blocked:")
+    assert "AAPL" in screened["prompt"]
+    assert screened["text"]
+    assert verdicts == ["REJECT_RESPONSE"]
+
+
+async def async_client_for(headers: dict[str, str]):
+    from httpx import ASGITransport
+
+    from src.api.app import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        return await client.post(
+            "/v1/research/equity",
+            json={"ticker": "AAPL", "fiscal_year": 2024, "focus_areas": ["Services_Margin"]},
+            headers=headers,
+        )

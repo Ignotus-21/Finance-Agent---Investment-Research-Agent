@@ -212,6 +212,25 @@ graph TD
        --src-ip-ranges="<OFFENDING_IP_RANGE>" \
        --action="deny-403"
    ```
+3. Identify which layer is firing. Signature rejections carry `latency_ms = 0` and no Model
+   Armor event; Model Armor rejections emit `jsonPayload.event="model_armor_screen"` with
+   `stage` (`prompt` | `tool_output` | `response`) and `matched_filters`:
+   ```bash
+   gcloud logging read 'resource.labels.service_name="ira-service-production" AND jsonPayload.event="model_armor_screen" AND jsonPayload.blocked=true' \
+     --limit=50 --format="table(timestamp, jsonPayload.stage, jsonPayload.matched_filters)"
+   ```
+
+### Incident 3.4: Model Armor Degraded or Over-Blocking
+
+#### Symptoms:
+- `jsonPayload.event="model_armor_degraded"` entries (API errors or timeouts) — coverage has silently fallen back to the in-process layers (fail-open default).
+- Legitimate briefs returning `422 RESPONSE_BLOCKED`, or ADK answers citing "evidence withheld" (`jsonPayload.event="tool_output_withheld"`) for benign filings.
+
+#### Triage Action:
+1. Confirm the template and API are healthy: `scripts/model_armor_template.sh describe <project> <region>`; check the Model Armor quota page for the region.
+2. For a sustained outage where strictness matters more than availability, flip to fail-closed through Terraform-managed env (`MODEL_ARMOR_FAIL_CLOSED=true`) and apply; revert when the service recovers.
+3. For false positives, read `matched_filters` on the offending `model_armor_screen` event. Responsible-AI matches on tool output never withhold evidence by design (`BLOCK_POLICY` in `src/guardrails/model_armor.py`); if the response stage is over-blocking on benign risk-factor prose, raise the RAI confidence to `HIGH` on the template (`gcloud model-armor templates update … --rai-settings-filters=…`) rather than disabling the stage.
+4. Stage switches exist for emergencies only: `MODEL_ARMOR_SCREEN_RESPONSES=false` / `MODEL_ARMOR_SCREEN_TOOL_OUTPUT=false` remove egress or indirect-injection coverage and must be logged as a risk acceptance against R2/R8 in `docs/threat_model.md`.
 
 ---
 

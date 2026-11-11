@@ -119,3 +119,21 @@ variable "model_armor_template" {
   type        = string
   default     = ""
 }
+
+variable "model_armor_fail_closed" {
+  description = "Reject requests when Model Armor is unavailable."
+  type        = bool
+  default     = false
+}
+
+variable "model_armor_screen_tool_output" {
+  description = "Screen tool and sub-agent output with Model Armor (indirect prompt injection)."
+  type        = bool
+  default     = true
+}
+
+variable "model_armor_screen_responses" {
+  description = "Screen outbound responses and briefs with Model Armor (egress)."
+  type        = bool
+  default     = true
+}

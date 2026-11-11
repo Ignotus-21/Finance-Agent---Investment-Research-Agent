@@ -157,3 +157,13 @@ Prompts that pass the in-process signature and scope checks are screened by Mode
 - **IAM:** runtime service account holds `roles/modelarmor.user`; `modelarmor.googleapis.com` is enabled by Terraform. The template itself is created outside Terraform (`make model-armor-create`) because provider `~> 5.38` has no Model Armor resource.
 - **Telemetry:** each screened request logs `{"event": "model_armor_screen", "blocked": true|false, "matched_filters": [...]}`; the prompt text is never logged.
 - **ADK path:** the coordinator's `before_model_callback` ([`src/guardrails/adk_callbacks.py`](../src/guardrails/adk_callbacks.py)) applies the same screen to every new user turn in `adk web` / `/adk`.
+
+Screening stages and block policy (`BLOCK_POLICY` in `model_armor.py`; rationale in [ADR-004](adrs/ADR-004-layered-guardrails-regex-model-armor-cloud-dlp.md)):
+
+| Stage | Where | API | Blocks on | Outcome |
+|---|---|---|---|---|
+| `prompt` | REST route; ADK `before_model_callback` | `SanitizeUserPrompt` | any match | 400 `SECURITY_VIOLATION` / refusal turn |
+| `tool_output` | ADK `after_tool_callback` on the coordinator and filing specialist (`compute_financial_ratios` allow-listed) | `SanitizeUserPrompt` | injection, malicious URI, SDP, CSAM (RAI logged only) | tool result replaced by a `status: withheld` notice; event `tool_output_withheld` |
+| `response` | ADK `after_model_callback`; REST `screen_response_async` on `ResearchBriefResponse.narrative_text()` | `SanitizeModelResponse` (+ user prompt context) | any match | refusal turn / 422 `RESPONSE_BLOCKED`, audit `REJECT_RESPONSE` |
+
+Text longer than `MODEL_ARMOR_MAX_CHUNK_CHARS` (100 000) is screened in sequential chunks. `MODEL_ARMOR_SCREEN_TOOL_OUTPUT` and `MODEL_ARMOR_SCREEN_RESPONSES` switch the two later stages independently (both default on).

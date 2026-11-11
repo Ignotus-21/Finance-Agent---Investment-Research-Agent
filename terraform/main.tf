@@ -104,16 +104,19 @@ module "cloud_run" {
   container_concurrency = var.container_concurrency
   request_timeout       = var.request_timeout
 
-  offline_mode               = var.offline_mode
-  sec_edgar_user_agent       = var.sec_edgar_user_agent
-  custom_audiences           = var.custom_audiences
-  ingress                    = var.ingress
-  pubsub_topic_id            = google_pubsub_topic.research_events.name
-  enable_adk_web             = var.enable_adk_web
-  dlp_backend                = var.dlp_backend
-  enable_live_news_grounding = var.enable_live_news_grounding
-  enable_model_armor         = var.enable_model_armor
-  model_armor_template       = var.model_armor_template
+  offline_mode                   = var.offline_mode
+  sec_edgar_user_agent           = var.sec_edgar_user_agent
+  custom_audiences               = var.custom_audiences
+  ingress                        = var.ingress
+  pubsub_topic_id                = google_pubsub_topic.research_events.name
+  enable_adk_web                 = var.enable_adk_web
+  dlp_backend                    = var.dlp_backend
+  enable_live_news_grounding     = var.enable_live_news_grounding
+  enable_model_armor             = var.enable_model_armor
+  model_armor_template           = var.model_armor_template
+  model_armor_fail_closed        = var.model_armor_fail_closed
+  model_armor_screen_tool_output = var.model_armor_screen_tool_output
+  model_armor_screen_responses   = var.model_armor_screen_responses
 
   invoker_members = concat(
     var.invoker_members,

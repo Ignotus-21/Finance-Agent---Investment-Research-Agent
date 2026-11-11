@@ -1,9 +1,10 @@
 """
 Pre-Execution Security Guardrails.
 Intercepts adversarial jailbreak attempts, prompt injections, and scope violations
-before dispatching queries to downstream LLM reasoning loops, optionally screens
-the prompt with Model Armor, then redacts PII through the configured masking
-backend (regex or Cloud DLP).
+before dispatching queries to downstream LLM reasoning loops, screens the prompt
+with Model Armor, then redacts PII through the configured masking backend (regex
+or Cloud DLP). The same Model Armor client screens tool output (indirect prompt
+injection) and outbound responses (egress).
 """
 
 import logging
@@ -12,10 +13,14 @@ import re
 from starlette.concurrency import run_in_threadpool
 
 from src.config import Settings
-from src.core.exceptions import OutOfDomainQueryException, SecurityViolationException
+from src.core.exceptions import (
+    OutOfDomainQueryException,
+    ResponseBlockedException,
+    SecurityViolationException,
+)
 from src.core.interfaces import GuardrailInterface
 from src.guardrails.dlp_masker import PIIMaskerProtocol, build_pii_masker
-from src.guardrails.model_armor import ModelArmorScreen
+from src.guardrails.model_armor import ModelArmorScreen, ModelArmorVerdict, ScreenStage
 from src.guardrails.scope_classifier import ScopeClassifier
 
 logger = logging.getLogger(__name__)
@@ -26,8 +31,9 @@ class InputGuardrail(GuardrailInterface):
     Pre-execution security classifier enforcing domain scope, PII redaction,
     and blocking adversarial prompt injections.
 
-    Layers, in order: length check → adversarial pattern interception → scope
-    classification → Model Armor screening (optional) → PII masking.
+    Ingress layers, in order: length check → adversarial pattern interception →
+    scope classification → Model Armor screening (optional) → PII masking.
+    Also exposes Model Armor screening for tool output and outbound responses.
     """
 
     ADVERSARIAL_PATTERNS = [
@@ -72,7 +78,16 @@ class InputGuardrail(GuardrailInterface):
                 template=self.settings.model_armor_template,
                 timeout_seconds=self.settings.model_armor_timeout_seconds,
                 fail_closed=self.settings.model_armor_fail_closed,
+                max_chunk_chars=self.settings.model_armor_max_chunk_chars,
             )
+
+    @property
+    def screens_tool_output(self) -> bool:
+        return self.model_armor is not None and self.settings.model_armor_screen_tool_output
+
+    @property
+    def screens_responses(self) -> bool:
+        return self.model_armor is not None and self.settings.model_armor_screen_responses
 
     def validate_input(self, prompt: str, require_financial_anchor: bool = True) -> tuple[bool, str]:
         """
@@ -103,7 +118,7 @@ class InputGuardrail(GuardrailInterface):
         return True, "Passed security and scope inspection."
 
     def screen_with_model_armor(self, prompt: str) -> None:
-        """Raise SecurityViolationException when Model Armor reports a filter match."""
+        """Raise SecurityViolationException when Model Armor reports a filter match (ingress)."""
         if self.model_armor is None:
             return
         verdict = self.model_armor.screen(prompt)
@@ -112,10 +127,44 @@ class InputGuardrail(GuardrailInterface):
                 message=f"Model Armor blocked the request: {verdict.detail}",
                 details={
                     "guardrail": "model_armor",
+                    "stage": verdict.stage,
                     "matched_filters": list(verdict.matched_filters),
                     "degraded": verdict.degraded,
                 },
             )
+
+    def screen_tool_output(self, text: str, source: str) -> ModelArmorVerdict:
+        """
+        Screen content returned by a tool or sub-agent for indirect prompt injection.
+        Returns the verdict; callers decide how to withhold the content.
+        """
+        if not self.screens_tool_output or self.model_armor is None or not text.strip():
+            return ModelArmorVerdict(blocked=False, stage=ScreenStage.TOOL_OUTPUT.value, chunks=0)
+        verdict = self.model_armor.screen_text(text, ScreenStage.TOOL_OUTPUT)
+        if verdict.blocked:
+            logger.warning(
+                "Tool output withheld by Model Armor.",
+                extra={
+                    "event": "tool_output_withheld",
+                    "source": source,
+                    "matched_filters": list(verdict.matched_filters),
+                    "degraded": verdict.degraded,
+                },
+            )
+        return verdict
+
+    def screen_response(self, text: str, user_prompt: str | None = None) -> None:
+        """Raise ResponseBlockedException when outbound text fails egress screening."""
+        if not self.screens_responses or self.model_armor is None or not text.strip():
+            return
+        verdict = self.model_armor.screen_text(text, ScreenStage.RESPONSE, user_prompt=user_prompt)
+        if verdict.blocked:
+            raise ResponseBlockedException(
+                reason=verdict.detail, matched_filters=list(verdict.matched_filters)
+            )
+
+    async def screen_response_async(self, text: str, user_prompt: str | None = None) -> None:
+        await run_in_threadpool(self.screen_response, text, user_prompt)
 
     def enforce(self, prompt: str, require_financial_anchor: bool = True) -> None:
         """Run the in-process checks and raise the matching domain exception on failure."""
